@@ -97,6 +97,7 @@ nav:
       - Operations Runbooks:
           - Verification: developer/runbooks/verification.md
           - Main Smoke: developer/runbooks/main-smoke.md
+          - First-user Onboarding: developer/runbooks/first-user-onboarding.md
           - Company-Scoped Smoke Matrix: developer/runbooks/company-scoped-smoke-matrix.md
           - Cleanup: developer/runbooks/cleanup.md
           - Deletion / Retirement: developer/runbooks/deletion-retirement.md

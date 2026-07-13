@@ -22,9 +22,6 @@ export function registerSessionRoutes(app: Hono, options: TinyOfficeApiOptions):
     const mode = authMode(options);
     const currentUser = currentUserFromRequest(c.req.raw, options.auth);
     const companyLifecycleService = resolveCompanyLifecycleService(options);
-    if (!companyLifecycleService.switchCurrentCompany) {
-      throw new Error("Current Company switching is not available.");
-    }
     const switchedSession = await companyLifecycleService.switchCurrentCompany(
       currentUser,
       parseSwitchCurrentCompanyBody(await readJsonBody(c)),

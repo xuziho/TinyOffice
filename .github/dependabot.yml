@@ -1,0 +1,38 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly }
+    groups:
+      root-dependencies:
+        patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /apps/tinyoffice-web-shadcn
+    schedule: { interval: weekly }
+    groups:
+      frontend-dependencies:
+        patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /packages/pi-context-harness
+    schedule: { interval: weekly }
+    groups:
+      context-harness-dependencies:
+        patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /packages/pi-tool-guard
+    schedule: { interval: weekly }
+    groups:
+      tool-guard-dependencies:
+        patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /packages/pi-web-tools
+    schedule: { interval: weekly }
+    groups:
+      web-tools-dependencies:
+        patterns: ["*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+    groups:
+      github-actions:
+        patterns: ["*"]

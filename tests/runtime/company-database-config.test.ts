@@ -52,7 +52,8 @@ test("runtime test setup uses the local postgres test database instead of live e
     assert.equal(process.env.COMPANY_DATABASE_BACKEND, undefined);
     assert.equal(
       process.env.TINYOFFICE_DATABASE_URL,
-      "postgresql://tinyoffice:tinyoffice_dev@127.0.0.1:55432/tinyoffice_test?sslmode=disable",
+      process.env.TINYOFFICE_TEST_DATABASE_URL ||
+        "postgresql://tinyoffice:tinyoffice_dev@127.0.0.1:55432/tinyoffice_test?sslmode=disable",
     );
     const config = resolveRuntimeDatabaseConfig(process.env, process.cwd());
     assert.equal(config.backend, "postgres");

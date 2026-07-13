@@ -1,0 +1,34 @@
+name: Feature request
+description: Propose a product capability or workflow improvement.
+title: "[Feature]: "
+labels: [enhancement, needs-triage]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user or operator problem needs to be solved?
+    validations: { required: true }
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe the result without prescribing an implementation.
+    validations: { required: true }
+  - type: dropdown
+    id: area
+    attributes:
+      label: Product area
+      options: [Chat, Tasks and Work, Employees and Runtime, Sessions and Evidence, Company and Settings, Access and Governance, Developer Experience, Other]
+    validations: { required: true }
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: boundary
+    attributes:
+      label: Product boundary
+      options:
+        - label: This belongs in the TinyOffice company-operations foundation rather than a vertical business app.
+          required: true

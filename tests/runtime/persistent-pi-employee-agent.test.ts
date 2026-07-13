@@ -22,11 +22,6 @@ import {
   PersistentPiEmployeeAgent,
 } from "../../src/runtime/pi/persistent-pi-employee-agent.js";
 import {
-  AuthStorage,
-  getAgentDir,
-  ModelRegistry,
-} from "../../src/runtime/pi/pi-coding-agent-sdk.js";
-import {
   savePromptBlockContent,
   savePromptBlocksConfig,
   savePromptPolicyTemplateContent,
@@ -176,18 +171,13 @@ async function setPromptPolicy(input: {
   });
 }
 
-function firstAvailableRuntimeModel() {
-  const agentDir = getAgentDir();
-  const authStorage = AuthStorage.create(path.join(agentDir, "auth.json"));
-  const modelRegistry = ModelRegistry.create(authStorage, path.join(agentDir, "models.json"));
-  const model = modelRegistry.getAvailable()[0];
-  assert.ok(model, "PI model registry should expose at least one model for runtime tests");
+function fakeTransportRuntimeModel() {
   return {
     version: 1,
-    modelProvider: model.provider,
-    modelId: model.id,
+    modelProvider: "test-provider",
+    modelId: "test-model",
     thinkingLevel: "minimal",
-  };
+  } as const;
 }
 
 test("buildSystemPromptAppend keeps identity separate from configurable prompt blocks", async () => {
@@ -642,7 +632,7 @@ test("persistent PI employee agent no longer writes PI local prompt files", asyn
       mountedActions: [],
     },
     permissionRules: [],
-    runtimeConfig: firstAvailableRuntimeModel(),
+    runtimeConfig: fakeTransportRuntimeModel(),
   };
   const sessionRootPath = await mkdtemp(path.join(tmpdir(), "tinyoffice-pi-sessions-"));
   const transport = new FakeTransport();

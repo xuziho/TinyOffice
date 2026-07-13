@@ -115,7 +115,7 @@ export interface CompanyLifecycleApiService {
   createCompany(input: CreateCompanyInput): Promise<OwnedCreateCompanyResult>;
   deleteCompany(input: DeleteCompanyInput, runtime?: CompanyRuntimeDeletionGuard): Promise<DeleteCompanyResult>;
   saveSystemAiSettings?(input: SaveCompanySystemAiSettingsInput): Promise<CompaniesAdminViewModel>;
-  switchCurrentCompany?(session: TinyOfficeCurrentUserSession, input: SwitchCurrentCompanyInput): Promise<TinyOfficeCurrentUserSession>;
+  switchCurrentCompany(session: TinyOfficeCurrentUserSession, input: SwitchCurrentCompanyInput): Promise<TinyOfficeCurrentUserSession>;
   resolveCurrentUserSession?(session: TinyOfficeCurrentUserSession): Promise<TinyOfficeCurrentUserSession>;
   deletionGuard?: CompanyRuntimeDeletionGuard;
 }

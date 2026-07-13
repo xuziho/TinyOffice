@@ -65,6 +65,8 @@ test("real Chat preview closes runtime and session state around Company deletion
   assert.match(source, /saveUserPreferredCompanyId/);
   assert.match(source, /loadUserPreferredCompanyId/);
   assert.match(source, /loadCurrentUserMemberSession\(repoRoot, session, session\.currentCompanyId\)/);
+  assert.doesNotMatch(source, /loadCurrentUserMemberSession\(repoRoot, session\)\s*\?\?/);
+  assert.doesNotMatch(source, /WHERE member\.id = \$1\s*ORDER BY member\.company_id ASC/);
 });
 
 test("real Chat preview starts a Work control-plane loop for queued WorkRuns", async () => {

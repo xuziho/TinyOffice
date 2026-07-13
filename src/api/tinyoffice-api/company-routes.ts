@@ -24,11 +24,15 @@ export function registerCompanyRoutes(app: Hono, options: TinyOfficeApiOptions):
     const companyLifecycleService = resolveCompanyLifecycleService(options);
     const currentUser = currentUserFromRequest(c.req.raw, options.auth);
     const input = parseCreateCompanyBody(await readJsonBody(c));
-    return jsonResponse(c, await companyLifecycleService.createCompany({
+    const created = await companyLifecycleService.createCompany({
       ...input,
       ownerMemberId: currentUser.userId,
       ownerDisplayName: currentUser.displayName ?? currentUser.userId,
-    }), 201);
+    });
+    await companyLifecycleService.switchCurrentCompany(currentUser, {
+      companyId: created.company.companyId,
+    });
+    return jsonResponse(c, created, 201);
   });
 
   app.delete("/api/companies/:companyId", async (c) => {

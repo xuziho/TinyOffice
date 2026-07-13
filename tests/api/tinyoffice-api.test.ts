@@ -1607,6 +1607,7 @@ test("Hono TinyOffice API serves Company lifecycle collection routes", async () 
       "companies:list",
       "companies:create:Globex Operations:xuziho:Xu Ziho",
       "companies:list",
+      "companies:switch:xuziho:globex",
       "companies:delete:globex",
       "companies:guard:globex",
       "companies:list",

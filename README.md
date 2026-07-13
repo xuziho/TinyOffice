@@ -28,10 +28,12 @@ Local company records, employee workspaces, uploaded assets, secrets, runtime da
 npm ci
 npm run runtime:postgres:ensure
 npm run runtime:postgres:init-schema
+$env:TINYOFFICE_PREVIEW_USER_ID = "local-owner"
+$env:TINYOFFICE_PREVIEW_USER_DISPLAY_NAME = "Local Owner"
 node --import tsx scripts/runtime/run-real-chat-preview.ts
 ```
 
-The preview serves the web app on `http://127.0.0.1:5175` and the runtime API on `http://127.0.0.1:8095`. Company and member records are created through the product lifecycle; the repository does not ship a hidden default company.
+The preview serves the web app on `http://127.0.0.1:5175` and the runtime API on `http://127.0.0.1:8095`. `TINYOFFICE_PREVIEW_USER_ID` is the stable local development identity; the display name is optional. Do not set `TINYOFFICE_PREVIEW_COMPANY_ID` for a clean first-user run. Company and member records are created through the product lifecycle; the repository does not ship a hidden default company. See the [first-user onboarding acceptance runbook](docs/developer/runbooks/first-user-onboarding.md) for an isolated path that does not touch an existing local Company.
 
 Useful checks:
 

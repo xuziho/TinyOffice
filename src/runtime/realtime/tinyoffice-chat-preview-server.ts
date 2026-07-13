@@ -300,7 +300,7 @@ async function resolvePreviewCurrentUserSession(
       return current;
     }
   }
-  return await loadCurrentUserMemberSession(repoRoot, session) ?? {
+  return {
     userId: session.userId,
     ...(session.displayName ? { displayName: session.displayName } : {}),
     source: session.source,
@@ -326,7 +326,7 @@ async function switchPreviewCurrentUserCompany(
 async function loadCurrentUserMemberSession(
   repoRoot: string,
   session: TinyOfficeCurrentUserSession,
-  companyId?: string,
+  companyId: string,
 ): Promise<TinyOfficeCurrentUserSession | undefined> {
   const postgres = await openConfiguredPostgresConnection(repoRoot);
   if (!postgres) {
@@ -334,21 +334,14 @@ async function loadCurrentUserMemberSession(
   }
   try {
     const rows = await postgres.client.query<CurrentUserMemberRow>(
-      companyId
-        ? `SELECT member.company_id, member.id, member.display_name, member.role, profile.display_name AS account_display_name
+      `SELECT member.company_id, member.id, member.display_name, member.role, profile.display_name AS account_display_name
 FROM company_members member
 LEFT JOIN user_profiles profile ON profile.user_id = member.id
 WHERE member.id = $1
   AND member.company_id = $2
 ORDER BY member.company_id ASC
-LIMIT 1`
-        : `SELECT member.company_id, member.id, member.display_name, member.role, profile.display_name AS account_display_name
-FROM company_members member
-LEFT JOIN user_profiles profile ON profile.user_id = member.id
-WHERE member.id = $1
-ORDER BY member.company_id ASC
 LIMIT 1`,
-      companyId ? [session.userId, companyId] : [session.userId],
+      [session.userId, companyId],
     );
     const row = rows.rows[0];
     if (!row) {

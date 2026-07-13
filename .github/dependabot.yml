@@ -1,4 +1,5 @@
 version: 2
+# Routine groups stay reviewable; breaking majors are opened separately.
 updates:
   - package-ecosystem: npm
     directory: /

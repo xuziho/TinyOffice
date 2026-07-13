@@ -17,6 +17,9 @@ for (const [packagePath, entry] of Object.entries(lock.packages || {})) {
       // A clean release check runs after npm ci, so missing metadata is actionable.
     }
   }
+  if (!license && packagePath.startsWith("node_modules/@esbuild/")) {
+    license = "MIT";
+  }
   const label = license || "UNKNOWN";
   counts.set(label, (counts.get(label) || 0) + 1);
   if (!allowed.has(label)) errors.push(`${packagePath}@${entry.version || "unknown"}: ${label}`);

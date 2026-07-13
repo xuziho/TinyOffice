@@ -469,6 +469,7 @@ function createRuntimeServer(): Promise<SmokeServer> {
                 chatChannelId,
                 employeeId: targetEmployeeId,
                 displayName: "Nora Automation",
+                avatarSeed: "smoke-nora-automation",
                 role: "member",
                 hasRuntimeProfile: true,
                 joinedAt: startedAt,
@@ -549,6 +550,7 @@ function createRuntimeServer(): Promise<SmokeServer> {
             memberId: viewerMemberId,
             selector: { kind: "member", memberId: viewerMemberId },
             displayName: viewerMemberDisplayName,
+            avatarSeed: "smoke-xuziho",
             role: viewerMemberRole,
             hasRuntimeProfile: false,
           },
@@ -559,6 +561,7 @@ function createRuntimeServer(): Promise<SmokeServer> {
             memberId: targetEmployeeId,
             selector: { kind: "member", memberId: targetEmployeeId },
             displayName: "Nora Automation",
+            avatarSeed: "smoke-nora-automation",
             role: "automation",
             summary: "Runtime capability: resident",
             hasRuntimeProfile: true,
@@ -1031,6 +1034,7 @@ async function createCdpPage(debuggingPort: number, url: string): Promise<CdpCli
 
 class CdpClient {
   private nextId = 1;
+  private runtimeDiagnostics: string[] = [];
   private pending = new Map<number, {
     resolve(value: CdpResponse): void;
     reject(error: Error): void;
@@ -1088,9 +1092,16 @@ class CdpClient {
     await Promise.race([closed, delay(1_000)]);
   }
 
+  diagnostics(): string {
+    return this.runtimeDiagnostics.slice(-10).join("\n");
+  }
+
   private onMessage(data: string): void {
-    const message = JSON.parse(data) as CdpResponse;
+    const message = JSON.parse(data) as CdpResponse & { method?: string; params?: Record<string, unknown> };
     if (!message.id) {
+      if (message.method === "Runtime.exceptionThrown" || message.method === "Runtime.consoleAPICalled") {
+        this.runtimeDiagnostics.push(`${message.method}: ${JSON.stringify(message.params)}`);
+      }
       return;
     }
     const pending = this.pending.get(message.id);
@@ -1113,7 +1124,7 @@ async function waitForPageText(cdp: CdpClient, text: string, timeoutMs = 10_000)
   }
   const body = await cdp.evaluate<string>("document.body.innerText");
   const href = await cdp.evaluate<string>("window.location.href");
-  throw new Error(`Timed out waiting for page text ${JSON.stringify(text)} at ${href}. Body was:\n${body}`);
+  throw new Error(`Timed out waiting for page text ${JSON.stringify(text)} at ${href}. Body was:\n${body}\nRuntime diagnostics:\n${cdp.diagnostics()}`);
 }
 
 async function assertPageTextAbsent(cdp: CdpClient, text: string): Promise<void> {

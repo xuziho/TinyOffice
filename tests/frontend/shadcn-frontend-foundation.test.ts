@@ -18,6 +18,7 @@ async function readText(relativePath: string): Promise<string> {
 async function readChatProductSource(): Promise<string> {
   const productFiles = [
     "apps/tinyoffice-web-shadcn/src/app/App.tsx",
+    "apps/tinyoffice-web-shadcn/src/chat/ChatWorkspaceRoute.tsx",
     "apps/tinyoffice-web-shadcn/src/chat/WorkspaceSidebar.tsx",
     "apps/tinyoffice-web-shadcn/src/chat/CenterWorkspace.tsx",
     "apps/tinyoffice-web-shadcn/src/chat/DraftEntryPanel.tsx",
@@ -136,10 +137,11 @@ test("shadcn frontend keeps theme tokens and horizontal workspace panels wired",
 
 test("shadcn chat shell prevents message content from pushing panels off screen", async () => {
   const appSource = await readText("apps/tinyoffice-web-shadcn/src/app/App.tsx");
+  const chatRouteSource = await readText("apps/tinyoffice-web-shadcn/src/chat/ChatWorkspaceRoute.tsx");
   const productSource = await readChatProductSource();
 
   assert.match(appSource, /<main[^>]*overflow-hidden/, "app shell must prevent page-level horizontal overflow");
-  assert.match(appSource, /<div[^>]*className="min-w-0 overflow-hidden"/, "workspace panels must allow children to shrink");
+  assert.match(chatRouteSource, /<div[^>]*className="min-w-0 overflow-hidden"/, "workspace panels must allow children to shrink");
   assert.match(productSource, /<MessageScrollerViewport[^>]*overflow-x-hidden/, "message viewport must not create a horizontal page scroll");
   assert.match(productSource, /\[overflow-wrap:anywhere\]/, "message bubbles must break long paths and unspaced text");
 });
@@ -156,7 +158,7 @@ test("shadcn chat shell uses stable grid columns instead of resizable pixel pane
 });
 
 test("shadcn chat shell uses a fixed object rail, center workspace, and context rail", async () => {
-  const appSource = await readText("apps/tinyoffice-web-shadcn/src/app/App.tsx");
+  const chatRouteSource = await readText("apps/tinyoffice-web-shadcn/src/chat/ChatWorkspaceRoute.tsx");
   const productSource = await readChatProductSource();
 
   assert.match(productSource, /SidebarProvider/);
@@ -171,16 +173,17 @@ test("shadcn chat shell uses a fixed object rail, center workspace, and context 
   assert.doesNotMatch(productSource, /RefreshCwIcon/);
   assert.doesNotMatch(productSource, />\{status\}<\/Badge>/);
   assert.match(productSource, /Direct messages/);
-  assert.match(appSource, /<CenterWorkspace/);
+  assert.match(chatRouteSource, /<CenterWorkspace/);
   assert.match(productSource, /onBackToList/);
   assert.match(productSource, /<EntryListPanel[^>]*onSelectEntry/);
   assert.match(productSource, /<MessagePanel[^>]*onBackToList/);
   assert.match(productSource, /Back to list/);
-  assert.equal((appSource.match(/className="min-w-0 overflow-hidden"/g) ?? []).length >= 3, true);
+  assert.equal((chatRouteSource.match(/className="min-w-0 overflow-hidden"/g) ?? []).length >= 3, true);
 });
 
 test("shadcn chat product composition lives outside the app orchestrator", async () => {
   const appSource = await readText("apps/tinyoffice-web-shadcn/src/app/App.tsx");
+  const chatRouteSource = await readText("apps/tinyoffice-web-shadcn/src/chat/ChatWorkspaceRoute.tsx");
   const productFiles = [
     "apps/tinyoffice-web-shadcn/src/chat/WorkspaceSidebar.tsx",
     "apps/tinyoffice-web-shadcn/src/chat/CenterWorkspace.tsx",
@@ -194,9 +197,10 @@ test("shadcn chat product composition lives outside the app orchestrator", async
     assert.equal(existsSync(path.join(repoRoot, productFile)), true, `${productFile} must exist`);
   }
 
-  assert.match(appSource, /from "@\/chat\/WorkspaceSidebar"/);
-  assert.match(appSource, /from "@\/chat\/CenterWorkspace"/);
-  assert.match(appSource, /from "@\/chat\/ContextPanel"/);
+  assert.match(appSource, /import\("@\/chat\/ChatWorkspaceRoute"\)/);
+  assert.match(chatRouteSource, /from "@\/chat\/WorkspaceSidebar"/);
+  assert.match(chatRouteSource, /from "@\/chat\/CenterWorkspace"/);
+  assert.match(chatRouteSource, /from "@\/chat\/ContextPanel"/);
   assert.doesNotMatch(appSource, /function WorkspaceSidebar/);
   assert.doesNotMatch(appSource, /function EntryListPanel/);
   assert.doesNotMatch(appSource, /function MessagePanel/);
@@ -235,7 +239,7 @@ test("shadcn app shell exposes Tasks as a first-class operations surface", async
   const contractSource = await readText("src/api/contracts/tinyoffice-frontend-api-contracts.ts");
 
   assert.match(navigationSource, /type AppView = [^;]*"tasks"/);
-  assert.match(appSource, /from "@\/tasks\/TasksPage"/);
+  assert.match(appSource, /import\("@\/tasks\/TasksPage"\)/);
   assert.match(appSource, /label="Tasks"/);
   assert.match(navigationSource, /return "\/tasks"/);
   assert.match(tasksPageSource, /TaskViewTabs/);
@@ -259,8 +263,8 @@ test("shadcn app shell keeps alerts on Chat and Tasks instead of a standalone At
   assert.equal(existsSync(path.join(appRoot, "src", "attention", "AttentionTray.tsx")), false);
   assert.equal(existsSync(path.join(appRoot, "src", "api", "attentionClient.ts")), false);
   assert.equal(existsSync(path.join(repoRoot, "src", "attention", "attention-projection.ts")), false);
-  assert.match(appSource, /indicator=\{workspace\.navigationAlerts\.chat\}/);
-  assert.match(appSource, /indicator=\{workspace\.navigationAlerts\.tasks\}/);
+  assert.match(appSource, /indicator=\{navigationAlerts\.chat\}/);
+  assert.match(appSource, /indicator=\{navigationAlerts\.tasks\}/);
   assert.match(appSource, /aria-label=\{accessibleLabel\}/);
   assert.match(alertSource, /entry\.unreadCount > 0 \|\| entry\.mentionCount > 0/);
   assert.match(alertSource, /request\.status === "pending"/);
@@ -278,7 +282,7 @@ test("shadcn app shell exposes Employees as the runtime employee configuration s
   const employeesClientSource = await readText("apps/tinyoffice-web-shadcn/src/api/employeesClient.ts");
   const contractSource = await readText("src/api/contracts/tinyoffice-frontend-api-contracts.ts");
 
-  assert.match(appSource, /from "@\/employees\/EmployeesPage"/);
+  assert.match(appSource, /import\("@\/employees\/EmployeesPage"\)/);
   assert.match(appSource, />Employees<\/DropdownMenuItem>/);
   const primaryRail = appSource.match(/<div className="flex flex-col items-center gap-2">[\s\S]*?<\/div>\s*<\/div>\s*<div className="flex flex-col items-center gap-2">/)?.[0] ?? "";
   assert.doesNotMatch(primaryRail, /label="Employees"/);
@@ -315,7 +319,7 @@ test("shadcn app shell exposes Prompt as the company Prompt Policy surface", asy
   const promptClientSource = await readText("apps/tinyoffice-web-shadcn/src/api/promptPolicyClient.ts");
   const contractSource = await readText("src/api/contracts/tinyoffice-frontend-api-contracts.ts");
 
-  assert.match(appSource, /from "@\/prompt\/PromptPolicyPage"/);
+  assert.match(appSource, /import\("@\/prompt\/PromptPolicyPage"\)/);
   assert.match(appSource, /onSelect\(\("prompt"\)\)|onSelect\("prompt"\)/);
   assert.match(appSource, /activeView === "prompt"/);
   assert.match(navigationSource, /return "\/prompt"/);
@@ -345,8 +349,8 @@ test("shadcn app shell keeps one permanent Developer Tools menu with read-only C
   const doctorClientSource = await readText("apps/tinyoffice-web-shadcn/src/api/doctorClient.ts");
   const contractSource = await readText("src/api/contracts/tinyoffice-frontend-api-contracts.ts");
 
-  assert.match(appSource, /from "@\/access\/AccessPage"/);
-  assert.match(appSource, /from "@\/doctor\/DoctorPage"/);
+  assert.match(appSource, /import\("@\/access\/AccessPage"\)/);
+  assert.match(appSource, /import\("@\/doctor\/DoctorPage"\)/);
   assert.doesNotMatch(appSource, /useDeveloperModePreference|developerMode\.enabled/);
   assert.match(appSource, /onSelect\(\("access"\)\)|onSelect\("access"\)/);
   assert.match(appSource, /onSelect\(\("doctor"\)\)|onSelect\("doctor"\)/);
@@ -386,7 +390,7 @@ test("shadcn Settings owns account profile without a developer mode switch", asy
   const settingsPageSource = await readText("apps/tinyoffice-web-shadcn/src/settings/SettingsPage.tsx");
   const navigationSource = await readText("apps/tinyoffice-web-shadcn/src/app/navigationRoutes.ts");
 
-  assert.match(appSource, /from "@\/settings\/SettingsPage"/);
+  assert.match(appSource, /import\("@\/settings\/SettingsPage"\)/);
   assert.match(appSource, /label="Settings"/);
   assert.match(appSource, /activeView === "settings"/);
   assert.doesNotMatch(appSource, /developerMode=/);
@@ -510,12 +514,15 @@ test("shadcn Company deletion requires a destructive confirmation dialog after t
 
 test("shadcn chat data orchestration lives in a chat workspace hook", async () => {
   const appSource = await readText("apps/tinyoffice-web-shadcn/src/app/App.tsx");
+  const chatRouteSource = await readText("apps/tinyoffice-web-shadcn/src/chat/ChatWorkspaceRoute.tsx");
   const hookPath = "apps/tinyoffice-web-shadcn/src/chat/useChatWorkspace.ts";
 
   assert.equal(existsSync(path.join(repoRoot, hookPath)), true, `${hookPath} must exist`);
-  assert.match(appSource, /from "@\/chat\/useChatWorkspace"/);
-  assert.match(appSource, /useChatWorkspace\(/);
-  assert.doesNotMatch(appSource, /getCurrentSession/);
+  assert.match(appSource, /import\("@\/chat\/ChatWorkspaceRoute"\)/);
+  assert.doesNotMatch(appSource, /useChatWorkspace\(/);
+  assert.match(chatRouteSource, /from "@\/chat\/useChatWorkspace"/);
+  assert.match(chatRouteSource, /useChatWorkspace\(/);
+  assert.match(appSource, /getCurrentSession/);
   assert.doesNotMatch(appSource, /getChatProjection/);
   assert.doesNotMatch(appSource, /getCompanyDirectory/);
   assert.doesNotMatch(appSource, /listChatRoomMessages/);
@@ -525,6 +532,22 @@ test("shadcn chat data orchestration lives in a chat workspace hook", async () =
   assert.doesNotMatch(appSource, /function createEntryFromSelectedContainer/);
   assert.doesNotMatch(appSource, /function sendReplyToSelectedRoom/);
   assert.doesNotMatch(appSource, /function requiredTinyOfficeValue/);
+});
+
+test("frontend routes split product pages and isolate Chat lifecycle from the app shell", async () => {
+  const appSource = await readText("apps/tinyoffice-web-shadcn/src/app/App.tsx");
+  const chatRouteSource = await readText("apps/tinyoffice-web-shadcn/src/chat/ChatWorkspaceRoute.tsx");
+  const viteSource = await readText("apps/tinyoffice-web-shadcn/vite.config.ts");
+  const packageJson = await readJson<{ scripts?: Record<string, string> }>("apps/tinyoffice-web-shadcn/package.json");
+
+  assert.match(appSource, /lazy\(\(\) => import\("@\/tasks\/TasksPage"\)/);
+  assert.match(appSource, /lazy\(\(\) => import\("@\/settings\/SettingsPage"\)/);
+  assert.match(appSource, /lazy\(\(\) => import\("@\/chat\/ChatWorkspaceRoute"\)/);
+  assert.match(appSource, /<Suspense fallback=\{<RouteLoadingFallback \/>\}>/);
+  assert.doesNotMatch(appSource, /useChatWorkspace\(/);
+  assert.match(chatRouteSource, /useChatWorkspace\(\{ requestedRoomId: focus\.roomId, currentSession, sessionOwnedByParent: true \}\)/);
+  assert.match(viteSource, /manifest: true/);
+  assert.match(packageJson.scripts?.build ?? "", /check-bundle-size\.mjs/);
 });
 
 test("shadcn frontend uses TanStack Query as the server-state foundation", async () => {
@@ -1004,13 +1027,13 @@ test("shadcn context and directory surfaces avoid frontend fallback guesses", as
 });
 
 test("shadcn chat thread header hides internal room identifiers", async () => {
-  const appSource = await readText("apps/tinyoffice-web-shadcn/src/app/App.tsx");
+  const chatRouteSource = await readText("apps/tinyoffice-web-shadcn/src/chat/ChatWorkspaceRoute.tsx");
   const productSource = await readChatProductSource();
 
   assert.doesNotMatch(productSource, /TinyOffice - \$\{model\.selectedRoomId\}/);
   assert.doesNotMatch(productSource, /Room \$\{model\.selectedRoomId\}/);
   assert.doesNotMatch(productSource, /conversation-/);
-  assert.match(appSource, /document\.title = browserTitleFor\(model\)/);
+  assert.match(chatRouteSource, /document\.title = browserTitleFor\(model\)/);
   assert.match(productSource, /browserTitleFor/);
   assert.match(productSource, /threadSubtitleFor/);
   assert.match(productSource, /threadTitleFor/);

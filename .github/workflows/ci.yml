@@ -31,9 +31,7 @@ jobs:
           cache: pip
           cache-dependency-path: docs/requirements.txt
       - name: Install dependencies
-        run: |
-          npm ci --ignore-scripts
-          npm ci --ignore-scripts --prefix apps/tinyoffice-web-shadcn
+        run: npm run setup:ci
       - name: Type check
         run: npm run check
       - name: Verify dependency licenses
@@ -75,8 +73,6 @@ jobs:
             package-lock.json
             apps/tinyoffice-web-shadcn/package-lock.json
       - name: Install dependencies
-        run: |
-          npm ci --ignore-scripts
-          npm ci --ignore-scripts --prefix apps/tinyoffice-web-shadcn
+        run: npm run setup:ci
       - name: Run complete test suite
         run: npm test

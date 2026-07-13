@@ -1,6 +1,6 @@
 # Public release code readiness
 
-Audit date: 2026-07-13.
+Audit date: 2026-07-13. Updated after canonical public repository creation and clean-install acceptance.
 
 ## Result
 
@@ -40,6 +40,12 @@ Follow-up splits should be issue-driven and preserve a stable import surface. Th
 - no deletion of legitimate fallback behavior or negative legacy-contract tests;
 - no parallel private/public product implementations.
 
-## Final repository-creation gate
+## Repository-creation gate result
 
-Run the full checks, build an exported snapshot, run `npm ci` and the checks from that extracted snapshot, scan it for secrets, then create the new public repository from one clean initial commit. The private incubation repository remains private until the public clone is verified.
+Passed. The verified snapshot became the canonical public repository at `https://github.com/xuziho/TinyOffice`; the private incubation repository is archived and remains private.
+
+The first public Alpha clean-install pass then cloned that canonical repository into a new directory, installed under supported Node.js, initialized an isolated PostgreSQL database, completed first-user Company creation, verified the owner and HR identities, and verified current-Company persistence after restart. That pass found and closed one installation gap: root `npm ci` did not install the standalone frontend dependencies. The canonical `npm run setup` command now installs both dependency trees.
+
+## Public Alpha boundary
+
+The first public Alpha is an evaluation release, not a production-ready deployment. It includes the current collaboration, runtime, Work, configuration, evidence, and local preview surfaces. Production authentication and deployment hardening remain outside this release and must not be implied by the tag or GitHub release notes.

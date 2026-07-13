@@ -1,7 +1,7 @@
 {
   "name": "tinyoffice",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.0-alpha.1",
   "description": "TinyOffice daemon-first member collaboration runtime",
   "type": "module",
   "engines": {
@@ -22,6 +22,8 @@
     }
   },
   "scripts": {
+    "setup": "npm ci && npm ci --prefix apps/tinyoffice-web-shadcn",
+    "setup:ci": "npm ci --ignore-scripts && npm ci --ignore-scripts --prefix apps/tinyoffice-web-shadcn",
     "check": "tsc --noEmit",
     "test": "npm run test:runtime && npm run test:web",
     "test:runtime": "node --import tsx --import ./tests/setup-runtime-test-env.ts --test --test-concurrency=1 tests/**/*.test.ts",

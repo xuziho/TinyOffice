@@ -2,9 +2,9 @@
 
 ## Decision
 
-TinyOffice will not make the existing private incubation repository public in place. The first public repository will be created from a verified clean snapshot of the current product source.
+TinyOffice did not make the private incubation repository public in place. The canonical public repository was created from a verified clean snapshot of the product source at `https://github.com/xuziho/TinyOffice`.
 
-After the transition:
+The completed boundary is:
 
 - the new public repository becomes the canonical development repository;
 - the current private repository remains a read-only incubation archive;
@@ -27,9 +27,9 @@ It excludes:
 
 Test fixtures may use fictional names, ids, paths, or credentials when they are clearly inert and required to verify behavior. They are not runtime defaults and must not be copied into production configuration.
 
-## Release gate
+## Completed repository creation gate
 
-Before creating the public repository:
+The public repository was created only after completing this gate:
 
 1. select and commit the root project license;
 2. run the normal type, test, frontend, and documentation checks;
@@ -42,7 +42,7 @@ Before creating the public repository:
 9. verify a clean clone can install, test, build docs, and start the local preview;
 10. archive the private repository and update all canonical links.
 
-Repository visibility must not change before this gate passes.
+The private incubation repository is archived and remains private. New code, Issues, Pull Requests, tags, and releases belong in the canonical public repository.
 
 ## License boundary
 

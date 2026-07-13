@@ -1,4 +1,5 @@
 version: 2
+# Routine groups stay reviewable; breaking majors are opened separately.
 updates:
   - package-ecosystem: npm
     directory: /
@@ -6,30 +7,35 @@ updates:
     groups:
       root-dependencies:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
   - package-ecosystem: npm
     directory: /apps/tinyoffice-web-shadcn
     schedule: { interval: weekly }
     groups:
       frontend-dependencies:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
   - package-ecosystem: npm
     directory: /packages/pi-context-harness
     schedule: { interval: weekly }
     groups:
       context-harness-dependencies:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
   - package-ecosystem: npm
     directory: /packages/pi-tool-guard
     schedule: { interval: weekly }
     groups:
       tool-guard-dependencies:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
   - package-ecosystem: npm
     directory: /packages/pi-web-tools
     schedule: { interval: weekly }
     groups:
       web-tools-dependencies:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }

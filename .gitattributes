@@ -1,0 +1,15 @@
+*.sh text eol=lf
+
+# `git archive` is the supported clean-snapshot boundary for the future public
+# repository. These files remain available in the private incubation history.
+/.agents export-ignore
+/.codex export-ignore
+/AGENTS.md export-ignore
+/apps/tinyoffice-web-shadcn/.agents export-ignore
+/artifacts export-ignore
+/design-qa.md export-ignore
+/docs/archive export-ignore
+/docs/superpowers export-ignore
+/prototypes export-ignore
+/qa export-ignore
+/visual-prototypes export-ignore

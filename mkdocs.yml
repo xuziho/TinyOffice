@@ -1,0 +1,151 @@
+﻿site_name: TinyOffice Product Architecture Manual
+site_description: Product architecture memory and development map for TinyOffice.
+site_url: ""
+repo_name: TinyOffice
+repo_url: ""
+
+theme:
+  name: material
+  language: zh
+  palette:
+    - scheme: slate
+      primary: black
+      accent: cyan
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+    - scheme: default
+      primary: blue grey
+      accent: cyan
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+  features:
+    - navigation.instant
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - toc.follow
+
+nav:
+  - "00 Start":
+      - Product Manual: index.md
+      - Feature Map: product/feature-map.md
+      - Product Models: product/product-models.md
+      - Frontend / Backend Capability Map: product/frontend-backend-capability-map.md
+      - Frontend UI Foundation: product/frontend-ui-foundation.md
+      - Modular Monolith Direction: product/modular-monolith-architecture.md
+      - Open-source Distribution: product/open-source-distribution.md
+      - Glossary: product/glossary.md
+      - Dashboard: status/dashboard.md
+      - Frontend Consistency Audit: status/frontend-consistency-audit.md
+      - Feature Inventory: status/feature-inventory.md
+  - "01 Collaboration":
+      - Chat: product/chat.md
+      - TinyOffice Chat Foundation Architecture: product/tinyoffice-chat-foundation-architecture.md
+      - Topic / Handoff: product/topic-handoff.md
+      - Approval: product/approval.md
+      - Process Trace: product/process-trace.md
+      - Realtime Intake: product/realtime-intake.md
+  - "02 Work":
+      - Work System: product/work-system.md
+      - Tasks: product/tasks.md
+  - "03 Members":
+      - Member Identity Model: product/member-identity-model.md
+      - Employee Config: product/employee-config.md
+      - Employee Status: product/employee-status.md
+      - Employees and Sessions: product/employees-and-sessions.md
+      - Evidence Query CLI: product/evidence-query-cli.md
+      - Sessions: product/sessions.md
+      - Skills / Runbooks: product/skills-runbooks.md
+      - Console: product/console.md
+      - Update Center: product/update-center.md
+  - "04 Runtime Policy":
+      - Prompt Policy: product/prompt-policy.md
+      - Access: product/tool-safety.md
+      - Company Config: product/company-config.md
+      - PI Baseline Carryover: pi-baseline-carryover.md
+  - "05 Company Data":
+      - Company Storage Boundary: company-storage-boundary.md
+  - "06 Technical":
+      - Tasks: technical/tasks.md
+      - Conversation / Message Contract: technical/conversation-message-contract.md
+      - Chat Entry Contract: technical/chat-entry-contract.md
+      - TinyOffice Realtime WebSocket: technical/tinyoffice-realtime.md
+      - TinyOffice Web: technical/tinyoffice-web.md
+      - Standalone Frontend: technical/standalone-frontend.md
+      - TinyOffice UI Style Brief: product/ui-style-brief.md
+      - Realtime Intake: technical/realtime-intake.md
+      - Topic / Handoff: technical/topic-handoff.md
+      - Approval / Process Trace: technical/approval-trace.md
+      - Work Data Model: technical/work-data-model.md
+      - Work Runtime Flow: technical/work-runtime-flow.md
+      - Work Actions: technical/work-actions.md
+      - Employee Config: technical/employee-config.md
+      - Employee Status: technical/employee-status.md
+      - Evidence Query CLI: technical/evidence-query-cli.md
+      - Sessions: technical/sessions.md
+      - Runtime Memory: technical/runtime-memory.md
+      - Prompt Policy: technical/prompt-policy.md
+      - Access: technical/tool-safety.md
+      - Company API Guide: product/company-api-guide.md
+  - "07 Runbooks":
+      - Runbook: developer/runbook.md
+      - Source Entry Map: developer/source-entry-map.md
+      - Operations Runbooks:
+          - Verification: developer/runbooks/verification.md
+          - Main Smoke: developer/runbooks/main-smoke.md
+          - Company-Scoped Smoke Matrix: developer/runbooks/company-scoped-smoke-matrix.md
+          - Cleanup: developer/runbooks/cleanup.md
+          - Deletion / Retirement: developer/runbooks/deletion-retirement.md
+          - Release Boundary: developer/runbooks/release-boundary.md
+      - Development Workflow: developer/development-workflow.md
+      - Foundation Development Principles: developer/foundation-development-principles.md
+      - UI Performance Smoke: developer/ui-performance-smoke.md
+      - Dogfood Runbook: developer/dogfood-runbook.md
+      - Migration and Restore: product/migration-and-restore.md
+      - Backup and Restore: product/backup-and-restore.md
+      - Design System: design-system.md
+      - AI Assisted UI Design Principles: ai-assisted-ui-design-principles.md
+  - "08 Status":
+      - System Map: status/system-map.md
+      - Source Architecture Map: status/source-architecture-map.md
+      - Repository Boundaries: status/repository-boundaries.md
+      - Product Code Alignment: status/product-code-alignment.md
+      - Product Model and Source Alignment: status/product-model-and-source-alignment.md
+      - Legacy Residue Audit: status/legacy-residue-audit.md
+      - Product Closure Audit: status/product-closure-audit.md
+      - Product Acceptance 2026-07-13: status/product-acceptance-20260713.md
+      - Public Release Code Readiness: status/public-release-code-readiness.md
+      - Intake Event Contract: intake-event-contract.md
+      - Collaboration Action Guidance: collaboration-action-guidance.md
+      - WorkTask / WorkSchedule / WorkRun Data Model: product/work-data-model.md
+      - Tasks Visibility: product/tasks-and-visibility.md
+      - WorkScheduler / WorkDispatcher / WorkExecution: product/work-runtime-flow.md
+      - Work Actions and Approvals: product/work-actions-and-approvals.md
+      - Agent Reference Repositories: agent-reference-repositories.md
+      - Runtime Boundary Baseline: developer/runtime-boundary-baseline.md
+  - "09 Manual Maintenance":
+      - Product Manual Maintenance: developer/product-manual-maintenance.md
+      - Product Manual Blueprint: developer/product-manual-blueprint.md
+      - Product Manual Home Decision: decisions/2026-06-11-product-manual-home.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+extra_css:
+  - stylesheets/extra.css
+

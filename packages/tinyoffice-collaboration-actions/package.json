@@ -1,0 +1,27 @@
+{
+  "name": "tinyoffice-collaboration-actions",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Collaboration action surface Pi package for TinyOffice",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "tinyoffice",
+    "collaboration",
+    "actions"
+  ],
+  "type": "module",
+  "scripts": {
+    "build": "echo 'No build step required'",
+    "check": "echo 'No local checks defined yet'"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
+  }
+}

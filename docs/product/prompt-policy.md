@@ -1,0 +1,47 @@
+# Prompt Policy
+
+Prompt Policy is the shared prompt template editor for company-level AI call text. It lets an operator edit stable prompt text that TinyOffice uses when assembling model calls.
+
+Scene loading is a runtime contract, not a normal operator workflow. Runtime maps the core scenes to their expected blocks internally: DM loads `dm-scene`, Channel loads `channel-scene`, Intake loads `intake-event`, and WorkRun loads `workrun-scene`.
+
+## Use
+
+- Edit and save the Base System Prompt and Runtime Prompt Template.
+- Edit and save the four runtime scene Prompt Blocks: Channel, DM, Intake, and WorkRun.
+- Reset any editable template or scene block to the current built-in default text.
+- See read-only `Loaded by` metadata when a scene block is part of the runtime scene contract.
+- Provide Sessions with block id, content, and hash evidence for the actual runtime prompt.
+
+Runtime values are represented as slots such as `{employeeId}`, `{displayName}`, `{role}`, `{sceneType}`, `{promptBlocks}`, `{contextBlocks}`, and `{userMessage}`. Prompt Policy does not manage employee-specific `AGENTS.md`, one-turn runtime context values, Access rules for sensitive resources, tool availability, or loaded skills.
+
+## Current Structure
+
+| Layer | Content |
+| --- | --- |
+| System Prompt | Member runtime identity, TinyOffice work boundary, core behavior, and Access boundary. |
+| Employee context | Employee-local `AGENTS.md`, `CLAUDE.md`, and related context loaded by PI resource paths. |
+| Runtime Prompt Template | Slot-based wrapper for scene, Prompt Policy blocks, context blocks, and current user message. |
+| Scene Prompt | Runtime-selected Prompt Blocks for DM, Channel, Intake, or WorkRun. Scene prompts also contain the editable collaboration and completion instructions for that scene. |
+| Runtime Context | Explicit runtime-provided context blocks. Topic turns include handoff candidates, Topic summary, and bounded recent raw messages. WorkRun turns include the WorkRun package. DM turns do not inject requester, shell paths, raw room history, or reachable participants as prompt context. |
+| Current Message | Current visible user message; placed late to reduce prompt-cache churn. |
+
+TinyOffice-owned Chat writes visible replies from normal assistant messages. Prompt Policy may edit scene-level collaboration instructions, but runtime still owns tool availability and code validation. Channel/Topic turns must call `handoff_topic_turn` exactly once, Intake turns must use `finish_intake_turn`, and WorkRun turns must use `finish_work_turn`; these tools are state actions, not visible message sources. Topic Runtime Context must give the model a `Handoff candidates` list that excludes the current turn owner and includes enough role/responsibility context to choose the next owner without presenting human-vs-AI product categories as collaboration rules. DM Runtime Context must stay empty unless an explicit future product contract adds a named context block.
+
+Prompt Policy is where shared company-level prompt template text belongs. Employee-specific responsibilities and personal guidance belong in Employee Config through employee-local instruction files. Access policy is where sensitive resource and dangerous command decisions belong.
+
+The shadcn Prompt Policy surface is available from the developer-mode `Developer tools` menu at `/prompt`. It exposes full-width editors for Foundation Prompts and Scene Prompt Blocks. Display names are system labels, so operators edit only prompt content. It does not expose a manual scene binding matrix, editable always/scenes workflow, mounted-block outcome panel, resource picker, Title field, or Advanced JSON binding editor. Other `AI Calls` sources such as `Employee Instructions`, live `Runtime Context`, `Tools`, and `Skills` are maintained by their own runtime surfaces or evidence views.
+
+## Data Entries
+
+| Type | Entry | Purpose |
+| --- | --- | --- |
+| shadcn app | Developer tools menu destination at `/prompt` | Current company-scoped Prompt Policy editor for foundation prompts and runtime scene blocks. |
+| Standalone API | `/api/companies/:companyId/prompt-policy` | Read the company-scoped Prompt Policy view model for the standalone frontend. |
+| Standalone API | `/api/companies/:companyId/prompt-policy/templates/:templateId` | Save Base System Prompt or Runtime Prompt Template content through the TinyOffice-owned company API. |
+| Standalone API | `/api/companies/:companyId/prompt-policy/templates/:templateId/reset` | Reset a foundation template through the TinyOffice-owned company API. |
+| Standalone API | `/api/companies/:companyId/prompt-policy/blocks/:blockPath` | Edit a scene Prompt Block through the TinyOffice-owned company API. |
+| Standalone API | `/api/companies/:companyId/prompt-policy/blocks/:blockPath/reset` | Reset a scene Prompt Block through the TinyOffice-owned company API. |
+
+## Storage
+
+Current Prompt Policy truth lives in PostgreSQL `prompt_policy_templates` and `prompt_policy_blocks`. The table can contain additional company reusable Prompt Blocks, but the ordinary Prompt Policy UI edits only the Foundation Prompts and the four runtime scene Prompt Blocks. Ordinary Prompt Policy UI does not expose arbitrary scene binding writes. Prompt source files are not runtime truth.

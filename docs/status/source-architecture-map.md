@@ -7,7 +7,8 @@ This page is a compact source map for current TinyOffice development.
 | Area | Source | Notes |
 | --- | --- | --- |
 | Shadcn frontend app | `apps/tinyoffice-web-shadcn` | Current documented frontend target. |
-| App shell / Chat surface | `apps/tinyoffice-web-shadcn/src/app/App.tsx` | Current shadcn Chat composition surface. |
+| App shell / route loading | `apps/tinyoffice-web-shadcn/src/app/App.tsx` | Persistent rail, session truth, navigation, and lazy route boundaries. |
+| Chat workbench route | `apps/tinyoffice-web-shadcn/src/chat/ChatWorkspaceRoute.tsx` | Mounts Chat queries and realtime only while the Chat route is active. |
 | Frontend API clients | `apps/tinyoffice-web-shadcn/src/api` | App-local HTTP boundary. |
 | Chat model assembly | `apps/tinyoffice-web-shadcn/src/chat/chatShellModel.ts` | Converts DTOs into Chat UI model. |
 | UI primitives | `apps/tinyoffice-web-shadcn/src/components/ui` | shadcn/approved registry primitives. |
@@ -30,7 +31,7 @@ The shadcn application now owns Chat, Tasks, Sessions, Employees, Company, Skill
 
 Native HTML Console renderers and the retired local primitive frontend are not current product destinations.
 
-The main remaining frontend foundation work is incremental accessibility, responsive behavior, and reducing composition size in frequently changed pages. It is not a second migration.
+The main remaining frontend foundation work is incremental accessibility, responsive behavior, and reducing composition size inside frequently changed pages. Route-level delivery and Chat lifecycle isolation are already enforced by the production bundle gate. It is not a second migration.
 
 ## Guardrails
 

@@ -71,7 +71,7 @@ export interface ChatWorkspaceController {
   navigationAlerts: NavigationAlertState;
 }
 
-export function useChatWorkspace(input: { requestedRoomId?: string } = {}): ChatWorkspaceController {
+export function useChatWorkspace(input: { requestedRoomId?: string; currentSession?: TinyOfficeCurrentSession; sessionOwnedByParent?: boolean } = {}): ChatWorkspaceController {
   const queryClient = useQueryClient();
   const [selectedSurface, setSelectedSurface] = useState<ChatShellSurface>();
   const [activitySelection, setActivitySelection] = useState<ActivitySelection | undefined>();
@@ -82,9 +82,10 @@ export function useChatWorkspace(input: { requestedRoomId?: string } = {}): Chat
   const sessionQuery = useQuery({
     queryKey: chatQueryKeys.currentSession(),
     queryFn: getCurrentSession,
+    enabled: !input.sessionOwnedByParent,
   });
 
-  const session = sessionQuery.data;
+  const session = input.currentSession ?? sessionQuery.data;
   const companyId = session?.companyId ?? session?.currentCompanyId;
   const viewer = useMemo(() => viewerFromSession(session), [session]);
   const hasCompanyScope = Boolean(companyId && !session?.needsInitialization);
@@ -510,20 +511,15 @@ export function useChatWorkspace(input: { requestedRoomId?: string } = {}): Chat
     setActivitySelection({ sourceMessageId });
   }, []);
 
+  const workspaceQueries = !input.sessionOwnedByParent
+    ? [sessionQuery, projectionQuery, directoryQuery, employeeRuntimeSummaryQuery, tasksQuery, messagesQuery, activityQuery, accessRequestsQuery]
+    : [projectionQuery, directoryQuery, employeeRuntimeSummaryQuery, tasksQuery, messagesQuery, activityQuery, accessRequestsQuery];
+
   return {
     model,
     currentSession: session,
-    status: statusFromQueries([
-      sessionQuery,
-      projectionQuery,
-      directoryQuery,
-      employeeRuntimeSummaryQuery,
-      tasksQuery,
-      messagesQuery,
-      activityQuery,
-      accessRequestsQuery,
-    ]),
-    error: errorFromQueries([sessionQuery, projectionQuery, directoryQuery, employeeRuntimeSummaryQuery, tasksQuery, messagesQuery, activityQuery, accessRequestsQuery]) ?? mutationError(markReadMutation.error) ?? mutationError(createEntryMutation.error) ?? mutationError(sendReplyMutation.error) ?? mutationError(updateTitleMutation.error) ?? mutationError(archiveEntryMutation.error) ?? mutationError(createChannelMutation.error) ?? mutationError(updateChannelDetailsMutation.error) ?? mutationError(addChannelMembersMutation.error) ?? mutationError(removeChannelMemberMutation.error) ?? mutationError(dissolveChannelMutation.error) ?? mutationError(cancelRunMutation.error) ?? mutationError(resolveAccessRequestMutation.error),
+    status: statusFromQueries(workspaceQueries),
+    error: errorFromQueries(workspaceQueries) ?? mutationError(markReadMutation.error) ?? mutationError(createEntryMutation.error) ?? mutationError(sendReplyMutation.error) ?? mutationError(updateTitleMutation.error) ?? mutationError(archiveEntryMutation.error) ?? mutationError(createChannelMutation.error) ?? mutationError(updateChannelDetailsMutation.error) ?? mutationError(addChannelMembersMutation.error) ?? mutationError(removeChannelMemberMutation.error) ?? mutationError(dissolveChannelMutation.error) ?? mutationError(cancelRunMutation.error) ?? mutationError(resolveAccessRequestMutation.error),
     loadWorkspace,
     selectSurface,
     selectEntry,

@@ -8,7 +8,7 @@ const sidebar = readFileSync(new URL("./WorkspaceSidebar.tsx", import.meta.url),
 const messagePanel = readFileSync(new URL("./MessagePanel.tsx", import.meta.url), "utf8");
 const contextPanel = readFileSync(new URL("./ContextPanel.tsx", import.meta.url), "utf8");
 const accessCards = readFileSync(new URL("../access/AccessRequestCards.tsx", import.meta.url), "utf8");
-const app = readFileSync(new URL("../app/App.tsx", import.meta.url), "utf8");
+const chatRoute = readFileSync(new URL("./ChatWorkspaceRoute.tsx", import.meta.url), "utf8");
 
 test("Chat density keeps compact controls and clean 44px stream avatars", () => {
   assert.match(css, /\.tiny-soft-retro-chat \.tiny-message-row \{[\s\S]*?margin-block: 14px;\s*\}/);
@@ -51,7 +51,7 @@ test("Channel marks and access approvals use the simplified product treatment", 
 });
 
 test("Chat uses a responsive Context column and conventional back-action order", () => {
-  assert.match(app, /tiny-chat-workbench tiny-soft-retro-chat/);
+  assert.match(chatRoute, /tiny-chat-workbench tiny-soft-retro-chat/);
   assert.match(css, /grid-template-columns: 274px minmax\(0, 1fr\) clamp\(248px, 22vw, 320px\);/);
   assert.match(messagePanel, /<header[\s\S]*?aria-label="Back to list"[\s\S]*?tiny-room-title/);
 });

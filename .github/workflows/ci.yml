@@ -17,15 +17,15 @@ jobs:
     name: Quality and builds
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
         with:
           node-version: 22.23.1
           cache: npm
           cache-dependency-path: |
             package-lock.json
             apps/tinyoffice-web-shadcn/package-lock.json
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           cache: pip
@@ -64,8 +64,8 @@ jobs:
       TINYOFFICE_TEST_DATABASE_URL: postgresql://tinyoffice:tinyoffice_dev@127.0.0.1:5432/tinyoffice_test?sslmode=disable
       TINYOFFICE_BLANK_TEST_DATABASE_URL: postgresql://tinyoffice:tinyoffice_dev@127.0.0.1:5432/tinyoffice_blank_test?sslmode=disable
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
         with:
           node-version: 22.23.1
           cache: npm

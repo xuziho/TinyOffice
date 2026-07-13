@@ -12,26 +12,11 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useUnsavedChangesNavigation } from "@/config/unsavedChangesContext";
-import { AccessPage } from "@/access/AccessPage";
-import { CapabilitiesPage } from "@/capabilities/CapabilitiesPage";
-import { CenterWorkspace } from "@/chat/CenterWorkspace";
 import { CompanyLifecyclePage } from "./CompanyLifecyclePage";
-import { ContextPanel } from "@/chat/ContextPanel";
-import { DoctorPage } from "@/doctor/DoctorPage";
-import { BackupPage } from "@/backup/BackupPage";
-import { EmployeesPage } from "@/employees/EmployeesPage";
-import { IntegrationsPage } from "@/integrations/IntegrationsPage";
-import { PromptPolicyPage } from "@/prompt/PromptPolicyPage";
-import { SessionsPage, type SessionChatReturnTarget, type SessionFocus } from "@/sessions/SessionsPage";
-import { SettingsPage } from "@/settings/SettingsPage";
-import { CompanySkillsPage } from "@/skills/CompanySkillsPage";
-import { SystemAiPage } from "@/system-ai/SystemAiPage";
-import { TasksPage } from "@/tasks/TasksPage";
-import { WorkspaceSidebar } from "@/chat/WorkspaceSidebar";
+import type { SessionChatReturnTarget, SessionFocus } from "@/sessions/SessionsPage";
 import { chatQueryKeys } from "@/chat/chatQueryKeys";
-import { chatRouteFocusFromSearch, chatRouteForSelectedRoom, type ChatRouteFocus } from "@/chat/chatRouteSync";
-import { browserTitleFor } from "@/chat/chatUiUtils";
-import { useChatWorkspace } from "@/chat/useChatWorkspace";
+import { chatRouteFocusFromSearch, type ChatRouteFocus } from "@/chat/chatRouteSync";
+import type { NavigationAlertState } from "@/chat/navigationAlertState";
 import {
   appViewHref,
   navigationHref,
@@ -45,11 +30,25 @@ import {
 } from "@/app/navigationRoutes";
 import { listCompanies } from "@/api/companyClient";
 import { getCompanyBranding } from "@/api/brandingClient";
-import { switchCurrentCompany } from "@/api/currentSessionClient";
+import { getCurrentSession, switchCurrentCompany } from "@/api/currentSessionClient";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Archive, BotIcon, BriefcaseBusinessIcon, Boxes, FileTextIcon, ListChecks, MessageCircle, PlugZapIcon, ScrollText, SettingsIcon, ShieldCheck, Stethoscope, UsersRound, Wrench } from "lucide-react";
-import { useEffect, useRef, useState, type MouseEvent, type ReactElement } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type MouseEvent, type ReactElement } from "react";
 import type { CompaniesAdminViewModel, TinyOfficeCurrentSession } from "tinyoffice/frontend-api-contracts";
+
+const AccessPage = lazy(() => import("@/access/AccessPage").then((module) => ({ default: module.AccessPage })));
+const BackupPage = lazy(() => import("@/backup/BackupPage").then((module) => ({ default: module.BackupPage })));
+const CapabilitiesPage = lazy(() => import("@/capabilities/CapabilitiesPage").then((module) => ({ default: module.CapabilitiesPage })));
+const ChatWorkspaceRoute = lazy(() => import("@/chat/ChatWorkspaceRoute").then((module) => ({ default: module.ChatWorkspaceRoute })));
+const DoctorPage = lazy(() => import("@/doctor/DoctorPage").then((module) => ({ default: module.DoctorPage })));
+const EmployeesPage = lazy(() => import("@/employees/EmployeesPage").then((module) => ({ default: module.EmployeesPage })));
+const IntegrationsPage = lazy(() => import("@/integrations/IntegrationsPage").then((module) => ({ default: module.IntegrationsPage })));
+const PromptPolicyPage = lazy(() => import("@/prompt/PromptPolicyPage").then((module) => ({ default: module.PromptPolicyPage })));
+const SessionsPage = lazy(() => import("@/sessions/SessionsPage").then((module) => ({ default: module.SessionsPage })));
+const SettingsPage = lazy(() => import("@/settings/SettingsPage").then((module) => ({ default: module.SettingsPage })));
+const CompanySkillsPage = lazy(() => import("@/skills/CompanySkillsPage").then((module) => ({ default: module.CompanySkillsPage })));
+const SystemAiPage = lazy(() => import("@/system-ai/SystemAiPage").then((module) => ({ default: module.SystemAiPage })));
+const TasksPage = lazy(() => import("@/tasks/TasksPage").then((module) => ({ default: module.TasksPage })));
 
 export function App(): ReactElement {
   const { hasUnsavedChanges, requestTransition } = useUnsavedChangesNavigation();
@@ -57,20 +56,21 @@ export function App(): ReactElement {
   const queryClient = useQueryClient();
   const [activeView, setActiveView] = useState<AppView>(() => initialViewFromLocation());
   const [chatFocus, setChatFocus] = useState<ChatRouteFocus>(() => chatFocusFromLocation());
-  const workspace = useChatWorkspace({ requestedRoomId: activeView === "chat" ? chatFocus.roomId : undefined });
-  const { model } = workspace;
+  const sessionQuery = useQuery({ queryKey: chatQueryKeys.currentSession(), queryFn: getCurrentSession });
+  const currentSession = sessionQuery.data;
+  const [navigationAlerts, setNavigationAlerts] = useState<NavigationAlertState>({ chat: false, tasks: false });
   const [sessionFocus, setSessionFocus] = useState<SessionFocus>(() => sessionFocusFromLocation());
   const [taskFocus, setTaskFocus] = useState(() => taskFocusFromLocation());
   const [returnContext, setReturnContext] = useState<NavigationReturnContext | undefined>(() =>
     navigationReturnContextFromState(window.history.state)
   );
-  const needsInitialization = Boolean(workspace.currentSession?.needsInitialization);
+  const needsInitialization = Boolean(currentSession?.needsInitialization);
   const companiesQuery = useQuery({
     queryKey: chatQueryKeys.companies(),
     queryFn: listCompanies,
   });
-  const currentCompanyName = currentCompanyDisplayName(workspace.currentSession, companiesQuery.data);
-  const currentCompanyId = workspace.currentSession?.companyId ?? workspace.currentSession?.currentCompanyId ?? "";
+  const currentCompanyName = currentCompanyDisplayName(currentSession, companiesQuery.data);
+  const currentCompanyId = currentSession?.companyId ?? currentSession?.currentCompanyId ?? "";
   const brandingQuery = useQuery({ queryKey: ["company-branding", currentCompanyId], enabled: Boolean(currentCompanyId), queryFn: () => getCompanyBranding({ companyId: currentCompanyId }) });
   const switchCompanyMutation = useMutation({
     mutationFn: switchCurrentCompany,
@@ -80,28 +80,9 @@ export function App(): ReactElement {
     },
   });
 
-  useEffect(() => {
-    document.title = browserTitleFor(model);
-  }, [model]);
-
-  useEffect(() => {
-    if (activeView !== "chat") {
-      return;
-    }
-    const nextRoute = chatRouteForSelectedRoom({
-      selectedRoomId: model.selectedRoomId,
-      selectedContainerKind: model.selectedContainer?.kind,
-    });
-    if (!nextRoute) {
-      return;
-    }
-    if (model.selectedRoomId === chatFocus.roomId) {
-      return;
-    }
-    setChatFocus(chatRouteFocusFromSearch(new URL(nextRoute, window.location.origin).search));
-    window.history.replaceState({}, "", nextRoute);
+  const handleCommittedLocationChange = useCallback(() => {
     committedLocationRef.current = window.location.href;
-  }, [activeView, chatFocus.roomId, model]);
+  }, []);
 
   useEffect(() => {
     if (needsInitialization && activeView !== "company" && activeView !== "settings") {
@@ -158,30 +139,6 @@ export function App(): ReactElement {
     });
   }
 
-  function clearChatRoute(): void {
-    setChatFocus({});
-    setReturnContext(undefined);
-    window.history.replaceState({}, "", "/chat");
-    committedLocationRef.current = window.location.href;
-  }
-
-  function selectChatSurface(surface: Parameters<typeof workspace.selectSurface>[0]): void {
-    workspace.selectSurface(surface);
-    if (surface.kind !== "entry-room") {
-      clearChatRoute();
-    }
-  }
-
-  function startDraftEntry(): void {
-    workspace.startDraftEntry();
-    clearChatRoute();
-  }
-
-  function backToList(): void {
-    workspace.backToList();
-    clearChatRoute();
-  }
-
   function openNavigationTarget(target: NavigationTarget, options: { from?: NavigationReturnContext } = {}): void {
     if (needsInitialization) {
       return;
@@ -191,7 +148,6 @@ export function App(): ReactElement {
       setActiveView(view);
       setReturnContext(options.from);
       if (target.kind === "chat-room") {
-        workspace.selectRoom(target.roomId);
         setChatFocus({ roomId: target.roomId, surface: target.surface });
       } else if (target.kind === "session") {
         setSessionFocus({
@@ -230,7 +186,7 @@ export function App(): ReactElement {
           <div className="flex flex-col items-center">
             <div className="mb-3 flex flex-col items-center gap-3">
               <CompanySwitcher
-                currentSession={workspace.currentSession}
+                currentSession={currentSession}
                 logoUrl={brandingQuery.data?.logoUrl}
                 viewModel={companiesQuery.data}
                 loading={companiesQuery.isLoading || switchCompanyMutation.isPending}
@@ -240,10 +196,10 @@ export function App(): ReactElement {
               <Separator className="w-8" />
             </div>
             <div className="flex flex-col items-center gap-2">
-              <ViewButton view="chat" label="Chat" active={activeView === "chat"} disabled={needsInitialization} indicator={workspace.navigationAlerts.chat} indicatorLabel="unread messages or requests" onClick={() => selectView("chat")}>
+              <ViewButton view="chat" label="Chat" active={activeView === "chat"} disabled={needsInitialization} indicator={navigationAlerts.chat} indicatorLabel="unread messages or requests" onClick={() => selectView("chat")}>
                 <MessageCircle />
               </ViewButton>
-              <ViewButton view="tasks" label="Tasks" active={activeView === "tasks"} disabled={needsInitialization} indicator={workspace.navigationAlerts.tasks} indicatorLabel="execution needs action" onClick={() => selectView("tasks")}>
+              <ViewButton view="tasks" label="Tasks" active={activeView === "tasks"} disabled={needsInitialization} indicator={navigationAlerts.tasks} indicatorLabel="execution needs action" onClick={() => selectView("tasks")}>
                 <ListChecks />
               </ViewButton>
             </div>
@@ -261,29 +217,30 @@ export function App(): ReactElement {
           </div>
         </nav>
         <section className={`min-w-0 flex-1 overflow-hidden ${activeView === "chat" || activeView === "tasks" ? "" : "tiny-soft-retro-product"}`}>
+          <Suspense fallback={<RouteLoadingFallback />}>
           {activeView === "company" ? (
-            <CompanyLifecyclePage currentSession={workspace.currentSession} />
+            <CompanyLifecyclePage currentSession={currentSession} />
           ) : activeView === "employees" ? (
-            <EmployeesPage currentSession={workspace.currentSession} />
+            <EmployeesPage currentSession={currentSession} />
           ) : activeView === "skills" ? (
-            <CompanySkillsPage currentSession={workspace.currentSession} />
+            <CompanySkillsPage currentSession={currentSession} />
           ) : activeView === "integrations" ? (
-            <IntegrationsPage currentSession={workspace.currentSession} />
+            <IntegrationsPage currentSession={currentSession} />
           ) : activeView === "prompt" ? (
-            <PromptPolicyPage currentSession={workspace.currentSession} />
+            <PromptPolicyPage currentSession={currentSession} />
           ) : activeView === "system-ai" ? (
-            <SystemAiPage currentSession={workspace.currentSession} />
+            <SystemAiPage currentSession={currentSession} />
           ) : activeView === "access" ? (
-            <AccessPage currentSession={workspace.currentSession} />
+            <AccessPage currentSession={currentSession} />
           ) : activeView === "capabilities" ? (
-            <CapabilitiesPage currentSession={workspace.currentSession} />
+            <CapabilitiesPage currentSession={currentSession} />
           ) : activeView === "doctor" ? (
-            <DoctorPage currentSession={workspace.currentSession} />
+            <DoctorPage currentSession={currentSession} />
           ) : activeView === "backup" ? (
             <BackupPage />
           ) : activeView === "sessions" ? (
             <SessionsPage
-              currentSession={workspace.currentSession}
+              currentSession={currentSession}
               focus={sessionFocus}
               returnContext={returnContext}
               onOpenNavigationTarget={openNavigationTarget}
@@ -292,70 +249,26 @@ export function App(): ReactElement {
             />
           ) : activeView === "tasks" ? (
             <TasksPage
-              currentSession={workspace.currentSession}
+              currentSession={currentSession}
               focus={taskFocus}
               returnContext={returnContext}
               onOpenNavigationTarget={openNavigationTarget}
               onClearReturnContext={() => setReturnContext(undefined)}
             />
           ) : activeView === "settings" ? (
-            <SettingsPage currentSession={workspace.currentSession} />
+            <SettingsPage currentSession={currentSession} />
           ) : (
-            <div data-tiny-chat-workbench className="tiny-chat-workbench tiny-soft-retro-chat grid h-svh w-full overflow-hidden">
-              <div data-tiny-chat-sidebar-pane className="min-w-0 overflow-hidden">
-                <WorkspaceSidebar
-                  model={model}
-                  companyName={currentCompanyName}
-                  onSelectSurface={selectChatSurface}
-                  onCreateChannel={workspace.createChannel}
-                />
-              </div>
-              <div data-tiny-chat-primary-pane className="min-w-0 overflow-hidden">
-                <CenterWorkspace
-                  model={model}
-                  status={workspace.status}
-                  error={workspace.error}
-                  onSelectEntry={workspace.selectEntry}
-                  onStartDraft={startDraftEntry}
-                  onArchiveEntry={workspace.archiveEntry}
-                  onRestoreEntry={workspace.restoreEntry}
-                  onBackToList={backToList}
-                  onCreateEntry={workspace.createEntry}
-                  onSendReply={workspace.sendReply}
-                  onClearComposerNotice={workspace.clearComposerNotice}
-                  onCancelRun={workspace.cancelActiveRun}
-                  onRetryRun={workspace.retryFailedRun}
-                  onUpdateTitle={workspace.updateTitle}
-                  onOpenMessageActivity={workspace.openMessageActivity}
-                  selectedActivitySourceMessageId={workspace.activitySelection?.sourceMessageId}
-                  onResolveAccessRequest={workspace.resolveAccessRequest}
-                  activeRun={workspace.activeRun}
-                  draftReply={workspace.draftReply}
-                  isCancelingRun={workspace.isCancelingRun}
-                  accessRequests={workspace.accessRequests}
-                  isResolvingAccessRequest={workspace.isResolvingAccessRequest}
-                  composerNotice={workspace.composerNotice}
-                />
-              </div>
-              <div data-tiny-chat-context-pane className="min-w-0 overflow-hidden">
-                <ContextPanel
-                  model={model}
-                  activityItems={workspace.activity.items}
-                  hasActivitySource={Boolean(workspace.activitySelection)}
-                  activitySource={workspace.activitySource}
-                  onOpenSession={(focus) => openNavigationTarget(
-                    { kind: "session", ...focus },
-                    { from: chatReturnContextForModel(model) },
-                  )}
-                  onOpenNavigationTarget={(target) => openNavigationTarget(target, { from: chatReturnContextForModel(model) })}
-                  onUpdateChannelDetails={workspace.updateChannelDetails}
-                  onAddChannelMembers={workspace.addChannelMembers}
-                  onRemoveChannelMember={workspace.removeChannelMember}
-                  onDissolveChannel={workspace.dissolveChannel}
-                />
-              </div>
-            </div>
+            <ChatWorkspaceRoute
+              currentSession={currentSession}
+              companyName={currentCompanyName}
+              focus={chatFocus}
+              onFocusChange={setChatFocus}
+              onNavigationAlertsChange={setNavigationAlerts}
+              onOpenNavigationTarget={openNavigationTarget}
+              onCommittedLocationChange={handleCommittedLocationChange}
+            />
           )}
+          </Suspense>
         </section>
       </main>
     </TooltipProvider>
@@ -662,25 +575,8 @@ function isDeveloperToolView(view: AppView): boolean {
   return view === "access" || view === "backup" || view === "capabilities" || view === "doctor" || view === "prompt" || view === "system-ai";
 }
 
-function chatReturnContextForModel(model: ReturnType<typeof useChatWorkspace>["model"]): NavigationReturnContext | undefined {
-  if (!model.selectedRoomId) {
-    return undefined;
-  }
-  const route = chatRouteForSelectedRoom({
-    selectedRoomId: model.selectedRoomId,
-    selectedContainerKind: model.selectedContainer?.kind,
-  });
-  if (!route) {
-    return undefined;
-  }
-  const focus = chatRouteFocusFromSearch(new URL(route, window.location.origin).search);
-  if (!focus.roomId || !focus.surface) {
-    return undefined;
-  }
-  return {
-    label: `Back to ${model.context.room.title}`,
-    target: { kind: "chat-room", roomId: focus.roomId, surface: focus.surface },
-  };
+function RouteLoadingFallback(): ReactElement {
+  return <div className="flex h-full items-center justify-center text-sm text-muted-foreground" role="status">Loading workspace…</div>;
 }
 
 function sessionFocusFromLocation(): SessionFocus {

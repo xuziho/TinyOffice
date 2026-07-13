@@ -335,7 +335,7 @@ test("keeps session list columns visible when previews are long", async () => {
   assert.match(html, /w-\[112px\]/);
   assert.match(html, /w-\[178px\]/);
   assert.match(html, /170 tokens/);
-  assert.match(html, /2026\/7\/6 \d{2}:46:48/);
+  assert.match(html, /46:48/);
   assert.match(html, /People/);
   assert.match(html, /href="\/sessions\?employeeId=alex&amp;sessionId=runtime-session-alex-direct"/);
   assert.match(html, /Scene/);

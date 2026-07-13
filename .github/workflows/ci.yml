@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Quality and builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/tinyoffice-web-shadcn/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: docs/requirements.txt
+      - name: Install dependencies
+        run: |
+          npm ci --ignore-scripts
+          npm ci --ignore-scripts --prefix apps/tinyoffice-web-shadcn
+      - name: Type check
+        run: npm run check
+      - name: Verify dependency licenses
+        run: npm run check:dependency-licenses
+      - name: Verify public source boundary
+        run: npm run check:open-source
+      - name: Build frontend
+        run: npm run build:tinyoffice-web-shadcn
+      - name: Build product manual
+        run: npm run docs:build
+
+  tests:
+    name: Runtime and frontend tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: tinyoffice
+          POSTGRES_PASSWORD: tinyoffice_dev
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tinyoffice -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TINYOFFICE_TEST_DATABASE_URL: postgresql://tinyoffice:tinyoffice_dev@127.0.0.1:5432/tinyoffice_test?sslmode=disable
+      TINYOFFICE_BLANK_TEST_DATABASE_URL: postgresql://tinyoffice:tinyoffice_dev@127.0.0.1:5432/tinyoffice_blank_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/tinyoffice-web-shadcn/package-lock.json
+      - name: Install dependencies
+        run: |
+          npm ci --ignore-scripts
+          npm ci --ignore-scripts --prefix apps/tinyoffice-web-shadcn
+      - name: Run complete test suite
+        run: npm test

@@ -78,7 +78,8 @@ test("real Chat preview starts a Work control-plane loop for queued WorkRuns", a
 
 test("real Chat preview process trace publisher persists stable trace ids", async () => {
   const previousDatabaseUrl = process.env.TINYOFFICE_DATABASE_URL;
-  process.env.TINYOFFICE_DATABASE_URL = defaultRuntimePostgresTestDatabaseUrl;
+  process.env.TINYOFFICE_DATABASE_URL =
+    process.env.TINYOFFICE_TEST_DATABASE_URL?.trim() || defaultRuntimePostgresTestDatabaseUrl;
   await resetRuntimePostgresTables();
   const repoRoot = await mkdtemp(path.join(tmpdir(), "tinyoffice-preview-process-trace-"));
   try {

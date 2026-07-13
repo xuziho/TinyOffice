@@ -1,0 +1,26 @@
+node_modules/
+dist/
+build/
+.DS_Store
+.pi/
+.data/
+.scratch/
+.logs/
+.runtime/
+.worktrees/
+.scratch-client-plugins/
+.tmp-tinyoffice-preview*.log
+# Company records, employee workspaces, generated skills, and uploaded assets are
+# runtime data. Public examples belong under examples/, never under companies/.
+companies/
+*.tar.gz
+packages/*/.bundle/
+employees/*/workspace/.env
+employees/*/workspace/.env.*
+AGENTS.md
+
+# Local review output and experiments are not product source.
+/artifacts/
+/qa/
+/tmp/
+/prototypes/soft-neo-retro-chat/

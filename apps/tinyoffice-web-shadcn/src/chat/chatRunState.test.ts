@@ -1,0 +1,244 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import type { TinyOfficeRealtimeEvent, TinyOfficeRealtimeEventPayload } from "tinyoffice/realtime-contracts";
+import { activeChatRunForRoom, applyChatRunRealtimeEvent, draftReplyForRoom, emptyChatRunState, streamingReplyForRoom } from "./chatRunState";
+
+test("chat run state tracks active runtime work by room", () => {
+  const state = applyChatRunRealtimeEvent(emptyChatRunState(), realtimeEvent({
+    type: "chat.runtime_status.changed",
+    companyId: "acme",
+    conversationId: "conversation-1",
+    roomId: "room-1",
+    sourceMessageId: "message-1",
+    targetMemberId: "aster",
+    status: "thinking",
+    runId: "run-1",
+  }));
+
+  assert.equal(activeChatRunForRoom(state, "room-1")?.runId, "run-1");
+  assert.equal(activeChatRunForRoom(state, "room-1")?.status, "thinking");
+});
+
+test("chat run state treats reply deltas as streaming work", () => {
+  const state = applyChatRunRealtimeEvent(emptyChatRunState(), realtimeEvent({
+    type: "chat.reply.delta",
+    companyId: "acme",
+    conversationId: "conversation-1",
+    roomId: "room-1",
+    runId: "run-1",
+    sourceMessageId: "message-1",
+    targetMemberId: "aster",
+    delta: "Working",
+    sequenceInRun: 1,
+  }));
+
+  assert.equal(activeChatRunForRoom(state, "room-1")?.status, "streaming");
+  assert.equal(activeChatRunForRoom(state, "room-1")?.streamedContent, "Working");
+});
+
+test("chat run state exposes a renderable streaming reply while text is arriving", () => {
+  const state = applyChatRunRealtimeEvent(emptyChatRunState(), realtimeEvent({
+    type: "chat.reply.delta",
+    companyId: "acme",
+    conversationId: "conversation-1",
+    roomId: "room-1",
+    runId: "run-1",
+    sourceMessageId: "message-1",
+    targetMemberId: "aster",
+    delta: "Working",
+    sequenceInRun: 1,
+  }));
+
+  assert.deepEqual(streamingReplyForRoom(state, "room-1"), {
+    companyId: "acme",
+    conversationId: "conversation-1",
+    roomId: "room-1",
+    runId: "run-1",
+    sourceMessageId: "message-1",
+    targetMemberId: "aster",
+    content: "Working",
+    sequence: 1,
+  });
+});
+
+test("chat run state clears active work after terminal statuses", () => {
+  const running = applyChatRunRealtimeEvent(emptyChatRunState(), realtimeEvent({
+    type: "chat.runtime_status.changed",
+    companyId: "acme",
+    conversationId: "conversation-1",
+    roomId: "room-1",
+    sourceMessageId: "message-1",
+    targetMemberId: "aster",
+    status: "thinking",
+    runId: "run-1",
+  }));
+
+  const completed = applyChatRunRealtimeEvent(running, realtimeEvent({
+    type: "chat.runtime_status.changed",
+    companyId: "acme",
+    conversationId: "conversation-1",
+    roomId: "room-1",
+    sourceMessageId: "message-1",
+    targetMemberId: "aster",
+    status: "completed",
+    runId: "run-1",
+  }));
+
+  assert.equal(activeChatRunForRoom(completed, "room-1"), undefined);
+});
+
+test("chat run state retains a completed streamed reply for atomic persistence reconciliation", () => {
+  const streaming = applyChatRunRealtimeEvent(emptyChatRunState(), realtimeEvent({
+    type: "chat.reply.snapshot",
+    companyId: "acme",
+    conversationId: "conversation-1",
+    roomId: "room-1",
+    runId: "run-1",
+    sourceMessageId: "message-1",
+    targetMemberId: "aster",
+    content: "Final reply",
+    sequenceInRun: 1,
+  }));
+  const completed = applyChatRunRealtimeEvent(streaming, realtimeEvent({
+    type: "chat.runtime_status.changed",
+    companyId: "acme",
+    conversationId: "conversation-1",
+    roomId: "room-1",
+    sourceMessageId: "message-1",
+    targetMemberId: "aster",
+    status: "completed",
+    runId: "run-1",
+    replyMessageId: "reply-1",
+  }));
+
+  assert.deepEqual(draftReplyForRoom(completed, "room-1"), {
+    companyId: "acme",
+    conversationId: "conversation-1",
+    roomId: "room-1",
+    runId: "run-1",
+    sourceMessageId: "message-1",
+    replyMessageId: "reply-1",
+    targetMemberId: "aster",
+    content: "Final reply",
+    sequence: 1,
+    status: "completed",
+    isTerminal: true,
+  });
+});
+
+test("chat run state keeps cancel requested active until the backend publishes canceled", () => {
+  const streaming = applyChatRunRealtimeEvent(emptyChatRunState(), realtimeEvent({
+    type: "chat.reply.delta",
+    companyId: "acme",
+    conversationId: "conversation-1",
+    roomId: "room-1",
+    runId: "run-1",
+    sourceMessageId: "message-1",
+    targetMemberId: "aster",
+    delta: "Partial reply",
+    sequenceInRun: 1,
+  }));
+  const cancelRequested = applyChatRunRealtimeEvent(streaming, realtimeEvent({
+    type: "chat.runtime_status.changed",
+    companyId: "acme",
+    conversationId: "conversation-1",
+    roomId: "room-1",
+    sourceMessageId: "message-1",
+    targetMemberId: "aster",
+    status: "cancel_requested",
+    runId: "run-1",
+  }));
+
+  assert.equal(activeChatRunForRoom(cancelRequested, "room-1")?.status, "cancel_requested");
+  assert.deepEqual(draftReplyForRoom(cancelRequested, "room-1"), {
+    companyId: "acme",
+    conversationId: "conversation-1",
+    roomId: "room-1",
+    runId: "run-1",
+    sourceMessageId: "message-1",
+    targetMemberId: "aster",
+    content: "Partial reply",
+    sequence: 1,
+    status: "cancel_requested",
+    isTerminal: false,
+  });
+
+  const canceled = applyChatRunRealtimeEvent(cancelRequested, realtimeEvent({
+    type: "chat.runtime_status.changed",
+    companyId: "acme",
+    conversationId: "conversation-1",
+    roomId: "room-1",
+    sourceMessageId: "message-1",
+    targetMemberId: "aster",
+    status: "canceled",
+    runId: "run-1",
+  }));
+
+  assert.equal(activeChatRunForRoom(canceled, "room-1"), undefined);
+  assert.equal(draftReplyForRoom(canceled, "room-1"), undefined);
+});
+
+test("chat run state ignores process trace payloads as a product activity source", () => {
+  const state = applyChatRunRealtimeEvent(emptyChatRunState(), realtimeEvent({
+    type: "chat.process_trace.appended",
+    companyId: "acme",
+    conversationId: "conversation-1",
+    roomId: "room-1",
+    runId: "run-1",
+    sourceMessageId: "message-1",
+    targetMemberId: "aster",
+    processTraceEvent: {
+      id: "trace-1",
+      timestamp: "2026-07-02T00:00:01.000Z",
+      sessionKey: "aster|chat_direct_room|room-1",
+      employeeId: "aster",
+      kind: "model_reasoning_observed",
+      title: "Aster is thinking",
+      summary: "Checking the request",
+      status: "running",
+    },
+  }));
+
+  assert.equal(activeChatRunForRoom(state, "room-1")?.runId, "run-1");
+  assert.equal(activeChatRunForRoom(state, "room-1")?.status, "thinking");
+});
+
+test("chat run state keeps unsupported image failures visible without backend wording", () => {
+  const failed = applyChatRunRealtimeEvent(emptyChatRunState(), realtimeEvent({
+    type: "chat.runtime_status.changed",
+    companyId: "acme",
+    conversationId: "conversation-1",
+    roomId: "room-1",
+    sourceMessageId: "message-1",
+    targetMemberId: "aster",
+    status: "failed",
+    runId: "run-1",
+    errorMessage: "The configured TinyOffice runtime provider does not support image understanding for Chat attachments.",
+  }));
+
+  assert.deepEqual(draftReplyForRoom(failed, "room-1"), {
+    companyId: "acme",
+    conversationId: "conversation-1",
+    roomId: "room-1",
+    runId: "run-1",
+    sourceMessageId: "message-1",
+    targetMemberId: "aster",
+    content: "This employee cannot understand images yet. The image was sent, but the current runtime provider cannot inspect it.",
+    errorMessage: "This employee cannot understand images yet. The image was sent, but the current runtime provider cannot inspect it.",
+    sequence: 1,
+    status: "failed",
+    isTerminal: true,
+  });
+});
+
+function realtimeEvent(input: TinyOfficeRealtimeEventPayload): TinyOfficeRealtimeEvent {
+  return {
+    schema: "tinyoffice-realtime-event",
+    version: 1,
+    eventId: "event-1",
+    occurredAt: "2026-07-02T00:00:00.000Z",
+    sequence: 1,
+    ...input,
+  } as TinyOfficeRealtimeEvent;
+}

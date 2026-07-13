@@ -1,0 +1,36 @@
+{
+  "name": "pi-context-harness",
+  "private": true,
+  "version": "0.1.0",
+  "description": "PI context continuity harness for tool result slimming and compaction support.",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "context",
+    "compaction"
+  ],
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --import tsx --test tests/**/*.test.ts",
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@types/node": "^24.0.1",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
+}

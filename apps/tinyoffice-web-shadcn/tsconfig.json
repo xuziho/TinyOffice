@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "tinyoffice/frontend-api-contracts": ["../../src/api/contracts/tinyoffice-frontend-api-contracts.ts"],
+      "tinyoffice/realtime-contracts": ["../../src/collaboration/contracts/tinyoffice-realtime-contract.ts"]
+    }
+  },
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
+  ]
+}

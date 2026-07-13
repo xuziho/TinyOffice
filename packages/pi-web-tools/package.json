@@ -1,0 +1,32 @@
+{
+  "name": "pi-web-tools",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Standalone PI web fetch and web search tools",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "webfetch",
+    "websearch"
+  ],
+  "type": "module",
+  "scripts": {
+    "build": "echo 'No build step required'",
+    "check": "echo 'No local checks defined yet'"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
+  },
+  "dependencies": {
+    "@mozilla/readability": "0.6.0",
+    "linkedom": "0.18.12",
+    "turndown": "7.2.1",
+    "undici": "8.3.0"
+  }
+}

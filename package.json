@@ -1,0 +1,65 @@
+{
+  "name": "tinyoffice",
+  "private": true,
+  "version": "0.1.0",
+  "description": "TinyOffice daemon-first member collaboration runtime",
+  "type": "module",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "exports": {
+    "./frontend-api-contracts": {
+      "types": "./src/api/contracts/tinyoffice-frontend-api-contracts.ts",
+      "default": "./src/api/contracts/tinyoffice-frontend-api-contracts.ts"
+    },
+    "./api-contracts": {
+      "types": "./src/api/contracts/tinyoffice-api-contracts.ts",
+      "default": "./src/api/contracts/tinyoffice-api-contracts.ts"
+    },
+    "./realtime-contracts": {
+      "types": "./src/collaboration/contracts/tinyoffice-realtime-contract.ts",
+      "default": "./src/collaboration/contracts/tinyoffice-realtime-contract.ts"
+    }
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "npm run test:runtime && npm run test:web",
+    "test:runtime": "node --import tsx --import ./tests/setup-runtime-test-env.ts --test --test-concurrency=1 tests/**/*.test.ts",
+    "test:web": "npm run test --prefix apps/tinyoffice-web-shadcn",
+    "docs:serve": "node scripts/docs/mkdocs.mjs serve",
+    "docs:build": "node scripts/docs/mkdocs.mjs build",
+    "docs:sync": "node scripts/docs/mkdocs.mjs sync",
+    "docs:sync-obsidian": "node scripts/docs/sync-obsidian.mjs",
+    "check:open-source": "node scripts/release/check-open-source-readiness.mjs",
+    "check:open-source:prelicense": "node scripts/release/check-open-source-readiness.mjs --allow-missing-license",
+    "check:dependency-licenses": "node scripts/release/check-dependency-licenses.mjs",
+    "dev:tinyoffice-web-shadcn": "npm run dev --prefix apps/tinyoffice-web-shadcn",
+    "build:tinyoffice-web-shadcn": "npm run build --prefix apps/tinyoffice-web-shadcn",
+    "check:tinyoffice-web-shadcn": "npm run check --prefix apps/tinyoffice-web-shadcn",
+    "dogfood:update-runtime": "powershell -ExecutionPolicy Bypass -File scripts/dogfood/update-runtime.ps1",
+    "dogfood:verify": "powershell -ExecutionPolicy Bypass -File scripts/dogfood/verify-dogfood.ps1",
+    "runtime:postgres:ensure": "powershell -ExecutionPolicy Bypass -File scripts/runtime/ensure-tinyoffice-postgres.ps1",
+    "runtime:postgres:init-schema": "node --import tsx scripts/runtime/init-tinyoffice-postgres-schema.ts",
+    "runtime:postgres:reset": "powershell -ExecutionPolicy Bypass -File scripts/runtime/reset-tinyoffice-postgres.ps1",
+    "smoke:lock:acquire": "powershell -ExecutionPolicy Bypass -File scripts/runtime/acquire-smoke-lock.ps1",
+    "smoke:lock:release": "powershell -ExecutionPolicy Bypass -File scripts/runtime/release-smoke-lock.ps1",
+    "smoke:chat-realtime-order": "node --import tsx scripts/runtime/smoke-chat-realtime-order.ts",
+    "smoke:no-carrier-chat": "node --import tsx scripts/runtime/smoke-no-carrier-chat.ts",
+    "smoke:standalone-frontend-browser": "node --import tsx scripts/runtime/run-smoke-standalone-frontend-browser.ts",
+    "agentco": "node --import tsx src/cli/agentco.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.1",
+    "@types/pg": "^8.20.0",
+    "tsx": "^4.20.3",
+    "typebox": "^1.1.39",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "0.80.6",
+    "hono": "^4.12.27",
+    "pg": "^8.21.0",
+    "socket.io": "^4.8.3",
+    "tar": "^7.5.19"
+  }
+}

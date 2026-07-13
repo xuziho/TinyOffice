@@ -1,8 +1,10 @@
 <p align="center">
-  <img src="docs/assets/brand/tinyoffice-lockup-on-paper.svg" width="360" alt="TinyOffice — cyan TO boss mark wearing sunglasses and smiling" />
+  <img src="docs/assets/brand/tinyoffice-lockup-on-paper.svg" width="220" alt="TinyOffice — cyan TO boss mark wearing sunglasses and smiling" />
 </p>
 
-<p align="center"><strong>One person. Full office.</strong></p>
+<p align="center">
+  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a>
+</p>
 
 # TinyOffice
 

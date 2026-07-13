@@ -6,8 +6,6 @@
 
 TinyOffice is a one-person-company workbench: one human acts as the boss and works with a persistent office of AI employees. The brand should therefore feel capable without becoming corporate, and playful without becoming childish.
 
-**Brand line:** `One person. Full office.`
-
 ## Mark
 
 The product mark combines `T` and `O` into one cyan monogram. The `O` is the boss character: compact sunglasses communicate confidence, while the crooked toothy grin keeps the personality witty, relaxed, and slightly rebellious.
@@ -54,3 +52,12 @@ The SVG assets are the authoritative production artwork. Raster exports are deri
 TinyOffice supports Company-specific uploaded logos. Those assets identify the current Company and remain authoritative inside the Company switcher and Company configuration surfaces. The TinyOffice product mark identifies the application itself, including the browser tab and repository/manual entry points.
 
 The product mark must not silently replace a missing Company logo with TinyOffice branding. A missing Company logo continues to use the Company's own textual or generated fallback so users do not confuse product ownership with Company identity.
+
+## Repository language editions
+
+The public repository maintains two README editions:
+
+- `README.md` is the English edition and the default GitHub entry point.
+- `README.zh-CN.md` is the Simplified Chinese edition.
+
+Both editions must describe the same product status, requirements, setup commands, data boundaries, contribution path, security process, and license. A change to one README's factual content should update the other in the same pull request. Tone may be natural in each language; the two files do not need to be mechanically literal translations.

@@ -32,6 +32,7 @@ theme:
 nav:
   - "00 Start":
       - Product Manual: index.md
+      - Brand Identity: product/brand-identity.md
       - Feature Map: product/feature-map.md
       - Product Models: product/product-models.md
       - Frontend / Backend Capability Map: product/frontend-backend-capability-map.md

@@ -1,6 +1,14 @@
+<p align="center">
+  <img src="docs/assets/brand/tinyoffice-lockup-on-paper.svg" width="360" alt="TinyOffice — cyan TO boss mark wearing sunglasses and smiling" />
+</p>
+
+<p align="center"><strong>One person. Full office.</strong></p>
+
 # TinyOffice
 
 TinyOffice is an early-stage, self-hosted company-operations foundation for persistent AI employees and the people who work with them. It combines a Slack/Discord-like collaboration workspace with runtime sessions, background work, operational evidence, and a small governance layer.
+
+<!-- Creator note reserved for the project author before the public launch announcement. -->
 
 > TinyOffice is available as an early public Alpha and is not ready for production use. Authentication and deployment hardening are still incomplete.
 

@@ -2,6 +2,8 @@
 
 This brief is the product-facing style memory for the standalone TinyOffice frontend. The foundation decision lives in [Frontend UI Foundation](frontend-ui-foundation.md).
 
+Product-level logo, palette, lockup, and Company-branding boundaries live in [Brand Identity](brand-identity.md).
+
 TinyOffice uses `shadcn/ui` as the standalone frontend foundation. New frontend UI work belongs in `apps/tinyoffice-web-shadcn` and should not extend retired local primitive layers.
 
 ## Default Direction

@@ -3,7 +3,6 @@ import test from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import type { TinyOfficeCurrentSession } from "tinyoffice/frontend-api-contracts";
 
 import { OwnerOnboardingPage } from "./OwnerOnboardingPage";
@@ -14,9 +13,7 @@ function renderOnboarding(session: TinyOfficeCurrentSession): string {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return renderToStaticMarkup(
     <QueryClientProvider client={client}>
-      <TooltipProvider>
-        <OwnerOnboardingPage session={session} />
-      </TooltipProvider>
+      <OwnerOnboardingPage session={session} />
     </QueryClientProvider>,
   );
 }

@@ -4,6 +4,7 @@ import { chatQueryKeys } from "@/chat/chatQueryKeys";
 import { AvatarSeedEditor } from "@/components/product/AvatarSeedEditor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { CreateCompanyPanel } from "@/app/CompanyLifecyclePage";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, CheckCircle2, UserRound } from "lucide-react";
@@ -11,6 +12,14 @@ import { useEffect, useState, type ReactElement, type ReactNode } from "react";
 import type { OwnedCreateCompanyResult, TinyOfficeCurrentSession } from "tinyoffice/frontend-api-contracts";
 
 export function OwnerOnboardingPage({ session }: { session: TinyOfficeCurrentSession }): ReactElement {
+  return (
+    <TooltipProvider>
+      <OwnerOnboardingContent session={session} />
+    </TooltipProvider>
+  );
+}
+
+function OwnerOnboardingContent({ session }: { session: TinyOfficeCurrentSession }): ReactElement {
   const queryClient = useQueryClient();
   const profileQuery = useQuery({ queryKey: ["my-profile"], queryFn: getMyProfile });
   const companiesQuery = useQuery({ queryKey: chatQueryKeys.companies(), queryFn: listCompanies });

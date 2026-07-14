@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
 import type { TinyOfficeCurrentSession, TinyOfficeUpdateStatus } from "tinyoffice/frontend-api-contracts";
-import { AlertTriangle, Check, Download, KeyRound, LogOut, RefreshCw } from "lucide-react";
+import { AlertTriangle, Check, Download, KeyRound, LogOut, MonitorSmartphone, RefreshCw, ShieldCheck } from "lucide-react";
 import { getMyProfile, saveMyProfile } from "@/api/profileClient";
 import { getUpdateStatus, installApprovedUpdate } from "@/api/updateClient";
 import { chatQueryKeys } from "@/chat/chatQueryKeys";
@@ -37,21 +37,82 @@ export function SettingsPage({ currentSession }: { currentSession?: TinyOfficeCu
 function SecurityPanel(): ReactElement {
   const [adding, setAdding] = useState(false);
   const [message, setMessage] = useState("");
+  const [sessions, setSessions] = useState<AuthSession[]>([]);
+  const [passkeys, setPasskeys] = useState<OwnerPasskey[]>([]);
+  const [loadingSecurity, setLoadingSecurity] = useState(true);
+  const [revoking, setRevoking] = useState(false);
+
+  async function loadSecurityState(): Promise<void> {
+    setLoadingSecurity(true);
+    const [sessionResponse, passkeyResponse] = await Promise.all([
+      fetch("/api/auth/list-sessions", { credentials: "include" }),
+      fetch("/api/auth/passkey/list-user-passkeys", { credentials: "include" }),
+    ]);
+    if (!sessionResponse.ok || !passkeyResponse.ok) throw new Error("Owner security state could not be loaded.");
+    setSessions(await sessionResponse.json() as AuthSession[]);
+    setPasskeys(await passkeyResponse.json() as OwnerPasskey[]);
+    setLoadingSecurity(false);
+  }
+
+  useEffect(() => {
+    void loadSecurityState().catch((cause) => {
+      setLoadingSecurity(false);
+      setMessage(cause instanceof Error ? cause.message : String(cause));
+    });
+  }, []);
+
   async function addPasskey(): Promise<void> {
     setAdding(true); setMessage("");
     const result = await authClient.passkey.addPasskey({ name: "Backup Owner passkey" });
     setAdding(false);
-    setMessage(result?.error ? result.error.message || "Passkey could not be added." : "Backup passkey added.");
+    if (result?.error) {
+      setMessage(result.error.message || "Passkey could not be added.");
+      return;
+    }
+    setMessage("Backup passkey added.");
+    await loadSecurityState();
+  }
+  async function revokeOtherSessions(): Promise<void> {
+    setRevoking(true); setMessage("");
+    const response = await fetch("/api/auth/revoke-other-sessions", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    setRevoking(false);
+    if (!response.ok) {
+      const payload = await response.json().catch(() => undefined) as { message?: string } | undefined;
+      setMessage(payload?.message || "Other sessions could not be signed out.");
+      return;
+    }
+    setMessage("Other Owner sessions signed out.");
+    await loadSecurityState();
   }
   async function signOut(): Promise<void> {
     await authClient.signOut();
     window.location.assign("/");
   }
   return <section className="tiny-settings-primary-surface grid max-w-3xl gap-5 rounded-md border p-5">
-    <div><h2 className="font-semibold">Owner security</h2><p className="mt-1 text-sm text-muted-foreground">Passkeys unlock this one-person office. Add a second passkey on another device or hardware key before you need it.</p></div>
-    <div className="tiny-settings-fact flex flex-wrap items-center justify-between gap-4 p-4"><div><div className="font-medium">Backup passkey</div><div className="mt-1 text-sm text-muted-foreground">The operating system will ask where to save the new credential.</div></div><Button variant="outline" disabled={adding} onClick={() => void addPasskey()}><KeyRound />{adding ? "Adding…" : "Add passkey"}</Button></div>
-    <div className="flex flex-wrap items-center gap-3"><Button variant="outline" onClick={() => void signOut()}><LogOut />Sign out</Button>{message ? <span role="status" className="text-sm text-muted-foreground">{message}</span> : null}</div>
+    <div><h2 className="font-semibold">Owner security</h2><p className="mt-1 text-sm text-muted-foreground">TinyOffice keeps one Owner identity. Local launcher access and remote Passkeys both create the same protected server session.</p></div>
+    <div className="tiny-settings-fact grid gap-4 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-4"><div className="flex gap-3"><ShieldCheck className="mt-0.5 size-5" /><div><div className="font-medium">Passkeys</div><div className="mt-1 text-sm text-muted-foreground">Required for remote access. Keep a backup credential on another device or hardware key.</div></div></div><Button variant="outline" disabled={adding} onClick={() => void addPasskey()}><KeyRound />{adding ? "Adding…" : "Add passkey"}</Button></div>
+      <div className="grid gap-2 border-t pt-3 text-sm">{loadingSecurity ? <span className="text-muted-foreground">Loading credentials…</span> : passkeys.length ? passkeys.map((passkey) => <div key={passkey.id} className="flex items-center justify-between gap-3"><span className="font-medium">{passkey.name || "Owner passkey"}</span><span className="text-xs text-muted-foreground">Added {formatSecurityDate(passkey.createdAt)}</span></div>) : <span className="text-muted-foreground">No Passkey registered. Local access remains available; configure one before remote deployment.</span>}</div>
+    </div>
+    <div className="tiny-settings-fact grid gap-4 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-4"><div className="flex gap-3"><MonitorSmartphone className="mt-0.5 size-5" /><div><div className="font-medium">Owner sessions</div><div className="mt-1 text-sm text-muted-foreground">Sessions expire after 30 days of inactivity and refresh while TinyOffice is in use.</div></div></div><Button variant="outline" disabled={revoking || sessions.length < 2} onClick={() => void revokeOtherSessions()}>{revoking ? "Signing out…" : "Sign out other sessions"}</Button></div>
+      <div className="grid gap-2 border-t pt-3 text-sm">{loadingSecurity ? <span className="text-muted-foreground">Loading sessions…</span> : sessions.map((session, index) => <div key={session.id} className="flex items-start justify-between gap-3"><div><div className="font-medium">{index === 0 ? "Current or recent session" : "Other session"}</div><div className="mt-0.5 max-w-lg truncate text-xs text-muted-foreground">{session.userAgent || "Unknown device"}</div></div><span className="shrink-0 text-xs text-muted-foreground">Expires {formatSecurityDate(session.expiresAt)}</span></div>)}</div>
+    </div>
+    <div className="flex flex-wrap items-center gap-3"><Button variant="outline" onClick={() => void signOut()}><LogOut />Sign out this browser</Button>{message ? <span role="status" className="text-sm text-muted-foreground">{message}</span> : null}</div>
   </section>;
+}
+
+type AuthSession = { id: string; userAgent?: string | null; expiresAt: string | Date };
+type OwnerPasskey = { id: string; name?: string | null; createdAt: string | Date };
+
+function formatSecurityDate(value: string | Date): string {
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? "unknown" : date.toLocaleDateString();
 }
 
 function ProfilePanel({ currentSession, displayName, setDisplayName, avatarSeed, setAvatarSeed, savePending, saveError, canSave, onSave }: {

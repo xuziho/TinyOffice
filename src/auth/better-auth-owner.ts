@@ -4,7 +4,10 @@ import path from "node:path";
 
 import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
+import { createAuthEndpoint, APIError } from "better-auth/api";
+import { setSessionCookie } from "better-auth/cookies";
 import { Pool, type PoolClient } from "pg";
+import { z } from "zod";
 
 import type {
   TinyOfficeAuthProvider,
@@ -25,6 +28,7 @@ export interface TinyOfficeOwnerAuthConfig {
 
 export interface TinyOfficeOwnerAuthProvider extends TinyOfficeAuthProvider {
   bootstrapToken?: string;
+  localAccessTicket?: string;
   close(): Promise<void>;
 }
 
@@ -32,14 +36,22 @@ export async function createTinyOfficeOwnerAuth(
   config: TinyOfficeOwnerAuthConfig,
 ): Promise<TinyOfficeOwnerAuthProvider> {
   const publicOrigin = normalizedOrigin(config.publicOrigin);
+  const accessMode = new URL(publicOrigin).protocol === "http:" ? "local" : "remote";
   const rpId = config.rpId?.trim() || new URL(publicOrigin).hostname;
   const pool = new Pool({ connectionString: config.databaseUrl });
   const secret = config.secret?.trim() || await loadOrCreateAuthSecret(config.repoRoot);
-  let bootstrapToken = await ownerHasPasskey(pool) ? undefined : randomBytes(32).toString("base64url");
+  let bootstrapToken = accessMode === "remote" && !await ownerHasPasskey(pool)
+    ? randomBytes(32).toString("base64url")
+    : undefined;
+  let localAccessTicket = accessMode === "local" ? randomBytes(32).toString("base64url") : undefined;
+  let localAccessInFlight = false;
 
   async function resolveBootstrapOwner(context?: string | null) {
     if (!bootstrapToken || !constantTimeEqual(context, bootstrapToken)) {
-      throw new Error("TinyOffice Owner bootstrap token is invalid or expired");
+      throw APIError.from("UNAUTHORIZED", {
+        code: "OWNER_BOOTSTRAP_INVALID",
+        message: "The Owner setup link is invalid or expired. Restart TinyOffice and open the new setup link.",
+      });
     }
     const client = await pool.connect();
     try {
@@ -47,7 +59,10 @@ export async function createTinyOfficeOwnerAuth(
       await client.query("SELECT pg_advisory_xact_lock(821946523)");
       if (await ownerHasPasskey(client)) {
         bootstrapToken = undefined;
-        throw new Error("TinyOffice Owner is already configured");
+        throw APIError.from("CONFLICT", {
+          code: "OWNER_ALREADY_CONFIGURED",
+          message: "The TinyOffice Owner passkey is already configured.",
+        });
       }
       const owner = await ensureSingleOwnerUser(client);
       await client.query("COMMIT");
@@ -59,6 +74,66 @@ export async function createTinyOfficeOwnerAuth(
       client.release();
     }
   }
+
+  const localOwnerAccess = {
+    id: "tinyoffice-local-owner-access",
+    endpoints: {
+      localOwnerAccess: createAuthEndpoint("/tinyoffice/local-owner-access", {
+        method: "POST",
+        body: z.object({ ticket: z.string().min(1) }),
+      }, async (context) => {
+        if (accessMode !== "local") {
+          throw APIError.from("FORBIDDEN", {
+            code: "LOCAL_OWNER_ACCESS_DISABLED",
+            message: "Local Owner access is available only on the localhost runtime.",
+          });
+        }
+        if (localAccessInFlight || !localAccessTicket || !constantTimeEqual(context.body.ticket, localAccessTicket)) {
+          throw APIError.from("UNAUTHORIZED", {
+            code: "LOCAL_OWNER_ACCESS_INVALID",
+            message: "The local Owner access link is invalid or already used. Restart TinyOffice and open the new local link.",
+          });
+        }
+
+        localAccessInFlight = true;
+        try {
+          const client = await pool.connect();
+          let ownerId: string;
+          try {
+            await client.query("BEGIN");
+            await client.query("SELECT pg_advisory_xact_lock(821946523)");
+            ownerId = (await ensureSingleOwnerUser(client)).id;
+            await client.query("COMMIT");
+          } catch (error) {
+            await client.query("ROLLBACK").catch(() => undefined);
+            throw error;
+          } finally {
+            client.release();
+          }
+
+          const user = await context.context.internalAdapter.findUserById(ownerId);
+          if (!user) {
+            throw APIError.from("INTERNAL_SERVER_ERROR", {
+              code: "OWNER_ACCOUNT_UNAVAILABLE",
+              message: "The TinyOffice Owner account could not be loaded.",
+            });
+          }
+          const session = await context.context.internalAdapter.createSession(user.id);
+          if (!session) {
+            throw APIError.from("INTERNAL_SERVER_ERROR", {
+              code: "OWNER_SESSION_CREATE_FAILED",
+              message: "The TinyOffice Owner session could not be created.",
+            });
+          }
+          await setSessionCookie(context, { session, user });
+          localAccessTicket = undefined;
+          return context.json({ authenticated: true });
+        } finally {
+          localAccessInFlight = false;
+        }
+      }),
+    },
+  };
 
   const auth = betterAuth({
     appName: "TinyOffice",
@@ -90,6 +165,7 @@ export async function createTinyOfficeOwnerAuth(
       max: 100,
     },
     plugins: [
+      localOwnerAccess,
       passkey({
         rpID: rpId,
         rpName: "TinyOffice",
@@ -101,7 +177,9 @@ export async function createTinyOfficeOwnerAuth(
           requireSession: false,
           resolveUser: async ({ context }) => resolveBootstrapOwner(context),
           afterVerification: async ({ context }) => {
-            await resolveBootstrapOwner(context);
+            if (context) {
+              await resolveBootstrapOwner(context);
+            }
             bootstrapToken = undefined;
           },
         },
@@ -112,6 +190,9 @@ export async function createTinyOfficeOwnerAuth(
   return {
     get bootstrapToken() {
       return bootstrapToken;
+    },
+    get localAccessTicket() {
+      return localAccessTicket;
     },
     async handle(request) {
       return auth.handler(request);
@@ -128,19 +209,22 @@ export async function createTinyOfficeOwnerAuth(
       };
     },
     async status(request): Promise<TinyOfficeAuthStatus> {
-      const [session, configured] = await Promise.all([
+      const [session, ownerConfigured, passkeyConfigured] = await Promise.all([
         auth.api.getSession({ headers: request.headers }),
+        ownerExists(pool),
         ownerHasPasskey(pool),
       ]);
-      if (configured) {
+      if (passkeyConfigured) {
         bootstrapToken = undefined;
       }
       return {
         schema: "tinyoffice-auth-status",
-        version: 1,
+        version: 2,
+        accessMode,
         authenticated: Boolean(session?.user?.id),
-        bootstrapRequired: !configured,
-        ownerConfigured: configured,
+        bootstrapRequired: accessMode === "remote" && !passkeyConfigured,
+        ownerConfigured,
+        passkeyConfigured,
       };
     },
     async close() {
@@ -187,6 +271,13 @@ async function ownerHasPasskey(client: Pick<Pool, "query"> | PoolClient): Promis
   return result.rows[0]?.configured === true;
 }
 
+async function ownerExists(client: Pick<Pool, "query"> | PoolClient): Promise<boolean> {
+  const result = await client.query<{ configured: boolean }>(
+    `SELECT EXISTS (SELECT 1 FROM auth_users) AS configured`,
+  );
+  return result.rows[0]?.configured === true;
+}
+
 async function loadOrCreateAuthSecret(repoRoot: string): Promise<string> {
   const directory = path.join(repoRoot, ".runtime", "auth");
   const secretPath = path.join(directory, "owner-session-secret");
@@ -207,8 +298,10 @@ async function loadOrCreateAuthSecret(repoRoot: string): Promise<string> {
 }
 
 function normalizedOrigin(value: string): string {
-  const origin = new URL(value.trim()).origin;
-  if (!origin.startsWith("http://localhost") && !origin.startsWith("https://")) {
+  const parsed = new URL(value.trim());
+  const origin = parsed.origin;
+  const isExactLocalhost = parsed.protocol === "http:" && parsed.hostname === "localhost";
+  if (!isExactLocalhost && parsed.protocol !== "https:") {
     throw new Error("TinyOffice public origin must use HTTPS, except for localhost");
   }
   return origin;

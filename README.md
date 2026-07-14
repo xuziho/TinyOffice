@@ -12,7 +12,7 @@ TinyOffice is an early-stage, self-hosted company-operations foundation for pers
 
 <!-- Creator note reserved for the project author before the public launch announcement. -->
 
-> TinyOffice is an early public Alpha intended for a single Owner. Passkey authentication is built in; internet-facing deployments still require HTTPS, backups, host patching, and network hardening.
+> TinyOffice is an early public Alpha intended for a single Owner. Localhost uses a private one-time launcher link; remote access uses Passkey authentication and still requires HTTPS, backups, host patching, and network hardening.
 
 ## What is in the repository
 
@@ -43,7 +43,7 @@ npm start
 
 The setup command installs both the root runtime dependencies and the standalone shadcn frontend dependencies. Confirm `node --version` reports Node.js 22.19 or newer before setup; unsupported Node versions may allow installation with warnings but are not a valid TinyOffice runtime.
 
-TinyOffice serves the web app on `http://localhost:5175` and the runtime API on `http://127.0.0.1:8095`. On a clean database, startup prints a one-time URL for creating the Owner passkey. The browser then continues into Company onboarding; the repository does not ship a hidden user or default Company. See [Owner authentication](docs/product/owner-authentication.md) and the [first-user onboarding acceptance runbook](docs/developer/runbooks/first-user-onboarding.md).
+TinyOffice serves the web app on `http://localhost:5175` and the runtime API on `http://127.0.0.1:8095`. Startup prints a private one-time local access URL; opening it creates the normal database-backed Owner session without a password or Windows Hello prompt. A deployment whose `TINYOFFICE_PUBLIC_ORIGIN` is an HTTPS domain instead requires Passkey bootstrap and sign-in. The browser then continues into Company onboarding; the repository does not ship a hidden user or default Company. See [Owner authentication](docs/product/owner-authentication.md) and the [first-user onboarding acceptance runbook](docs/developer/runbooks/first-user-onboarding.md).
 
 Useful checks:
 

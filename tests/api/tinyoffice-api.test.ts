@@ -1544,10 +1544,12 @@ function unauthenticatedProvider(): TinyOfficeAuthProvider {
     resolveCurrentUser: async () => undefined,
     status: async () => ({
       schema: "tinyoffice-auth-status",
-      version: 1,
+      version: 2,
+      accessMode: "remote",
       authenticated: false,
       bootstrapRequired: false,
       ownerConfigured: true,
+      passkeyConfigured: true,
     }),
   };
 }
@@ -3390,10 +3392,12 @@ test("TinyOffice exposes only non-secret authentication readiness before sign-in
     assert.equal(response.status, 200);
     assert.deepEqual(await json(response), {
       schema: "tinyoffice-auth-status",
-      version: 1,
+      version: 2,
+      accessMode: "remote",
       authenticated: false,
       bootstrapRequired: false,
       ownerConfigured: true,
+      passkeyConfigured: true,
     });
   }, unauthenticatedProvider());
 });

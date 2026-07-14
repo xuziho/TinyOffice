@@ -9,6 +9,7 @@ This page records the technical boundary for model-visible tools and final-resul
 | `src/runtime/registry/register-default-collaboration-actions.ts` | Keeps the empty-registration boundary; state-changing exits moved to scene final-result tools. |
 | `src/collaboration/actions/action-specs.ts` | Keeps the empty mounted-action baseline and prevents old state tools from being reintroduced. |
 | `src/collaboration/pi/collaboration-actions-extension.ts` | Exposes Chat `handoff_topic_turn`, `finish_intake_turn`, `finish_work_turn`, and read-only `recall_memory`. |
+| `src/runtime/pi/persistent-pi-session-transport.ts` | Injects the host-owned collaboration extension through PI `extensionFactories`, so TinyOffice business tools share the Runtime's event and service boundary. It must not be reloaded as an isolated project Package. |
 | `src/runtime/realtime/channel-turn-result-protocol.ts` | Channel Topic handoff protocol; Runtime records Handoff and updates Topic owner from `toId`. |
 | TinyOffice Chat state-action parser | Parses Channel handoff from tool-call events. Chat visible replies come from assistant messages, not tool arguments. Legacy approval fields must not create broad business approvals. |
 | `src/work/finish-work-turn-result.ts` | WorkRun `finish_work_turn` completion policy and result validation. |

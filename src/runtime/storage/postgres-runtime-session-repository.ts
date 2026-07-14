@@ -1,4 +1,5 @@
 import type { ProcessTraceEvent } from "../contracts/process-trace-event.js";
+import { logicalRuntimeSessionToolCounts } from "./runtime-session-tool-counts.js";
 import { releaseCompanyPostgresConnection } from "../company-config/postgres-runtime-connection.js";
 import type { PostgresMigrationClient } from "../company-config/postgres-company-database.js";
 import type {
@@ -957,8 +958,9 @@ WHERE company_id = $1 AND id = $2`,
     record.eventCount = events.length;
     record.userMessageCount = events.filter(isUserVisibleUserMessageEvent).length;
     record.assistantMessageCount = events.filter(isUserVisibleAssistantMessageEvent).length;
-    record.toolCallCount = events.filter((event) => event.kind === "tool_call").length;
-    record.toolResultCount = events.filter((event) => event.kind === "tool_result").length;
+    const toolCounts = logicalRuntimeSessionToolCounts(events);
+    record.toolCallCount = toolCounts.toolCallCount;
+    record.toolResultCount = toolCounts.toolResultCount;
     record.byteSize = events.reduce((total, event) => total + event.byteSize, 0);
   }
 

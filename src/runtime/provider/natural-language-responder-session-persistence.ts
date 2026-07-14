@@ -8,6 +8,7 @@ import type {
   RuntimeSessionPersistResult,
   RuntimeSessionRecordInput,
 } from "./natural-language-responder-contracts.js";
+import { logicalRuntimeSessionToolCounts } from "../storage/runtime-session-tool-counts.js";
 
 export async function persistNaturalLanguageRuntimeSessionSnapshot(
   repoRoot: string,
@@ -100,16 +101,7 @@ export async function persistNaturalLanguageRuntimeSessionSnapshotIntoRepository
       eventsToAppend.filter(isUserVisibleUserMessageEvent).length,
     assistantMessageCount: existingEvents.filter(isUserVisibleAssistantMessageEvent).length +
       eventsToAppend.filter(isUserVisibleAssistantMessageEvent).length,
-    toolCallCount: existingEvents.filter((event) =>
-      event.kind === "tool_call" || event.kind === "model_tool_call"
-    ).length + eventsToAppend.filter((event) =>
-      event.kind === "tool_call" || event.kind === "model_tool_call"
-    ).length,
-    toolResultCount: existingEvents.filter((event) =>
-      event.kind === "tool_result" || event.kind === "model_tool_result"
-    ).length + eventsToAppend.filter((event) =>
-      event.kind === "tool_result" || event.kind === "model_tool_result"
-    ).length,
+    ...logicalRuntimeSessionToolCounts([...existingEvents, ...eventsToAppend]),
     byteSize: existingEvents.reduce((total, event) => total + (event.byteSize || 0), 0) +
       eventsToAppend.reduce((total, event) => total + (event.byteSize || 0), 0),
     ...runtimeSessionTokenTotals({

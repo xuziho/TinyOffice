@@ -286,7 +286,6 @@ function EmployeeEditor({
                 {employee.enabled === false ? "Disabled" : "Enabled"}
               </Badge>
             </div>
-            <div className="mt-1 truncate text-sm text-[var(--tiny-muted)]">{employee.employeeId}</div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <EmployeeLifecycleAction employee={employee} pending={changingLifecycle} onSetEnabled={onSetEnabled} />
@@ -308,7 +307,7 @@ function EmployeeEditor({
           <TabsTrigger value="assets" className={employeeTabTriggerClassName}>Assets</TabsTrigger>
         </TabsList>
         <TabsContent value="profile" className="grid gap-3 pt-3">
-          <AvatarSeedEditor memberId={employee.employeeId} displayName={draft.displayName || employee.employeeId} avatarSeed={draft.avatarSeed} disabled={saving} onChange={(avatarSeed) => onDraftChange({ ...draft, avatarSeed })} />
+          <AvatarSeedEditor memberId={employee.employeeId} displayName={draft.displayName || "Unnamed employee"} avatarSeed={draft.avatarSeed} disabled={saving} onChange={(avatarSeed) => onDraftChange({ ...draft, avatarSeed })} />
           <FieldGrid>
             <LabelledField label="Display name">
               <Input value={draft.displayName} onChange={(event) => onDraftChange({ ...draft, displayName: event.currentTarget.value })} />
@@ -725,7 +724,7 @@ function isEmployeeSkillPath(employee: EmployeeAdminRecord, skillPath: string): 
 }
 
 function employeeLabel(employee: EmployeeAdminRecord): string {
-  return employee.profile.displayName?.trim() || employee.employeeId;
+  return employee.profile.displayName?.trim() || "Unnamed employee";
 }
 
 type RuntimeModelOption = {

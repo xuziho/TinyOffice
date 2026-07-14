@@ -92,6 +92,11 @@ export type DeleteCompanyInput = {
   };
 };
 
+export type UpdateCompanyProfileInput = {
+  companyId: string;
+  displayName?: unknown;
+};
+
 export type SaveCompanySystemAiSettingsInput = {
   companyId: string;
   settings?: {
@@ -113,6 +118,7 @@ export type SwitchCurrentCompanyInput = {
 export interface CompanyLifecycleApiService {
   loadCompanies(): Promise<CompaniesAdminViewModel>;
   createCompany(input: CreateCompanyInput): Promise<OwnedCreateCompanyResult>;
+  updateCompanyProfile(input: UpdateCompanyProfileInput): Promise<CompaniesAdminViewModel>;
   deleteCompany(input: DeleteCompanyInput, runtime?: CompanyRuntimeDeletionGuard): Promise<DeleteCompanyResult>;
   saveSystemAiSettings?(input: SaveCompanySystemAiSettingsInput): Promise<CompaniesAdminViewModel>;
   switchCurrentCompany(session: TinyOfficeCurrentUserSession, input: SwitchCurrentCompanyInput): Promise<TinyOfficeCurrentUserSession>;

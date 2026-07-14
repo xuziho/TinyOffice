@@ -28,7 +28,7 @@ Both modes resolve the same single Owner identity and use the same `auth_users` 
 1. Start TinyOffice with `npm start`.
 2. Open the private local URL printed in the terminal.
 3. TinyOffice creates or resolves the single Owner account, exchanges the one-time local ticket, and establishes the normal 30-day sliding session.
-4. The normal Company initialization flow begins when no Company exists.
+4. TinyOffice initializes the Owner profile first, then begins first-Company setup when no Company exists.
 
 If the local browser cookie is cleared while the runtime is still running and the one-time URL has already been consumed, restart TinyOffice to generate a fresh local launcher URL.
 
@@ -40,7 +40,7 @@ When remote mode has no passkey, runtime startup creates an in-memory one-time b
 2. Open the one-time URL printed in the terminal.
 3. Confirm the operating-system passkey prompt.
 4. TinyOffice creates the single Owner account, stores the passkey, and asks the new Owner to unlock the office.
-5. After sign-in, the normal Company initialization flow begins when no Company exists.
+5. After sign-in, TinyOffice initializes the Owner profile first, then begins first-Company setup when no Company exists.
 
 The runtime secret used to sign sessions is generated under ignored local runtime storage at `.runtime/auth/owner-session-secret`. A deployment may instead supply `TINYOFFICE_AUTH_SECRET`. Backup and restore procedures must treat the database and this secret as one authentication state. Sessions expire after 30 days of inactivity and slide forward while the Owner continues using TinyOffice.
 

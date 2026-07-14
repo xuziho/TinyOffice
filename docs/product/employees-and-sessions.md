@@ -72,7 +72,7 @@ The detail page uses four main sections:
 ## Counting Rules
 
 - `Messages` only counts user-visible `user_message` / `assistant_message`.
-- `Tools` counts logical tool calls, not provider lifecycle wrappers.
+- `Tools` counts logical tool calls, not provider lifecycle wrappers. When semantic Process Trace evidence and raw PI `tool_execution_start` / `tool_execution_end` evidence describe the same `toolCallId`, they count once; raw execution evidence still supplies an accurate count when no semantic wrapper was persisted.
 - `Tokens` comes from `session_records.token_input_total`, `token_output_total`, and `token_cache_total`, and represents whole-session totals.
 - Per-turn usage is shown on each conversation turn; model call ids and token attribution tables are debug evidence, not default reading content.
 - `Raw Events` is not a main-page metric.

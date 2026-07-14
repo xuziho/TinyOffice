@@ -119,7 +119,7 @@ export function useChatWorkspace(input: { requestedRoomId?: string; currentSessi
   const session = input.currentSession ?? sessionQuery.data;
   const companyId = session?.companyId ?? session?.currentCompanyId;
   const viewer = useMemo(() => viewerFromSession(session), [session]);
-  const hasCompanyScope = Boolean(companyId && !session?.needsInitialization);
+  const hasCompanyScope = Boolean(companyId && !session?.needsCompanyInitialization);
 
   const projectionQuery = useQuery({
     queryKey: chatQueryKeys.projection(companyId, viewer),

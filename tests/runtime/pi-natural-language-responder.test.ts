@@ -84,6 +84,35 @@ test("PI empty thinking lifecycle events do not become user-visible process trac
   assert.deepEqual(events, []);
 });
 
+test("PI provider retry lifecycle becomes visible Process Trace evidence", () => {
+  const started = buildProcessEventsFromSessionEvent(input, {
+    type: "auto_retry_start",
+    attempt: 2,
+    maxAttempts: 3,
+    delayMs: 4000,
+    errorMessage: "Provider overloaded",
+  });
+  const completed = buildProcessEventsFromSessionEvent(input, {
+    type: "auto_retry_end",
+    attempt: 2,
+    success: true,
+  });
+
+  assert.deepEqual(started.map((event) => ({ kind: event.kind, status: event.status, metadata: event.metadata })), [{
+    kind: "provider_retry",
+    status: "running",
+    metadata: {
+      attempt: 2,
+      maxAttempts: 3,
+      delayMs: 4000,
+      errorMessage: "Provider overloaded",
+      finalError: undefined,
+    },
+  }]);
+  assert.equal(completed[0]?.kind, "provider_retry");
+  assert.equal(completed[0]?.status, "succeeded");
+});
+
 test("PI provider prepares runtime image inputs as PI SDK image prompt options", async () => {
   const repoRoot = await mkdtemp(path.join(tmpdir(), "tinyoffice-pi-provider-images-"));
   const imagePath = path.join(repoRoot, ".data", "companies", "acme", "chat-attachments", "att-screen", "original");

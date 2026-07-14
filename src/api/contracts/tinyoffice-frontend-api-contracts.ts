@@ -1,6 +1,6 @@
 export type TinyOfficeCurrentSession = {
   schema: "tinyoffice-current-session";
-  version: 1;
+  version: 2;
   user: {
     id: string;
     displayName?: string;
@@ -12,7 +12,8 @@ export type TinyOfficeCurrentSession = {
     displayName?: string;
     role?: string;
   };
-  needsInitialization: boolean;
+  needsProfileInitialization: boolean;
+  needsCompanyInitialization: boolean;
 };
 
 export type TinyOfficeMemberViewerIdentity = {
@@ -210,7 +211,7 @@ export type CompanyBrandingState = {
   logoUrl?: string;
 };
 
-export type UserProfileState = { schema: "tinyoffice-user-profile"; version: 2; id: string; displayName: string; avatarSeed: string };
+export type UserProfileState = { schema: "tinyoffice-user-profile"; version: 3; id: string; displayName: string; avatarSeed: string; initialized: boolean };
 
 export type TinyOfficeUpdateManifest = {
   schema: "tinyoffice-update-manifest";
@@ -669,6 +670,11 @@ export type CreateCompanyRequest = {
     modelProvider?: string;
     modelId?: string;
   };
+};
+
+export type UpdateCompanyProfileRequest = {
+  companyId: string;
+  displayName: string;
 };
 
 export type OwnedCreateCompanyResult = {
@@ -1137,6 +1143,7 @@ export type SessionExplorerPromptInputPackage = {
 export type RuntimeActivityKind =
   | "run_started"
   | "thinking"
+  | "provider_retry"
   | "handoff"
   | "tool_call"
   | "tool_result"

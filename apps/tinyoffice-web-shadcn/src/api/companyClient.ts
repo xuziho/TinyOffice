@@ -5,6 +5,7 @@ import type {
   DeleteCompanyResult,
   OwnedCreateCompanyResult,
   SaveCompanySystemAiSettingsRequest,
+  UpdateCompanyProfileRequest,
 } from "tinyoffice/frontend-api-contracts";
 import { companiesPath, companyLifecyclePath, companySystemAiPath } from "./tinyofficePaths";
 import { requestJson, required } from "./tinyofficeRequest";
@@ -41,6 +42,19 @@ export async function deleteCompany(input: DeleteCompanyRequest): Promise<Delete
       confirmation: {
         intent: required(input.confirmationText, "confirmationText"),
       },
+    }),
+  });
+}
+
+export async function updateCompanyProfile(input: UpdateCompanyProfileRequest): Promise<CompaniesAdminViewModel> {
+  const companyId = required(input.companyId, "companyId");
+  return requestJson<CompaniesAdminViewModel>(companyLifecyclePath(companyId), {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      displayName: required(input.displayName, "displayName"),
     }),
   });
 }

@@ -12,7 +12,6 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useUnsavedChangesNavigation } from "@/config/unsavedChangesContext";
-import { CompanyLifecyclePage } from "./CompanyLifecyclePage";
 import type { SessionChatReturnTarget, SessionFocus } from "@/sessions/SessionsPage";
 import { chatQueryKeys } from "@/chat/chatQueryKeys";
 import { chatRouteFocusFromSearch, type ChatRouteFocus } from "@/chat/chatRouteSync";
@@ -37,12 +36,14 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState, type MouseEve
 import type { CompaniesAdminViewModel, TinyOfficeCurrentSession } from "tinyoffice/frontend-api-contracts";
 
 const AccessPage = lazy(() => import("@/access/AccessPage").then((module) => ({ default: module.AccessPage })));
+const CompanyLifecyclePage = lazy(() => import("./CompanyLifecyclePage").then((module) => ({ default: module.CompanyLifecyclePage })));
 const BackupPage = lazy(() => import("@/backup/BackupPage").then((module) => ({ default: module.BackupPage })));
 const CapabilitiesPage = lazy(() => import("@/capabilities/CapabilitiesPage").then((module) => ({ default: module.CapabilitiesPage })));
 const ChatWorkspaceRoute = lazy(() => import("@/chat/ChatWorkspaceRoute").then((module) => ({ default: module.ChatWorkspaceRoute })));
 const DoctorPage = lazy(() => import("@/doctor/DoctorPage").then((module) => ({ default: module.DoctorPage })));
 const EmployeesPage = lazy(() => import("@/employees/EmployeesPage").then((module) => ({ default: module.EmployeesPage })));
 const IntegrationsPage = lazy(() => import("@/integrations/IntegrationsPage").then((module) => ({ default: module.IntegrationsPage })));
+const OwnerOnboardingPage = lazy(() => import("@/onboarding/OwnerOnboardingPage").then((module) => ({ default: module.OwnerOnboardingPage })));
 const PromptPolicyPage = lazy(() => import("@/prompt/PromptPolicyPage").then((module) => ({ default: module.PromptPolicyPage })));
 const SessionsPage = lazy(() => import("@/sessions/SessionsPage").then((module) => ({ default: module.SessionsPage })));
 const SettingsPage = lazy(() => import("@/settings/SettingsPage").then((module) => ({ default: module.SettingsPage })));
@@ -64,7 +65,7 @@ export function App(): ReactElement {
   const [returnContext, setReturnContext] = useState<NavigationReturnContext | undefined>(() =>
     navigationReturnContextFromState(window.history.state)
   );
-  const needsInitialization = Boolean(currentSession?.needsInitialization);
+  const needsInitialization = Boolean(currentSession?.needsProfileInitialization || currentSession?.needsCompanyInitialization);
   const companiesQuery = useQuery({
     queryKey: chatQueryKeys.companies(),
     queryFn: listCompanies,
@@ -177,6 +178,14 @@ export function App(): ReactElement {
 
   function openChatTarget(target: SessionChatReturnTarget): void {
     openNavigationTarget({ kind: "chat-room", roomId: target.conversationId, surface: target.surface });
+  }
+
+  if (currentSession && needsInitialization) {
+    return (
+      <Suspense fallback={<RouteLoadingFallback />}>
+        <OwnerOnboardingPage session={currentSession} />
+      </Suspense>
+    );
   }
 
   return (
@@ -394,7 +403,7 @@ function currentCompanyDisplayName(
   if (!currentCompanyId) {
     return undefined;
   }
-  return viewModel?.companies.find((company) => company.companyId === currentCompanyId)?.displayName ?? currentCompanyId;
+  return viewModel?.companies.find((company) => company.companyId === currentCompanyId)?.displayName ?? "Company";
 }
 
 function CompanySwitcher({
@@ -414,7 +423,7 @@ function CompanySwitcher({
 }): ReactElement {
   const currentCompanyId = currentSession?.companyId ?? currentSession?.currentCompanyId ?? "";
   const companies = viewModel?.companies ?? [];
-  const currentCompanyName = companies.find((company) => company.companyId === currentCompanyId)?.displayName ?? currentCompanyId;
+  const currentCompanyName = companies.find((company) => company.companyId === currentCompanyId)?.displayName ?? "Company";
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>

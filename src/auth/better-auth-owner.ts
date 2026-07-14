@@ -205,6 +205,7 @@ export async function createTinyOfficeOwnerAuth(
       return {
         userId: session.user.id,
         ...(session.user.name?.trim() ? { displayName: session.user.name.trim() } : {}),
+        profileInitialized: false,
         source: "owner-session",
       };
     },

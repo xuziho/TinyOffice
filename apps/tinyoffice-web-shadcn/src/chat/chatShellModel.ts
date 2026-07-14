@@ -54,6 +54,7 @@ export type ChatRelatedTask = {
   title: string;
   status: TasksTaskListItem["status"];
   ownerMemberId: string;
+  ownerDisplayName?: string;
   sourceMessageId?: string;
   updatedAt: string;
 };
@@ -108,7 +109,7 @@ export function buildChatShellModel(input: {
   selectedSurface?: ChatShellSurface;
 }): ChatShellModel {
   const companyId = input.session?.companyId ?? input.session?.currentCompanyId;
-  const viewerLabel = input.session?.member?.displayName ?? input.session?.user.displayName ?? input.session?.user.id ?? "Unknown";
+  const viewerLabel = input.session?.member?.displayName ?? input.session?.user.displayName ?? "Owner";
   const containers = input.projection?.containers ?? [];
   const entries = input.projection?.entries ?? [];
   const archivedEntries = input.projection?.archivedEntries ?? [];
@@ -211,6 +212,7 @@ function relatedTasksFor(input: {
       title: task.title,
       status: task.status,
       ownerMemberId: task.ownerMemberId,
+      ...(task.ownerDisplayName ? { ownerDisplayName: task.ownerDisplayName } : {}),
       ...(task.sourceLink?.messageId ? { sourceMessageId: task.sourceLink.messageId } : {}),
       updatedAt: task.updatedAt,
     }));

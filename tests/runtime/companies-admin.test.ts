@@ -10,6 +10,7 @@ import {
   deleteCompany,
   loadCompaniesAdminViewModel,
   saveCompanySystemAiSettings,
+  updateCompanyProfile,
 } from "../../src/runtime/company-config/companies-admin.js";
 import { companyEmployeeHomePath } from "../../src/runtime/company-config/company-paths.js";
 import { DEFAULT_COMPANY_ID } from "../../src/runtime/company-config/postgres-schema.js";
@@ -136,6 +137,29 @@ test("creates isolated Companies from the default blueprint", async () => {
     assert.match(recruitSkill, /"capabilityId": "employee\.recruit"/);
     assert.ok((await stat(path.join(firstHomePath, "workspace"))).isDirectory());
     assert.ok((await stat(path.join(secondHomePath, "workspace"))).isDirectory());
+  } finally {
+    await rm(repoRoot, { recursive: true, force: true });
+  }
+});
+
+test("updates a Company display name without changing its stable identity", async () => {
+  const repoRoot = await mkdtempRepoRoot("tinyoffice-company-profile-");
+  try {
+    await createCompany({ repoRoot, companyId: "stable-company", displayName: "Original name", hrEmployeeDisplayName: "Mira" });
+    const updated = await updateCompanyProfile({ repoRoot, companyId: "stable-company", displayName: "Renamed company" });
+    assert.equal(updated.companies[0]?.companyId, "stable-company");
+    assert.equal(updated.companies[0]?.displayName, "Renamed company");
+
+    const databaseUrl = process.env.TINYOFFICE_DATABASE_URL?.trim();
+    assert(databaseUrl);
+    const pool = new Pool({ connectionString: databaseUrl });
+    try {
+      const row = await pool.query("SELECT company_id, display_name FROM companies WHERE company_id = $1", ["stable-company"]);
+      assert.deepEqual(row.rows[0], { company_id: "stable-company", display_name: "Renamed company" });
+      assert.equal(Number((await pool.query("SELECT COUNT(*) AS count FROM company_members WHERE company_id = $1", ["stable-company"])).rows[0].count), 1);
+    } finally {
+      await pool.end();
+    }
   } finally {
     await rm(repoRoot, { recursive: true, force: true });
   }

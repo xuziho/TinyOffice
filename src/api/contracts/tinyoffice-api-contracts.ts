@@ -155,7 +155,7 @@ export type TinyOfficeContextParams = {
 
 export type TinyOfficeCurrentSession = {
   schema: "tinyoffice-current-session";
-  version: 1;
+  version: 2;
   user: {
     id: string;
     displayName?: string;
@@ -167,7 +167,8 @@ export type TinyOfficeCurrentSession = {
     displayName?: string;
     role?: string;
   };
-  needsInitialization: boolean;
+  needsProfileInitialization: boolean;
+  needsCompanyInitialization: boolean;
 };
 
 export type TinyOfficeEmployeeViewerIdentity = {

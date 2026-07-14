@@ -11,6 +11,7 @@ export function registerCompanyRoutes(app: Hono, options: TinyOfficeApiOptions):
     parseCreateCompanyBody,
     parseDeleteCompanyBody,
     parseSaveCompanySystemAiSettingsBody,
+    parseUpdateCompanyProfileBody,
     readJsonBody,
     resolveCompanyLifecycleService,
   } = api;
@@ -43,6 +44,17 @@ export function registerCompanyRoutes(app: Hono, options: TinyOfficeApiOptions):
       await companyLifecycleService.deleteCompany(
         parseDeleteCompanyBody(await readJsonBody(c), companyId),
         companyLifecycleService.deletionGuard,
+      ),
+    );
+  });
+
+  app.patch("/api/companies/:companyId", async (c) => {
+    const companyId = companyIdFromContext(c);
+    const companyLifecycleService = resolveCompanyLifecycleService(options);
+    return jsonResponse(
+      c,
+      await companyLifecycleService.updateCompanyProfile(
+        parseUpdateCompanyProfileBody(await readJsonBody(c), companyId),
       ),
     );
   });

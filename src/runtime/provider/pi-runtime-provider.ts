@@ -415,6 +415,12 @@ export function buildProcessEventsFromPiSessionEvent(
     type?: string;
     id?: string;
     timestamp?: string;
+    attempt?: number;
+    maxAttempts?: number;
+    delayMs?: number;
+    errorMessage?: string;
+    success?: boolean;
+    finalError?: string;
     message?: {
       role?: string;
       content?: unknown[];
@@ -433,6 +439,26 @@ export function buildProcessEventsFromPiSessionEvent(
       reason?: string;
     };
   };
+
+  if (record.type === "auto_retry_start" || record.type === "auto_retry_end") {
+    const base = buildBaseProcessTraceEvent(input);
+    const started = record.type === "auto_retry_start";
+    return [{
+      ...base,
+      kind: "provider_retry",
+      title: started ? "Provider retry scheduled" : record.success ? "Provider retry succeeded" : "Provider retry failed",
+      summary: record.errorMessage || record.finalError || (started ? "A transient provider error will be retried." : undefined),
+      status: started ? "running" : record.success ? "succeeded" : "failed",
+      timestamp: record.timestamp,
+      metadata: {
+        attempt: record.attempt,
+        maxAttempts: record.maxAttempts,
+        delayMs: record.delayMs,
+        errorMessage: record.errorMessage,
+        finalError: record.finalError,
+      },
+    }];
+  }
 
   if (record.type === "message_update") {
     return buildProcessEventsFromAssistantMessageUpdate(input, record);
@@ -998,6 +1024,8 @@ function isProviderLifecycleSessionEvent(eventType: string) {
     "agent_end",
     "tool_execution_start",
     "tool_execution_end",
+    "auto_retry_start",
+    "auto_retry_end",
   ].includes(eventType);
 }
 

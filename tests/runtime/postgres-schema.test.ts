@@ -230,6 +230,7 @@ test("postgres migrations include the baseline and Channel role hard cut without
       "pg_011_chat_attachment_references_20260713",
       "pg_012_single_owner_authentication_20260714",
       "pg_013_chat_topic_single_ball_chain_20260714",
+      "pg_014_owner_profile_initialization_20260714",
     ],
   );
   assert.equal(postgresSchemaMigrations[0]?.sql, buildInitialPostgresSchemaSql());
@@ -250,6 +251,7 @@ test("postgres migrations include the baseline and Channel role hard cut without
   assert.match(migrationSql, /CREATE TABLE IF NOT EXISTS chat_topic_chains/);
   assert.match(migrationSql, /idx_chat_topic_chains_one_active_room/);
   assert.match(migrationSql, /CREATE TABLE IF NOT EXISTS chat_topic_chain_runs/);
+  assert.match(migrationSql, /ADD COLUMN IF NOT EXISTS profile_initialized_at timestamptz/);
   assert.doesNotMatch(migrationSql, /assignee_employee_id|created_by_employee_id|handoff_from_employee_id/);
   assert.doesNotMatch(migrationSql, /requested_by_employee_id|requested_approver_id|resolved_by_participant_id|actor_employee_id/);
   assert.doesNotMatch(createTableSql(migrationSql, "work_tasks"), /owner_employee_id/);
@@ -295,6 +297,7 @@ test("postgres migration runner applies pending migrations transactionally", asy
     "pg_011_chat_attachment_references_20260713",
     "pg_012_single_owner_authentication_20260714",
     "pg_013_chat_topic_single_ball_chain_20260714",
+    "pg_014_owner_profile_initialization_20260714",
   ]);
   assert.ok(client.queries.some((query) => query === "BEGIN"));
   assert.ok(client.queries.some((query) => /CREATE TABLE IF NOT EXISTS schema_migrations/.test(query)));
@@ -322,6 +325,7 @@ test("postgres migration runner applies current migrations after the baseline", 
     "pg_011_chat_attachment_references_20260713",
     "pg_012_single_owner_authentication_20260714",
     "pg_013_chat_topic_single_ball_chain_20260714",
+    "pg_014_owner_profile_initialization_20260714",
   ]);
   assert.ok(client.queries.some((query) => /ALTER TABLE chat_channel_members\s+DROP COLUMN IF EXISTS role/.test(query)));
   assert.ok(client.queries.some((query) => /CREATE TABLE IF NOT EXISTS work_blocked_recovery_requests/.test(query)));
@@ -343,6 +347,7 @@ test("postgres migration runner skips current migrations when already applied", 
     "pg_011_chat_attachment_references_20260713",
     "pg_012_single_owner_authentication_20260714",
     "pg_013_chat_topic_single_ball_chain_20260714",
+    "pg_014_owner_profile_initialization_20260714",
   ]);
 
   const result = await runPostgresSchemaMigrations(client);

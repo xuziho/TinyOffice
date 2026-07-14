@@ -41,7 +41,7 @@ export function WorkspaceSidebar({
     >
       <Sidebar collapsible="none" className="tiny-sidebar h-full w-full min-w-0 border-r">
         <SidebarHeader className="tiny-sidebar-header border-b">
-          <div className="truncate text-base font-semibold">{companyName ?? model.companyId ?? "TinyOffice"}</div>
+          <div className="truncate text-base font-semibold">{companyName ?? "TinyOffice"}</div>
           <div className="truncate text-xs text-muted-foreground">
             {model.companyId ? model.viewerLabel : "Waiting for Company context"}
           </div>

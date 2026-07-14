@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createCompany, deleteCompany, listCompanies, saveCompanySystemAiSettings } from "./companyClient";
+import { createCompany, deleteCompany, listCompanies, saveCompanySystemAiSettings, updateCompanyProfile } from "./companyClient";
 
 test("listCompanies reads the TinyOffice company lifecycle API", async () => {
   const requests: Array<{ url: string; init?: RequestInit }> = [];
@@ -129,6 +129,26 @@ test("deleteCompany sends the required Company delete confirmation without emplo
     companyId: "ziho-co",
     confirmation: { intent: "DELETE" },
   });
+});
+
+test("updateCompanyProfile changes only the Company display name", async () => {
+  const requests: Array<{ url: string; init?: RequestInit }> = [];
+  const previousFetch = globalThis.fetch;
+  const previousWindow = globalThis.window;
+  globalThis.window = { location: new URL("http://127.0.0.1:5175/company") } as unknown as Window & typeof globalThis;
+  globalThis.fetch = async (url, init) => {
+    requests.push({ url: String(url), init });
+    return new Response(JSON.stringify({ companies: [] }), { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+  try {
+    await updateCompanyProfile({ companyId: "ziho-co", displayName: "Ziho Commerce" });
+  } finally {
+    globalThis.fetch = previousFetch;
+    globalThis.window = previousWindow;
+  }
+  assert.equal(requests[0]?.url, "http://127.0.0.1:5175/api/companies/ziho-co");
+  assert.equal(requests[0]?.init?.method, "PATCH");
+  assert.deepEqual(JSON.parse(String(requests[0]?.init?.body)), { displayName: "Ziho Commerce" });
 });
 
 test("saveCompanySystemAiSettings stores company-level System AI models", async () => {

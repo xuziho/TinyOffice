@@ -113,6 +113,7 @@ export function ChatWorkspaceRoute({
           activityItems={workspace.activity.items}
           hasActivitySource={Boolean(workspace.activitySelection)}
           activitySource={workspace.activitySource}
+          activityIsPrevious={Boolean(workspace.activeRun?.sourceMessageId && workspace.activitySelection?.sourceMessageId !== workspace.activeRun.sourceMessageId)}
           onOpenSession={(sessionFocus) => onOpenNavigationTarget({ kind: "session", ...sessionFocus }, { from: returnContext })}
           onOpenNavigationTarget={(target) => onOpenNavigationTarget(target, { from: returnContext })}
           onUpdateChannelDetails={workspace.updateChannelDetails}

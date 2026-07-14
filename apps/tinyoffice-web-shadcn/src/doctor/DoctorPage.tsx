@@ -29,7 +29,7 @@ export function DoctorPage({ currentSession }: { currentSession?: TinyOfficeCurr
         <div className="min-w-0">
           <div className="tiny-room-title truncate">Doctor</div>
           <div className="tiny-room-subtitle truncate">
-            {companyId ? `Read-only diagnostics - ${companyId}` : "Read-only diagnostics"}
+            {companyId ? "Read-only diagnostics for the current company" : "Read-only diagnostics"}
           </div>
         </div>
       </header>

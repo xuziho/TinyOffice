@@ -8,11 +8,12 @@ import type { SessionExplorerSessionSummary, SessionExplorerViewModel, TinyOffic
 
 const currentSession: TinyOfficeCurrentSession = {
   schema: "tinyoffice-current-session",
-  version: 1,
+  version: 2,
   user: { id: "user-xu", displayName: "Xu Ziho" },
   currentCompanyId: "ziho-e-com",
   member: { memberId: "xuziho", displayName: "Xu Ziho", role: "boss" },
-  needsInitialization: false,
+  needsProfileInitialization: false,
+  needsCompanyInitialization: false,
 };
 
 function sessionViewModel(): SessionExplorerViewModel {

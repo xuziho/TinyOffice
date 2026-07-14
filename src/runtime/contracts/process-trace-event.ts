@@ -11,6 +11,7 @@ export type ProcessTraceEventKind =
   | "model_tool_result"
   | "model_reply_observed"
   | "model_text_delta"
+  | "provider_retry"
   | "tool_call_detected"
   | "structured_action_replayed"
   | "turn_completed"

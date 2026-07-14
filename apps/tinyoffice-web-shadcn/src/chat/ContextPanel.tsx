@@ -19,6 +19,7 @@ export function ContextPanel({
   activityItems,
   hasActivitySource,
   activitySource,
+  activityIsPrevious,
   onOpenSession,
   onOpenNavigationTarget,
   onUpdateChannelDetails,
@@ -30,6 +31,7 @@ export function ContextPanel({
   activityItems: RuntimeActivityItem[];
   hasActivitySource: boolean;
   activitySource?: ActivitySourceSummary;
+  activityIsPrevious?: boolean;
   onOpenSession?: (input: { employeeId?: string; sessionId?: string; query?: string }) => void;
   onOpenNavigationTarget?: (target: NavigationTarget) => void;
   onUpdateChannelDetails?: (input: { title: string; summary?: string }) => Promise<void>;
@@ -81,7 +83,7 @@ export function ContextPanel({
           {directMessageRuntimeSummary ? <DirectMessageWorkSummary summary={directMessageRuntimeSummary} onOpenNavigationTarget={onOpenNavigationTarget} /> : null}
           <RelatedTasksSection tasks={model.context.relatedTasks} onOpenNavigationTarget={onOpenNavigationTarget} />
           {shouldShowParticipants(model) ? <ParticipantsSection model={model} showSessions={runtimeMode.showParticipantSessions} onOpenSession={onOpenSession} /> : null}
-          {runtimeMode.showActivityDock ? <ActivityDock activityItems={activityItems} hasActivitySource={hasActivitySource} activitySource={activitySource} /> : null}
+          {runtimeMode.showActivityDock ? <ActivityDock activityItems={activityItems} hasActivitySource={hasActivitySource} activitySource={activitySource} activityIsPrevious={activityIsPrevious} /> : null}
           <EvidenceSection title="Work runs" items={model.context.evidence.workRuns} />
           <EvidenceSection title="Files" items={model.context.evidence.files} />
           <EvidenceSection title="Other evidence" items={model.context.evidence.other} />
@@ -284,7 +286,7 @@ function RelatedTasksSection({
               <div className="min-w-0 flex-1">
                 <div className="tiny-runtime-work-title" title={task.title}>{task.title}</div>
                 <ContextText className="tiny-runtime-work-meta">
-                  {`${statusLabel(task.status)} - ${task.ownerMemberId}`}
+                  {`${statusLabel(task.status)} - ${task.ownerDisplayName ?? "Unknown owner"}`}
                 </ContextText>
               </div>
             </div>
@@ -341,15 +343,20 @@ function ActivityDock({
   activityItems,
   hasActivitySource,
   activitySource,
+  activityIsPrevious,
 }: {
   activityItems: RuntimeActivityItem[];
   hasActivitySource: boolean;
   activitySource?: ActivitySourceSummary;
+  activityIsPrevious?: boolean;
 }): ReactElement {
   return (
     <section className="tiny-trace-dock grid min-w-0 gap-2">
       <div className="flex min-w-0 items-baseline justify-between gap-2">
-        <div className="tiny-context-section-label">Activity</div>
+        <div className="flex items-center gap-2">
+          <div className="tiny-context-section-label">Activity</div>
+          {activityIsPrevious ? <Badge variant="outline">Previous reply</Badge> : null}
+        </div>
         {activitySource ? (
           <div className="min-w-0 truncate text-[11px] font-normal text-muted-foreground/70" title={`${activitySource.senderName} - ${formatActivitySourceTime(activitySource.createdAt)}`}>
             {activitySource.senderName} - {formatActivitySourceTime(activitySource.createdAt)}

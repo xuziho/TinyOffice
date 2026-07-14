@@ -8,11 +8,12 @@ import type { TasksViewModel, TinyOfficeCurrentSession } from "tinyoffice/fronte
 
 const currentSession: TinyOfficeCurrentSession = {
   schema: "tinyoffice-current-session",
-  version: 1,
+  version: 2,
   user: { id: "user-xu", displayName: "Xu Ziho" },
   currentCompanyId: "ziho-e-com",
   member: { memberId: "xuziho", displayName: "Xu Ziho", role: "boss" },
-  needsInitialization: false,
+  needsProfileInitialization: false,
+  needsCompanyInitialization: false,
 };
 
 function tasksViewModel(): TasksViewModel {
@@ -50,6 +51,7 @@ function tasksViewModel(): TasksViewModel {
       title: "Publish weekly social update",
       status: "active",
       ownerMemberId: "alex",
+      ownerDisplayName: "Alex",
       sourceKind: "chat_request",
       updatedAt: "2026-07-06T00:00:00.000Z",
       acceptanceCriteria: "Published post URL is recorded.",
@@ -100,6 +102,7 @@ function taskSelectedViewModel(status: "active" | "canceled" | "archived"): Task
       title: "Publish weekly social update",
       status,
       ownerMemberId: "alex",
+      ownerDisplayName: "Alex",
       sourceKind: "chat_request",
       sourceLink: {
         kind: "conversation-message",
@@ -167,7 +170,8 @@ test("renders Tasks as a background Task operations console", async () => {
   );
 
   assert.match(html, /Tasks/);
-  assert.match(html, /Task command center · ziho-e-com/);
+  assert.match(html, /Task command center/);
+  assert.doesNotMatch(html, /Task command center · ziho-e-com/);
   assert.doesNotMatch(html, /New Task|Create Task/);
   assert.match(html, />Task</);
   assert.match(html, />State</);
@@ -224,6 +228,7 @@ test("constrains long Task table metadata so right columns do not overlap", asyn
   model.tasks[0] = {
     ...model.tasks[0]!,
     ownerMemberId: "tinyoffice-company-control-plane-S7yekK-iris-growth",
+    ownerDisplayName: "Iris Growth",
     nextStep: "Queued run tinyoffice-company-control-plane-S7yekK-work-run-3 is waiting for dispatch.",
   };
   const queryClient = new QueryClient();
@@ -242,10 +247,11 @@ test("constrains long Task table metadata so right columns do not overlap", asyn
     </QueryClientProvider>,
   );
 
-  assert.match(html, /title="tinyoffice-company-control-plane-S7yekK-iris-growth"/);
+  assert.match(html, /Iris Growth/);
+  assert.doesNotMatch(html, /title="tinyoffice-company-control-plane-S7yekK-iris-growth"/);
   assert.doesNotMatch(html, /Queued run tinyoffice-company-control-plane-S7yekK-work-run-3 is waiting for dispatch\./);
   assert.match(html, />Current /);
-  assert.match(html, /title="tinyoffice-company-control-plane-S7yekK-iris-growth"/);
+  assert.doesNotMatch(html, /title="tinyoffice-company-control-plane-S7yekK-iris-growth"/);
 });
 
 test("renders a selected Task as a full-width detail route with a back action", async () => {

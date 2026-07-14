@@ -18,6 +18,17 @@ import { resetRuntimePostgresTables } from "./postgres-test-utils.js";
 
 beforeEach(resetRuntimePostgresTables);
 
+test("a clean Owner profile remains explicitly uninitialized until it is saved", async () => {
+  const repoRoot = await mkdtemp(path.join(os.tmpdir(), "tinyoffice-user-onboarding-"));
+  const initial = await loadUserProfile({ repoRoot, userId: "owner-1", fallbackDisplayName: "Owner" });
+  assert.equal(initial.initialized, false);
+  assert.equal(initial.displayName, "Owner");
+
+  const saved = await saveUserProfile({ repoRoot, userId: "owner-1", displayName: "Xu Ziho", avatarSeed: "owner-avatar" });
+  assert.equal(saved.initialized, true);
+  assert.equal((await loadUserProfile({ repoRoot, userId: "owner-1" })).displayName, "Xu Ziho");
+});
+
 test("current Company selection persists in the user profile and clears when the Company is deleted", async () => {
   const repoRoot = await mkdtemp(path.join(os.tmpdir(), "tinyoffice-user-current-company-"));
   const postgres = await openConfiguredPostgresConnection(repoRoot);

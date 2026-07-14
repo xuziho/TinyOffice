@@ -1,4 +1,4 @@
-import { createCompany, deleteCompany, listCompanies } from "@/api/companyClient";
+import { createCompany, deleteCompany, listCompanies, updateCompanyProfile } from "@/api/companyClient";
 import { getCompanyBranding, removeCompanyLogo, uploadCompanyLogo } from "@/api/brandingClient";
 import { switchCurrentCompany } from "@/api/currentSessionClient";
 import { Badge } from "@/components/ui/badge";
@@ -80,9 +80,19 @@ export function CompanyLifecyclePage({
 
   const deleteMutation = useMutation({
     mutationFn: deleteCompany,
-    onSuccess: async (result) => {
-      setMessage(`${result.companyId} deleted.`);
+    onSuccess: async () => {
+      setMessage("Company deleted.");
       setSelectedCompanyId(undefined);
+      await refreshRuntimeState();
+    },
+    onError: (error) => setMessage(error instanceof Error ? error.message : String(error)),
+  });
+
+  const updateProfileMutation = useMutation({
+    mutationFn: updateCompanyProfile,
+    onSuccess: async (result) => {
+      queryClient.setQueryData(chatQueryKeys.companies(), result);
+      setMessage("Company profile updated.");
       await refreshRuntimeState();
     },
     onError: (error) => setMessage(error instanceof Error ? error.message : String(error)),
@@ -92,19 +102,19 @@ export function CompanyLifecyclePage({
     mutationFn: switchCurrentCompany,
     onSuccess: async (session) => {
       queryClient.setQueryData(chatQueryKeys.currentSession(), session);
-      setMessage(`${session.companyId ?? session.currentCompanyId} is now current.`);
+      setMessage("Current company changed.");
       await refreshRuntimeState();
     },
     onError: (error) => setMessage(error instanceof Error ? error.message : String(error)),
   });
 
   const viewModel = companiesQuery.data;
-  const isInitializing = Boolean(currentSession?.needsInitialization || viewModel?.companies.length === 0);
+  const isInitializing = Boolean(currentSession?.needsCompanyInitialization || viewModel?.companies.length === 0);
   const currentCompanyId = currentSession?.companyId ?? currentSession?.currentCompanyId;
   const companies = viewModel?.companies ?? EMPTY_COMPANIES;
   const visibleCompanies = useMemo(() => visibleCompanyRows(companies, query), [companies, query]);
   const selectedCompany = selectedCompanyFor(companies, selectedCompanyId, currentCompanyId);
-  const busy = createMutation.isPending || deleteMutation.isPending || switchCompanyMutation.isPending;
+  const busy = createMutation.isPending || deleteMutation.isPending || updateProfileMutation.isPending || switchCompanyMutation.isPending;
 
   useEffect(() => {
     if (!companies.length) {
@@ -201,6 +211,7 @@ export function CompanyLifecyclePage({
                   current={selectedCompany.companyId === currentCompanyId}
                   busy={busy}
                   onMakeCurrent={() => requestTransition(() => switchCompanyMutation.mutate({ companyId: selectedCompany.companyId }))}
+                  onUpdateProfile={(displayName) => updateProfileMutation.mutate({ companyId: selectedCompany.companyId, displayName })}
                   onDelete={(confirmationText) => requestTransition(() => deleteMutation.mutate({ companyId: selectedCompany.companyId, confirmationText }))}
                 />
               ) : (
@@ -257,12 +268,14 @@ function CompanySettingsPanel({
   current,
   busy,
   onMakeCurrent,
+  onUpdateProfile,
   onDelete,
 }: {
   company: CompanyLifecycleRecordDto;
   current: boolean;
   busy: boolean;
   onMakeCurrent: () => void;
+  onUpdateProfile: (displayName: string) => void;
   onDelete: (confirmationText: string) => void;
 }): ReactElement {
   return (
@@ -285,12 +298,7 @@ function CompanySettingsPanel({
       <div className="grid gap-5 p-5">
         <section className="grid gap-3">
           <SectionHeading title="Identity" />
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Fact label="Company name" value={company.displayName} />
-            <Fact label="Company ID" value={company.companyId} />
-            <Fact label="Created" value={formatTimestamp(company.createdAt)} />
-            <Fact label="Updated" value={formatTimestamp(company.updatedAt)} />
-          </div>
+          <CompanyIdentityEditor company={company} busy={busy} onSave={onUpdateProfile} />
         </section>
 
         <Separator />
@@ -303,6 +311,43 @@ function CompanySettingsPanel({
           busy={busy}
           onDelete={onDelete}
         />
+      </div>
+    </div>
+  );
+}
+
+function CompanyIdentityEditor({
+  company,
+  busy,
+  onSave,
+}: {
+  company: CompanyLifecycleRecordDto;
+  busy: boolean;
+  onSave: (displayName: string) => void;
+}): ReactElement {
+  const [displayName, setDisplayName] = useState(company.displayName);
+
+  useEffect(() => setDisplayName(company.displayName), [company.companyId, company.displayName]);
+
+  const normalized = displayName.trim();
+  const dirty = normalized !== company.displayName;
+  return (
+    <div className="grid gap-3">
+      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+        <label className="grid gap-1.5 text-sm font-medium">
+          Company name
+          <Input value={displayName} maxLength={120} onChange={(event) => setDisplayName(event.currentTarget.value)} />
+        </label>
+        <Button type="button" size="sm" disabled={busy || !dirty || !normalized} onClick={() => onSave(normalized)}>
+          Save name
+        </Button>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        The internal company identifier stays fixed so conversations, employees, files, and runtime history keep the same identity.
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Fact label="Created" value={formatTimestamp(company.createdAt)} />
+        <Fact label="Updated" value={formatTimestamp(company.updatedAt)} />
       </div>
     </div>
   );
@@ -328,14 +373,18 @@ function StateBlock({ children }: { children: string }): ReactElement {
   );
 }
 
-function CreateCompanyPanel({
+export function CreateCompanyPanel({
   viewModel,
   busy,
   onCreate,
+  title = "Create company",
+  submitLabel = "Create company",
 }: {
   viewModel?: CompaniesAdminViewModel;
   busy: boolean;
   onCreate: (input: CreateCompanyRequest) => void;
+  title?: string;
+  submitLabel?: string;
 }): ReactElement {
   const [displayName, setDisplayName] = useState("");
   const [hrEmployeeDisplayName, setHrEmployeeDisplayName] = useState("");
@@ -380,7 +429,7 @@ function CreateCompanyPanel({
     <form className="rounded-md border bg-background" onSubmit={submit}>
       <div className="px-4 py-3">
         <h2 className="flex items-center gap-1.5 text-base font-semibold leading-tight">
-          Create company
+          {title}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -424,7 +473,7 @@ function CreateCompanyPanel({
         />
         <Button className="w-fit" type="submit" disabled={busy}>
           <Plus />
-          Create company
+          {submitLabel}
         </Button>
       </div>
     </form>
@@ -509,7 +558,6 @@ function CompanyRow({
             <h3 className="truncate text-sm font-medium">{company.displayName}</h3>
             {current ? <Badge variant="secondary">Current</Badge> : null}
           </div>
-          <p className="truncate text-sm text-muted-foreground">{company.companyId}</p>
         </div>
         <div className="shrink-0 text-xs text-muted-foreground">{formatShortDate(company.updatedAt)}</div>
       </div>
@@ -596,7 +644,6 @@ function DangerZone({
               </DialogHeader>
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm">
                 <p className="font-medium text-destructive">{company.displayName}</p>
-                <p className="mt-1 text-muted-foreground">{company.companyId}</p>
               </div>
               <Input
                 aria-label={`Confirm delete ${company.companyId}`}
@@ -657,5 +704,5 @@ function formatShortDate(value: string): string {
 
 function currentCompanyName(viewModel: CompaniesAdminViewModel | undefined, session: TinyOfficeCurrentSession | undefined): string {
   const companyId = session?.companyId ?? session?.currentCompanyId;
-  return viewModel?.companies.find((company) => company.companyId === companyId)?.displayName ?? companyId ?? "Company";
+  return viewModel?.companies.find((company) => company.companyId === companyId)?.displayName ?? "Company";
 }

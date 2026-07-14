@@ -38,7 +38,7 @@ export function CompanySkillsPage({ currentSession }: { currentSession?: TinyOff
   return (
     <main className="grid h-svh grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
       <header className="tiny-room-header flex items-center justify-between border-b">
-        <div><div className="tiny-room-title">Company Skills</div><div className="tiny-room-subtitle">Shared workflow knowledge - {companyId}</div></div>
+        <div><div className="tiny-room-title">Company Skills</div><div className="tiny-room-subtitle">Shared workflow knowledge for the current company</div></div>
         <Badge variant="secondary">Company-wide</Badge>
       </header>
       <section className="grid min-h-0 grid-cols-[280px_minmax(0,1fr)] overflow-hidden">

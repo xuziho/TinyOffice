@@ -13,12 +13,13 @@ import { activeEntryContainerId, entryListHeaderFor, formatEntryCount, memberDis
 
 const session: TinyOfficeCurrentSession = {
   schema: "tinyoffice-current-session",
-  version: 1,
+  version: 2,
   user: { id: "xuziho", displayName: "Xu Ziho" },
   currentCompanyId: "ziho-co",
   companyId: "ziho-co",
   member: { memberId: "xuziho", displayName: "Xu Ziho", role: "boss" },
-  needsInitialization: false,
+  needsProfileInitialization: false,
+  needsCompanyInitialization: false,
 };
 
 const projection: ChatProjectionPage = {

@@ -3,6 +3,7 @@ import type { ProcessTraceEvent, ProcessTraceEventStatus } from "../contracts/pr
 export type RuntimeActivityKind =
   | "run_started"
   | "thinking"
+  | "provider_retry"
   | "handoff"
   | "tool_call"
   | "tool_result"
@@ -62,6 +63,8 @@ function activityGroupKey(event: ProcessTraceEvent): string | undefined {
       return `run_started:${runId}`;
     case "model_reasoning_observed":
       return `thinking:${metadataString(metadata.modelCallId) || metadataString(metadata.piModelCallId) || runId}`;
+    case "provider_retry":
+      return `provider_retry:${runId}:${metadataString(metadata.attempt) || event.id}`;
     case "tool_activity": {
       const key = durableToolTraceKey(event);
       return key ? `${isHandoffToolEvent(event) ? "handoff" : "tool_call"}:${runId}:${key}` : undefined;
@@ -119,6 +122,20 @@ function activityItemForGroup(key: string, events: ProcessTraceEvent[]): Runtime
       kind: "thinking",
       title: "Thinking",
       details: activityDetails(latest.summary || latest.preview || latest.title),
+      status: latest.status,
+      timestamp: latest.timestamp,
+      raw,
+    };
+  }
+  if (key.startsWith("provider_retry:")) {
+    const attempt = metadataString(latest.metadata?.attempt);
+    const delayMs = metadataNumber(latest.metadata?.delayMs);
+    const error = metadataString(latest.metadata?.errorMessage) || metadataString(latest.metadata?.finalError);
+    return {
+      id: `activity:${key}`,
+      kind: "provider_retry",
+      title: attempt ? `Provider retry ${attempt}` : "Provider retry",
+      details: error || (delayMs !== undefined ? `Waiting ${Math.max(1, Math.round(delayMs / 1000))} seconds before retrying.` : "Retrying after a transient provider error."),
       status: latest.status,
       timestamp: latest.timestamp,
       raw,
@@ -236,7 +253,14 @@ function bestStatus(events: ProcessTraceEvent[]): ProcessTraceEventStatus | unde
 }
 
 function metadataString(value: unknown): string | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function metadataNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
 function recordFromUnknown(value: unknown): Record<string, unknown> | undefined {

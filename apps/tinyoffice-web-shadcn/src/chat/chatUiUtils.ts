@@ -11,7 +11,7 @@ export function entryListHeaderFor(model: ChatShellModel): { title: string; subt
     };
   }
   if (model.selectedEntry) {
-    const parentTitle = model.selectedContainer?.title ?? model.selectedEntry.parentContainerId;
+    const parentTitle = model.selectedContainer?.title ?? "Conversation";
     return {
       title: parentTitle,
       subtitle: formatEntryCount(model.directoryEntries.length),
@@ -209,7 +209,7 @@ function draftTargetNameFor(model: ChatShellModel): string {
       return directMessage.title;
     }
   }
-  return model.selectedContainer?.title ?? surface.containerId;
+  return model.selectedContainer?.title ?? "current space";
 }
 
 export function messageAlignFor(message: MessagePage["messages"][number], model: ChatShellModel): "start" | "end" {

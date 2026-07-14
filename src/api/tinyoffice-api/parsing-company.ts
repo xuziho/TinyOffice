@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 
 import { ensureConversationCompanyScope } from "../../collaboration/contracts/conversation-message-contract.js";
-import type { CreateCompanyInput, DeleteCompanyInput, SaveCompanySystemAiSettingsInput, SwitchCurrentCompanyInput } from "./contracts.js";
+import type { CreateCompanyInput, DeleteCompanyInput, SaveCompanySystemAiSettingsInput, SwitchCurrentCompanyInput, UpdateCompanyProfileInput } from "./contracts.js";
 import { requireObjectBody, requireParam, requireString } from "./parsing.js";
 
 export function companyIdFromContext(c: Context): string {
@@ -37,6 +37,14 @@ export function parseDeleteCompanyBody(value: unknown, companyId: string): Delet
     confirmation: {
       intent: confirmation?.intent,
     },
+  };
+}
+
+export function parseUpdateCompanyProfileBody(value: unknown, companyId: string): UpdateCompanyProfileInput {
+  const body = requireObjectBody(value, "Company profile body");
+  return {
+    companyId,
+    displayName: body.displayName,
   };
 }
 

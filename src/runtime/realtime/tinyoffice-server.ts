@@ -41,6 +41,7 @@ import {
   deleteCompany,
   loadCompaniesAdminViewModel,
   saveCompanySystemAiSettings,
+  updateCompanyProfile,
 } from "../company-config/companies-admin.js";
 import {
   endCompanyPostgresPool,
@@ -56,7 +57,7 @@ import {
   saveEmployeePrivateSkill,
 } from "../company-config/employees-admin.js";
 import { setMemberRuntimeLifecycle } from "../company-config/member-runtime-lifecycle-service.js";
-import { loadUserPreferredCompanyId, saveUserPreferredCompanyId } from "../company-config/user-profile.js";
+import { loadUserPreferredCompanyId, loadUserProfile, saveUserPreferredCompanyId } from "../company-config/user-profile.js";
 import { recruitEmployee } from "../company-config/recruit-employee.js";
 import {
   loadPromptPolicyViewModel,
@@ -303,6 +304,7 @@ async function resolveRuntimeCurrentUserSession(
   return {
     userId: session.userId,
     ...(session.displayName ? { displayName: session.displayName } : {}),
+    profileInitialized: session.profileInitialized ?? false,
     source: session.source,
   };
 }
@@ -1033,8 +1035,22 @@ export async function createTinyOfficeServer(
         return selected;
       },
       async resolveCurrentUserSession(session) {
-        const preferredCompanyId = await loadUserPreferredCompanyId({ repoRoot: config.repoRoot, userId: session.userId });
-        return resolveRuntimeCurrentUserSession(config.repoRoot, session, preferredCompanyId);
+        const [preferredCompanyId, profile] = await Promise.all([
+          loadUserPreferredCompanyId({ repoRoot: config.repoRoot, userId: session.userId }),
+          loadUserProfile({ repoRoot: config.repoRoot, userId: session.userId, fallbackDisplayName: session.displayName }),
+        ]);
+        return resolveRuntimeCurrentUserSession(config.repoRoot, {
+          ...session,
+          ...(profile.displayName ? { displayName: profile.displayName } : {}),
+          profileInitialized: profile.initialized,
+        }, preferredCompanyId);
+      },
+      updateCompanyProfile(input) {
+        return updateCompanyProfile({
+          repoRoot: config.repoRoot,
+          companyId: input.companyId,
+          displayName: input.displayName,
+        });
       },
     },
     tasksViewModelService: {

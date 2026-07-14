@@ -13,12 +13,13 @@ test("switchCurrentCompany writes the authoritative TinyOffice session company",
     requests.push({ url: String(url), init });
     return new Response(JSON.stringify({
       schema: "tinyoffice-current-session",
-      version: 1,
+      version: 2,
       user: { id: "xuziho", displayName: "Xu Ziho" },
       currentCompanyId: "globex",
       companyId: "globex",
       member: { memberId: "xuziho", displayName: "Xu Ziho", role: "admin" },
-      needsInitialization: false,
+      needsProfileInitialization: false,
+      needsCompanyInitialization: false,
     }), { status: 200, headers: { "Content-Type": "application/json" } });
   };
 

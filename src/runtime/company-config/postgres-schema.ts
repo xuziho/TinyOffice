@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   user_id text PRIMARY KEY,
   display_name text NOT NULL,
   avatar_seed text,
+  profile_initialized_at timestamptz,
   current_company_id text REFERENCES companies(company_id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL,
   updated_at timestamptz NOT NULL
@@ -1057,6 +1058,17 @@ CREATE TABLE IF NOT EXISTS chat_topic_chain_runs (
 );
 CREATE INDEX IF NOT EXISTS idx_chat_topic_chain_runs_chain
 ON chat_topic_chain_runs(company_id, chain_id, created_at);
+`,
+  },
+  {
+    id: "pg_014_owner_profile_initialization_20260714",
+    sql: `
+ALTER TABLE user_profiles
+  ADD COLUMN IF NOT EXISTS profile_initialized_at timestamptz;
+
+UPDATE user_profiles
+SET profile_initialized_at = COALESCE(profile_initialized_at, updated_at, now())
+WHERE profile_initialized_at IS NULL;
 `,
   },
 ];

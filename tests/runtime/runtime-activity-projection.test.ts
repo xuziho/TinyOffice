@@ -290,6 +290,40 @@ test("runtime Activity projects topic handoff as a first-class activity", () => 
   }]);
 });
 
+test("runtime Activity keeps provider backoff visible as one retry item", () => {
+  const activity = buildRuntimeActivity([
+    traceEvent({
+      id: "retry-start",
+      timestamp: "2026-07-14T12:00:00.000Z",
+      kind: "provider_retry",
+      title: "Provider retry scheduled",
+      status: "running",
+      metadata: { runId: "run-1", attempt: 1, delayMs: 5000, errorMessage: "Provider overloaded" },
+    }),
+    traceEvent({
+      id: "retry-end",
+      timestamp: "2026-07-14T12:00:05.000Z",
+      kind: "provider_retry",
+      title: "Provider retry succeeded",
+      status: "succeeded",
+      metadata: { runId: "run-1", attempt: 1 },
+    }),
+  ]);
+
+  assert.equal(activity.items.length, 1);
+  assert.deepEqual(activity.items[0] && {
+    kind: activity.items[0].kind,
+    title: activity.items[0].title,
+    status: activity.items[0].status,
+    rawEventIds: activity.items[0].raw.eventIds,
+  }, {
+    kind: "provider_retry",
+    title: "Provider retry 1",
+    status: "succeeded",
+    rawEventIds: ["retry-start", "retry-end"],
+  });
+});
+
 function traceEvent(input: Omit<ProcessTraceEvent, "sessionKey" | "employeeId">): ProcessTraceEvent {
   return {
     sessionKey: "employee-hr|chat_direct_room|conversation-1",

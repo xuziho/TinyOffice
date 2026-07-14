@@ -151,8 +151,8 @@ export function TasksPage({
           <div className="tiny-room-title truncate">{selectedTask?.title ?? "Tasks"}</div>
           <div className="tiny-room-subtitle truncate">
             {selectedTask
-              ? `${sourceLabel(selectedTask.sourceKind)} - ${selectedTask.ownerMemberId}`
-              : `Task command center · ${companyId}`}
+              ? `${sourceLabel(selectedTask.sourceKind)} - ${taskOwnerLabel(selectedTask)}`
+              : "Task command center"}
           </div>
         </div>
         {selectedTask ? (
@@ -263,7 +263,11 @@ export function TasksPage({
 }
 
 function TaskOwnerAvatar({ task, className }: { task: Pick<TasksTaskListItem, "ownerMemberId" | "ownerDisplayName" | "ownerAvatarSeed">; className: string }): ReactElement {
-  return <EmployeeAvatar memberId={task.ownerMemberId} avatarSeed={task.ownerAvatarSeed ?? task.ownerMemberId} displayName={task.ownerDisplayName ?? task.ownerMemberId} className={className} />;
+  return <EmployeeAvatar memberId={task.ownerMemberId} avatarSeed={task.ownerAvatarSeed ?? task.ownerMemberId} displayName={taskOwnerLabel(task)} className={className} />;
+}
+
+function taskOwnerLabel(task: Pick<TasksTaskListItem, "ownerDisplayName">): string {
+  return task.ownerDisplayName?.trim() || "Unknown owner";
 }
 
 function TasksFirstEmptyState(): ReactElement {
@@ -286,7 +290,7 @@ function TaskAttentionZone({ tasks, onSelect }: { tasks: TasksTaskListItem[]; on
   return <section className="tiny-task-attention">
     <div className="flex items-center gap-2 border-b border-[var(--tiny-line-faint)] px-4 py-2.5"><AlertTriangle className="size-4" /><strong className="text-sm">Needs attention</strong><span className="text-xs text-muted-foreground">{tasks.length} waiting</span></div>
     {tasks.map((task) => <div key={task.id} className="grid gap-3 px-4 py-4 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center">
-      <TaskOwnerAvatar task={task} className="size-11" /><div className="min-w-0"><div className="truncate text-base font-semibold">{task.title}</div><p className="line-clamp-2 text-sm leading-5 text-muted-foreground">{attentionHintForTask(task)}</p><div className="mt-2 text-xs text-muted-foreground">{task.ownerDisplayName ?? task.ownerMemberId} · {formatDateTime(task.updatedAt)}</div></div>
+      <TaskOwnerAvatar task={task} className="size-11" /><div className="min-w-0"><div className="truncate text-base font-semibold">{task.title}</div><p className="line-clamp-2 text-sm leading-5 text-muted-foreground">{attentionHintForTask(task)}</p><div className="mt-2 text-xs text-muted-foreground">{taskOwnerLabel(task)} · {formatDateTime(task.updatedAt)}</div></div>
       <Button type="button" size="sm" className="tiny-task-attention-action" onClick={() => onSelect({ kind: "task", id: task.id })}>Review task</Button>
     </div>)}
   </section>;
@@ -332,7 +336,7 @@ function TasksToolbar({
         <SelectTrigger aria-label="Filter by owner" className="h-9 min-w-[138px] bg-[var(--tiny-surface)]"><SelectValue placeholder="Owner: All" /></SelectTrigger>
         <SelectContent align="start">
           <SelectItem value="all">Owner: All</SelectItem>
-          {ownerOptions.map((option) => <SelectItem key={option.ownerMemberId} value={option.ownerMemberId}>{option.ownerMemberId} ({option.count})</SelectItem>)}
+          {ownerOptions.map((option) => <SelectItem key={option.ownerMemberId} value={option.ownerMemberId}>{option.displayName} ({option.count})</SelectItem>)}
         </SelectContent>
       </Select>
       <Popover>
@@ -441,18 +445,19 @@ function taskMatchesTimeFilter(task: TasksTaskListItem, filter: TaskTimeFilter, 
   return nowMs - taskMs <= rangeMs;
 }
 
-function taskOwnerOptions(tasks: TasksTaskListItem[]): Array<{ ownerMemberId: string; count: number }> {
-  const counts = new Map<string, number>();
+function taskOwnerOptions(tasks: TasksTaskListItem[]): Array<{ ownerMemberId: string; displayName: string; count: number }> {
+  const counts = new Map<string, { displayName: string; count: number }>();
   for (const task of tasks) {
     const owner = task.ownerMemberId?.trim();
     if (!owner) {
       continue;
     }
-    counts.set(owner, (counts.get(owner) ?? 0) + 1);
+    const current = counts.get(owner);
+    counts.set(owner, { displayName: taskOwnerLabel(task), count: (current?.count ?? 0) + 1 });
   }
   return [...counts.entries()]
-    .map(([ownerMemberId, count]) => ({ ownerMemberId, count }))
-    .sort((left, right) => right.count - left.count || left.ownerMemberId.localeCompare(right.ownerMemberId));
+    .map(([ownerMemberId, value]) => ({ ownerMemberId, ...value }))
+    .sort((left, right) => right.count - left.count || left.displayName.localeCompare(right.displayName));
 }
 
 function TaskOperationsTable({
@@ -502,7 +507,7 @@ function TaskOperationRow({ task, view, selected, onSelect }: { task: TasksTaskL
         <div className="truncate text-xs text-muted-foreground" title={hint ?? nextActionForTask(task, view)}>{hint ?? nextActionForTask(task, view)}</div>
       </TableCell>
       <TableCell className="px-3 py-3"><TaskStateBadge task={task} view={view} /></TableCell>
-      <TableCell className="max-w-0 px-3 py-3"><div className="flex items-center gap-2"><TaskOwnerAvatar task={task} className="size-6" /><div className="truncate text-xs" title={task.ownerMemberId}>{task.ownerDisplayName ?? task.ownerMemberId}</div></div></TableCell>
+      <TableCell className="max-w-0 px-3 py-3"><div className="flex items-center gap-2"><TaskOwnerAvatar task={task} className="size-6" /><div className="truncate text-xs">{taskOwnerLabel(task)}</div></div></TableCell>
       <TableCell className="max-w-0 px-3 py-3"><div className="truncate text-xs text-muted-foreground" title={nextActionForTask(task, view)}>{nextActionForTask(task, view)}</div></TableCell>
       <TableCell className="max-w-0 px-4 py-3 text-right"><div className="truncate text-xs text-muted-foreground" title={formatDateTime(task.updatedAt)}>{formatDateTime(task.updatedAt)}</div></TableCell>
     </TableRow>
@@ -558,7 +563,7 @@ function TaskDetail({
   return (
     <div className="tiny-task-detail grid min-w-0 gap-4 overflow-hidden p-4">
       <section className="tiny-task-current-state grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
-        <div className="min-w-0"><div className="text-xs font-bold uppercase tracking-wide">What happens next</div><p className="mt-1 break-words text-sm leading-6">{task.nextStep}</p><div className="mt-2 flex items-center gap-2"><TaskOwnerAvatar task={task} className="size-7" /><span className="text-xs font-medium">{task.ownerDisplayName ?? task.ownerMemberId}</span><span className="text-xs text-muted-foreground">· {formatDateTime(task.updatedAt)}</span></div></div>
+        <div className="min-w-0"><div className="text-xs font-bold uppercase tracking-wide">What happens next</div><p className="mt-1 break-words text-sm leading-6">{task.nextStep}</p><div className="mt-2 flex items-center gap-2"><TaskOwnerAvatar task={task} className="size-7" /><span className="text-xs font-medium">{taskOwnerLabel(task)}</span><span className="text-xs text-muted-foreground">· {formatDateTime(task.updatedAt)}</span></div></div>
         <StatusBadge status={displayStatusForTask(task).label} />
       </section>
       {actions.length ? (
@@ -648,7 +653,7 @@ function TaskDetail({
       {actionError || runActionError ? <div className="tiny-task-error text-sm text-destructive">{actionError || runActionError}</div> : null}
       <DetailSection title="Current state">
         <FactRow label="Status" value={displayStatusForTask(task).label} />
-        <FactRow label="Owner" value={task.ownerMemberId} />
+        <FactRow label="Owner" value={taskOwnerLabel(task)} />
         <FactRow label="Latest update" value={formatDateTime(task.updatedAt)} />
       </DetailSection>
       <DetailSection title="Objective">

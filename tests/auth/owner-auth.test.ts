@@ -54,6 +54,7 @@ test("local Owner access exchanges a private one-time ticket for the standard se
     assert.deepEqual(await provider.resolveCurrentUser(authenticatedRequest), {
       userId: "owner",
       displayName: "Owner",
+      profileInitialized: false,
       source: "owner-session",
     });
 

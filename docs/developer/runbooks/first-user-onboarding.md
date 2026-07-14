@@ -44,14 +44,16 @@ Startup prints a one-time local Owner access URL. Open that exact URL. Local acc
 
 1. Confirm opening the root URL without the private launcher ticket presents the local Owner access gate, not the Company UI.
 2. Open the launcher URL and confirm TinyOffice enters the authenticated Owner session without a visible token field or Windows Hello prompt.
-3. Confirm the app enters Organization initialization and does not show seeded Companies, Channels, Topics, or DMs.
-4. Create a Company with a Company name and HR name. Runtime models may remain `Set later`.
-5. Confirm the Company becomes current and normal navigation unlocks.
-6. Confirm `/api/tinyoffice/session/current` reports the authenticated Owner as the Company `boss` with `needsInitialization: false`.
-7. Confirm Chat shows the named HR as a direct-message participant.
-8. Stop and restart with the same database, origin, ports, and `.runtime/auth/owner-session-secret`.
-9. Confirm the same browser session remains authenticated and the same Company remains current. This must come from the authenticated Owner plus `user_profiles.current_company_id`; session resolution must not guess the first Company membership.
-10. Confirm a private/incognito browser cannot open product APIs or the app without a fresh local launcher ticket.
+3. Confirm the app enters Owner profile setup and does not show seeded Companies, Channels, Topics, or DMs.
+4. Set the Owner display name and avatar, then confirm `session/current` reports `needsProfileInitialization: false` and `needsCompanyInitialization: true`.
+5. Create a Company with a Company name and HR name. Runtime models may remain `Set later`.
+6. Confirm the Company becomes current and normal navigation unlocks.
+7. Confirm `/api/tinyoffice/session/current` reports the authenticated Owner as the Company `boss`, with both initialization flags `false`.
+8. Confirm Chat shows the named HR as a direct-message participant and ordinary UI does not use account, Company, member, or employee ids as display labels.
+9. Rename the Company in Organization. Confirm the new display name appears while the API still returns the original immutable `companyId`.
+10. Stop and restart with the same database, origin, ports, and `.runtime/auth/owner-session-secret`.
+11. Confirm the same browser session remains authenticated, the Owner profile remains initialized, and the same Company remains current. This must come from the authenticated Owner plus `user_profiles.current_company_id`; session resolution must not guess the first Company membership.
+12. Confirm a private/incognito browser cannot open product APIs or the app without a fresh local launcher ticket.
 
 Run a separate remote-mode acceptance behind HTTPS before an Internet-facing release. That acceptance must confirm first-owner Passkey bootstrap, normal Passkey sign-in, exact-origin enforcement, and rejection of the local-ticket endpoint.
 

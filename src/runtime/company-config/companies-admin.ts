@@ -98,6 +98,12 @@ export interface SaveCompanySystemAiSettingsInput {
   };
 }
 
+export interface UpdateCompanyProfileInput {
+  repoRoot: string;
+  companyId?: unknown;
+  displayName?: unknown;
+}
+
 interface CompanyRow {
   company_id: string;
   display_name: string;
@@ -162,6 +168,17 @@ function normalizeCreateCompanyId(input: {
 function normalizeDisplayName(value: unknown, companyId: string): string {
   const displayName = typeof value === "string" ? value.trim() : "";
   return displayName || companyId;
+}
+
+function requireDisplayName(value: unknown): string {
+  const displayName = typeof value === "string" ? value.trim() : "";
+  if (!displayName) {
+    throw new Error("Company display name is required.");
+  }
+  if (displayName.length > 120) {
+    throw new Error("Company display name must be 120 characters or fewer.");
+  }
+  return displayName;
 }
 
 function normalizeOptionalString(value: unknown): string | undefined {
@@ -435,6 +452,32 @@ export async function saveCompanySystemAiSettings(input: SaveCompanySystemAiSett
       enabled: summary.enabled,
       modelRef: summary.modelRef,
     });
+  } finally {
+    postgres.client.release();
+    await endCompanyPostgresPool(postgres.pool);
+  }
+  return loadCompaniesAdminViewModel({ repoRoot: input.repoRoot });
+}
+
+export async function updateCompanyProfile(input: UpdateCompanyProfileInput): Promise<CompaniesAdminViewModel> {
+  const companyId = normalizeCompanyId(input.companyId);
+  const displayName = requireDisplayName(input.displayName);
+  const postgres = await openConfiguredPostgresConnection(input.repoRoot);
+  if (!postgres) {
+    throw new Error("Company profile updates require PostgreSQL runtime configuration.");
+  }
+  try {
+    const updated = await postgres.client.query(
+      `UPDATE companies
+SET display_name = $2,
+    updated_at = now()
+WHERE company_id = $1
+RETURNING company_id`,
+      [companyId, displayName],
+    );
+    if (updated.rows.length !== 1) {
+      throw new Error(`Company ${companyId} was not found.`);
+    }
   } finally {
     postgres.client.release();
     await endCompanyPostgresPool(postgres.pool);

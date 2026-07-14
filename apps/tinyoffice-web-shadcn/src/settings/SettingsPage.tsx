@@ -130,7 +130,7 @@ function ProfilePanel({ currentSession, displayName, setDisplayName, avatarSeed,
     <div className="flex items-start justify-between"><div><h2 className="font-semibold">My Profile</h2><p className="mt-1 text-sm text-muted-foreground">Your Owner identity is shared across Companies. Company roles remain governed separately.</p></div><Badge variant="secondary">Owner</Badge></div>
     {avatarSeed ? <AvatarSeedEditor memberId={currentSession?.user.id ?? "current-user"} displayName={displayName || "You"} avatarSeed={avatarSeed} disabled={savePending} onChange={setAvatarSeed} /> : null}
     <label className="grid gap-2 text-sm"><span className="font-medium">Display name</span><Input value={displayName} maxLength={80} onChange={(event) => setDisplayName(event.currentTarget.value)} /></label>
-    <div className="tiny-settings-comparison grid sm:grid-cols-3"><ProfileValue label="Account id" value={currentSession?.user.id ?? "Unavailable"} /><ProfileValue label="Current Company" value={currentSession?.companyId ?? currentSession?.currentCompanyId ?? "None"} /><ProfileValue label="Company role" value={currentSession?.member?.role ?? "Not assigned"} /></div>
+    <div className="tiny-settings-comparison grid sm:grid-cols-2"><ProfileValue label="Account type" value="Owner" /><ProfileValue label="Company role" value={currentSession?.member?.role ?? "Not assigned"} /></div>
     <div className="flex items-center gap-3"><Button disabled={!canSave || savePending} onClick={onSave}>Save profile</Button>{saveError ? <span className="text-sm text-[var(--tiny-danger-ink)]">{saveError.message}</span> : null}</div>
   </section>;
 }

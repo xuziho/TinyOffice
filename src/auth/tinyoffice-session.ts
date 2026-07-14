@@ -9,6 +9,7 @@ export interface TinyOfficeCurrentMemberSession {
 export interface TinyOfficeCurrentUserSession {
   userId: string;
   displayName?: string;
+  profileInitialized?: boolean;
   currentCompanyId?: string;
   member?: {
     memberId: string;
@@ -20,7 +21,7 @@ export interface TinyOfficeCurrentUserSession {
 
 export interface TinyOfficeSessionResponse {
   schema: "tinyoffice-current-session";
-  version: 1;
+  version: 2;
   user: {
     id: string;
     displayName?: string;
@@ -32,7 +33,8 @@ export interface TinyOfficeSessionResponse {
     displayName?: string;
     role?: string;
   };
-  needsInitialization: boolean;
+  needsProfileInitialization: boolean;
+  needsCompanyInitialization: boolean;
 }
 
 export interface TinyOfficeAuthStatus {
@@ -101,14 +103,15 @@ export function assertCurrentMemberCompany(
 export function currentSessionResponse(session: TinyOfficeCurrentUserSession): TinyOfficeSessionResponse {
   return {
     schema: "tinyoffice-current-session",
-    version: 1,
+    version: 2,
     user: {
       id: session.userId,
       ...(session.displayName ? { displayName: session.displayName } : {}),
     },
     ...(session.currentCompanyId ? { currentCompanyId: session.currentCompanyId, companyId: session.currentCompanyId } : {}),
     ...(session.member ? { member: session.member } : {}),
-    needsInitialization: !session.currentCompanyId || !session.member,
+    needsProfileInitialization: session.profileInitialized === false,
+    needsCompanyInitialization: !session.currentCompanyId || !session.member,
   };
 }
 

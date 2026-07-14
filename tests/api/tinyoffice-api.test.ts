@@ -353,6 +353,10 @@ async function withServer(
           viewModel: await this.loadCompanies(),
         };
       },
+      async updateCompanyProfile(input) {
+        calls.push(`companies:update:${input.companyId}:${String(input.displayName)}`);
+        return this.loadCompanies();
+      },
       async deleteCompany(input, runtime) {
         calls.push(`companies:delete:${input.companyId}`);
         await runtime?.ensureSafeToDeleteCompany(input.companyId);
@@ -1632,6 +1636,13 @@ test("Hono TinyOffice API serves Company lifecycle collection routes", async () 
     });
     assert.equal(systemAi.status, 200);
 
+    const updated = await fetch(`${baseUrl}/api/companies/acme`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ displayName: "Acme Renamed", companyId: "forged" }),
+    });
+    assert.equal(updated.status, 200);
+
     assert.deepEqual(calls, [
       "companies:list",
       "companies:create:Globex Operations:xuziho:Xu Ziho",
@@ -1641,6 +1652,8 @@ test("Hono TinyOffice API serves Company lifecycle collection routes", async () 
       "companies:guard:globex",
       "companies:list",
       "companies:system-ai:acme:openai:gpt-5-mini:openai:gpt-5",
+      "companies:list",
+      "companies:update:acme:Acme Renamed",
       "companies:list",
     ]);
   });
@@ -3109,7 +3122,7 @@ test("TinyOffice API uses the verified Owner session instead of request identity
     assert.equal(session.status, 200);
     assert.deepEqual(await json(session), {
       schema: "tinyoffice-current-session",
-      version: 1,
+      version: 2,
       user: {
         id: "xuziho",
         displayName: "Xu Ziho",
@@ -3121,7 +3134,8 @@ test("TinyOffice API uses the verified Owner session instead of request identity
         displayName: "Xu",
         role: "boss",
       },
-      needsInitialization: false,
+      needsProfileInitialization: false,
+      needsCompanyInitialization: false,
     });
 
     assert.equal((await fetch(`${baseUrl}/api/companies/acme/chat?viewerMemberId=intruder`, { headers: sessionHeaders })).status, 200);
@@ -3344,7 +3358,7 @@ test("TinyOffice API resolves the Owner from its authenticated session", async (
     assert.equal(session.status, 200);
     assert.deepEqual(await json(session), {
       schema: "tinyoffice-current-session",
-      version: 1,
+      version: 2,
       user: {
         id: "xuziho",
         displayName: "Xu Ziho",
@@ -3356,7 +3370,8 @@ test("TinyOffice API resolves the Owner from its authenticated session", async (
         displayName: "Xu",
         role: "boss",
       },
-      needsInitialization: false,
+      needsProfileInitialization: false,
+      needsCompanyInitialization: false,
     });
   });
 });
@@ -3386,7 +3401,7 @@ test("TinyOffice API switches the current Company through Owner session truth", 
     assert.equal(switched.status, 200);
     assert.deepEqual(await json(switched), {
       schema: "tinyoffice-current-session",
-      version: 1,
+      version: 2,
       user: {
         id: "xuziho",
         displayName: "Xu Ziho",
@@ -3398,7 +3413,8 @@ test("TinyOffice API switches the current Company through Owner session truth", 
         displayName: "Xu Ziho",
         role: "admin",
       },
-      needsInitialization: false,
+      needsProfileInitialization: false,
+      needsCompanyInitialization: false,
     });
     assert.deepEqual(calls, ["companies:switch:xuziho:globex"]);
   });
@@ -3410,12 +3426,13 @@ test("TinyOffice API returns initialization-needed session before the Owner crea
     assert.equal(session.status, 200);
     assert.deepEqual(await json(session), {
       schema: "tinyoffice-current-session",
-      version: 1,
+      version: 2,
       user: {
         id: "new-owner",
         displayName: "New Owner",
       },
-      needsInitialization: true,
+      needsProfileInitialization: false,
+      needsCompanyInitialization: true,
     });
   }, createTestAuthProvider({ userId: "new-owner", displayName: "New Owner", source: "test-session" }));
 });

@@ -18,6 +18,7 @@ import {
   type CompanyPostgresOpenOptions,
 } from "./postgres-runtime-connection.js";
 import { companyEmployeeHomePath, companySkillsRootPath, normalizeCompanyId } from "./company-paths.js";
+import { deriveUniqueEmployeeId } from "./employee-id.js";
 import { normalizeResourcePolicy, type EmployeeResourcePolicy } from "./resource-policy.js";
 import { defaultToolGuardPolicy } from "./tool-guard-admin.js";
 import {
@@ -37,7 +38,6 @@ export interface CompanyBlueprintInstance {
 interface CompanyBlueprint {
   version: 1;
   hrEmployee: {
-    employeeId: string;
     role: string;
     memberSummary: string;
     presenceMode: PresenceMode;
@@ -68,7 +68,6 @@ export interface CompanyBlueprintSeedResult {
 const DEFAULT_COMPANY_BLUEPRINT: CompanyBlueprint = {
   version: 1,
   hrEmployee: {
-    employeeId: "employee-hr",
     role: "hr",
     memberSummary: "Company HR contact for initial member setup.",
     presenceMode: "resident",
@@ -327,6 +326,7 @@ ON CONFLICT (company_id, capability) DO UPDATE SET
 async function seedHrEmployee(input: {
   client: CompanyPostgresClient;
   companyId: string;
+  employeeId: string;
   displayName: string;
   runtime?: unknown;
   blueprint: CompanyBlueprint;
@@ -343,7 +343,7 @@ ON CONFLICT (company_id, id) DO UPDATE SET
   role = EXCLUDED.role,
   summary = EXCLUDED.summary,
   updated_at = NOW()`,
-    [input.companyId, employee.employeeId, input.displayName, employee.role, employee.memberSummary],
+    [input.companyId, input.employeeId, input.displayName, employee.role, employee.memberSummary],
   );
   await input.client.query(
     `INSERT INTO member_runtime_profiles (
@@ -359,7 +359,7 @@ ON CONFLICT (company_id, member_id) DO UPDATE SET
   updated_at = NOW()`,
     [
       input.companyId,
-      employee.employeeId,
+      input.employeeId,
       employee.presenceMode,
       runtime.modelProvider ?? null,
       runtime.modelId ?? null,
@@ -367,6 +367,32 @@ ON CONFLICT (company_id, member_id) DO UPDATE SET
       normalizeResourcePolicy(employee.resourcePolicy),
     ],
   );
+}
+
+async function resolveHrEmployeeId(input: {
+  client: CompanyPostgresClient;
+  companyId: string;
+  displayName: string;
+}): Promise<string> {
+  const existing = await input.client.query<{
+    id: string;
+    display_name: string;
+    role: string;
+  }>(
+    "SELECT id, display_name, role FROM company_members WHERE company_id = $1 ORDER BY created_at ASC, id ASC",
+    [input.companyId],
+  );
+  const existingBlueprintHr = existing.rows.find((member) =>
+    member.role === DEFAULT_COMPANY_BLUEPRINT.hrEmployee.role &&
+    member.display_name === input.displayName
+  );
+  if (existingBlueprintHr) {
+    return existingBlueprintHr.id;
+  }
+  return deriveUniqueEmployeeId({
+    displayName: input.displayName,
+    existingIds: existing.rows.map((member) => member.id),
+  });
 }
 
 async function seedOwnerMember(input: {
@@ -482,9 +508,15 @@ ON CONFLICT (company_id) DO UPDATE SET
     ownerMemberId: input.ownerMemberId,
     ownerDisplayName: input.ownerDisplayName,
   });
+  const hrEmployeeId = await resolveHrEmployeeId({
+    client: input.client,
+    companyId,
+    displayName: hrEmployeeDisplayName,
+  });
   await seedHrEmployee({
     client: input.client,
     companyId,
+    employeeId: hrEmployeeId,
     displayName: hrEmployeeDisplayName,
     runtime: input.hrRuntime,
     blueprint,
@@ -493,7 +525,7 @@ ON CONFLICT (company_id) DO UPDATE SET
   return {
     companyId,
     displayName,
-    hrEmployeeId: blueprint.hrEmployee.employeeId,
+    hrEmployeeId,
     hrEmployeeDisplayName,
   };
 }

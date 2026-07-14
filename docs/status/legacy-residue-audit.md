@@ -36,8 +36,8 @@ Current product/admin behavior must not expose or preserve these retired identit
 - `routesThroughMattermostPosts`
 - root-post or Mattermost-thread identity semantics
 - implicit preview Company/user/target employee defaults
-- `TINYOFFICE_PREVIEW_MEMBER_ID`
-- `TINYOFFICE_PREVIEW_TARGET_EMPLOYEE_ID`
+- retired preview member selector environment variables
+- retired preview employee selector environment variables
 
 ## Latest Hard Delete
 
@@ -54,7 +54,7 @@ The preceding preview-identity hard cut removed the real runtime preview default
 - default preview display name `Xu Ziho`
 - default target employee `nora-automation`
 
-`scripts/runtime/run-real-chat-preview.ts` now requires `TINYOFFICE_PREVIEW_USER_ID`. `TINYOFFICE_PREVIEW_COMPANY_ID` is optional and only selects an active Company when the operator explicitly provides it. Without a selected Company, preview startup keeps the first-create Company flow visible instead of pretending a default Company exists.
+The formal runtime launcher no longer accepts preview identity variables. It derives the human Owner only from Better Auth, while Company selection comes from the authenticated Owner's persisted profile. Without a Company, startup keeps the first-create Company flow visible instead of pretending a default Company exists.
 
 ## Remaining Setup Gates
 

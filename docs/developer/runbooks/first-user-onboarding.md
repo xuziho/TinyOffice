@@ -1,20 +1,18 @@
 # First-user Onboarding Acceptance
 
-Use this runbook to verify a clean TinyOffice installation without deleting or reusing an existing local Company. The acceptance runs on the local machine, but it uses a dedicated PostgreSQL container, database, runtime ports, and synthetic preview identity.
+Use this runbook to verify a clean TinyOffice installation without deleting or reusing the normal local database. The acceptance environment has its own PostgreSQL container, ports, authentication secret, and Owner passkey.
 
 ## Isolation boundary
 
-The example values below are deliberately separate from the normal preview:
-
-| Resource | Normal preview | Onboarding acceptance |
+| Resource | Normal runtime | Onboarding acceptance |
 | --- | --- | --- |
 | PostgreSQL container | `tinyoffice-postgres` | `tinyoffice-onboarding-postgres` |
 | PostgreSQL port | `55432` | `55434` |
 | Runtime API | `8095` | `8097` |
 | Web app | `5175` | `5177` |
-| User id | operator-specific | `onboarding-user-001` |
+| Runtime directory | repository `.runtime/` | a fresh clone or isolated checkout |
 
-Do not reset, delete, or repoint the normal preview database for this acceptance.
+Do not reset, delete, or repoint the normal database for this acceptance.
 
 ## Start a clean environment
 
@@ -29,41 +27,39 @@ docker run --name tinyoffice-onboarding-postgres `
   -d postgres:18-alpine
 ```
 
-Initialize the schema and start the preview:
+From a fresh clone or isolated checkout, initialize and start TinyOffice:
 
 ```powershell
 $env:TINYOFFICE_DATABASE_URL = "postgresql://tinyoffice_onboarding:tinyoffice_onboarding_dev@127.0.0.1:55434/tinyoffice_onboarding?sslmode=disable"
+$env:TINYOFFICE_RUNTIME_PORT = "8097"
+$env:TINYOFFICE_WEB_PORT = "5177"
+$env:TINYOFFICE_PUBLIC_ORIGIN = "http://localhost:5177"
 npm run runtime:postgres:init-schema
-
-$env:TINYOFFICE_PREVIEW_USER_ID = "onboarding-user-001"
-$env:TINYOFFICE_PREVIEW_USER_DISPLAY_NAME = "First User"
-Remove-Item Env:TINYOFFICE_PREVIEW_COMPANY_ID -ErrorAction SilentlyContinue
-$env:TINYOFFICE_RUNTIME_PREVIEW_PORT = "8097"
-$env:TINYOFFICE_WEB_PREVIEW_PORT = "5177"
-node --import tsx scripts/runtime/run-real-chat-preview.ts
+npm start
 ```
 
-Open `http://127.0.0.1:5177/`.
+Startup prints a one-time Owner setup URL. Open that exact URL and complete the operating-system passkey prompt.
 
 ## Acceptance sequence
 
-1. Confirm the app enters the Organization initialization surface and does not show seeded Companies, Channels, Topics, or DMs.
-2. Create a Company with a Company name and HR name. Runtime models may remain `Set later`.
-3. Confirm the Company becomes current and normal navigation unlocks.
-4. Confirm `/api/tinyoffice/session/current` reports the synthetic user as the Company `boss` with `needsInitialization: false`.
-5. Confirm Chat shows the named HR as a direct-message participant.
-6. Stop and restart the preview with the same environment variables, without setting `TINYOFFICE_PREVIEW_COMPANY_ID`.
-7. Confirm the same Company remains current after reload. This must come from `user_profiles.current_company_id`; session resolution must not guess the first Company membership.
+1. Confirm TinyOffice first presents the Owner passkey gate, not the Company UI.
+2. Create the Owner passkey and unlock TinyOffice with it.
+3. Confirm the app enters Organization initialization and does not show seeded Companies, Channels, Topics, or DMs.
+4. Create a Company with a Company name and HR name. Runtime models may remain `Set later`.
+5. Confirm the Company becomes current and normal navigation unlocks.
+6. Confirm `/api/tinyoffice/session/current` reports the authenticated Owner as the Company `boss` with `needsInitialization: false`.
+7. Confirm Chat shows the named HR as a direct-message participant.
+8. Stop and restart with the same database, origin, ports, and `.runtime/auth/owner-session-secret`.
+9. Confirm passkey sign-in works and the same Company remains current. This must come from the authenticated Owner plus `user_profiles.current_company_id`; session resolution must not guess the first Company membership.
+10. Confirm a private/incognito browser cannot open product APIs or the app without passkey sign-in.
 
 ## Identity boundary
 
-The current local preview does not provide account registration or password login. `TINYOFFICE_PREVIEW_USER_ID` supplies the development-only user identity before startup. Company creation uses that current session identity to create the owner member and persists the created Company as the user's current Company. Settings may later change the display name and avatar, but not the stable user id.
-
-Production identity must come from a deliberate backend authentication and session design. Do not turn preview environment variables or URL parameters into production login behavior.
+The Owner id comes from the authenticated account. Environment variables, URL parameters, request headers, and browser request bodies must not select it. Company creation uses this account to create the first boss member. Settings may change the display name and avatar, while Company roles remain Company-governed.
 
 ## Cleanup
 
-Stop the preview process, then remove only the isolated acceptance container when the evidence is no longer needed:
+Stop TinyOffice, then remove only the isolated acceptance container when its evidence is no longer needed:
 
 ```powershell
 docker rm -f tinyoffice-onboarding-postgres

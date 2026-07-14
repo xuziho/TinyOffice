@@ -23,7 +23,7 @@ Do not use deleted plugin proxy routes or carrier-native frontend pages as perfo
 
 ```powershell
 npm run smoke:standalone-frontend-browser
-node --import tsx scripts/runtime/run-real-chat-preview.ts
+npm start
 ```
 
 For code-level changes, also run the relevant frontend or view-model tests.

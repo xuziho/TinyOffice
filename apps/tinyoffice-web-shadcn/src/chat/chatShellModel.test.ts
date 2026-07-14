@@ -14,13 +14,11 @@ import { activeEntryContainerId, entryListHeaderFor, formatEntryCount, memberDis
 const session: TinyOfficeCurrentSession = {
   schema: "tinyoffice-current-session",
   version: 1,
-  authMode: "development-preview",
   user: { id: "xuziho", displayName: "Xu Ziho" },
   currentCompanyId: "ziho-co",
   companyId: "ziho-co",
   member: { memberId: "xuziho", displayName: "Xu Ziho", role: "boss" },
   needsInitialization: false,
-  source: "development-preview",
 };
 
 const projection: ChatProjectionPage = {

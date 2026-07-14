@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
 import type { TinyOfficeCurrentSession, TinyOfficeUpdateStatus } from "tinyoffice/frontend-api-contracts";
-import { AlertTriangle, Check, Download, RefreshCw } from "lucide-react";
+import { AlertTriangle, Check, Download, KeyRound, LogOut, RefreshCw } from "lucide-react";
 import { getMyProfile, saveMyProfile } from "@/api/profileClient";
 import { getUpdateStatus, installApprovedUpdate } from "@/api/updateClient";
 import { chatQueryKeys } from "@/chat/chatQueryKeys";
@@ -10,8 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AvatarSeedEditor } from "@/components/product/AvatarSeedEditor";
+import { authClient } from "@/auth/authClient";
 
-type SettingsSection = "profile" | "updates";
+type SettingsSection = "profile" | "security" | "updates";
 
 export function SettingsPage({ currentSession }: { currentSession?: TinyOfficeCurrentSession }): ReactElement {
   const queryClient = useQueryClient();
@@ -27,10 +28,30 @@ export function SettingsPage({ currentSession }: { currentSession?: TinyOfficeCu
   return <main className="grid h-svh grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
     <header className="tiny-room-header border-b"><div className="tiny-room-title">Settings</div><div className="tiny-room-subtitle">Your profile, runtime, and product updates</div></header>
     <section className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden md:grid-cols-[280px_minmax(0,1fr)] md:grid-rows-1">
-      <aside className="border-b bg-[var(--tiny-sidebar)] p-3 md:border-b-0 md:border-r"><SelectionList className="grid-cols-3 md:grid-cols-1"><SelectionRow selected={section === "profile"} onClick={() => setSection("profile")}>My Profile</SelectionRow><SelectionRow selected={section === "updates"} onClick={() => setSection("updates")}>Updates</SelectionRow><SelectionRow selected={false} disabled title="No local preferences are available yet.">Preferences</SelectionRow></SelectionList></aside>
-      <div className="overflow-auto p-4 sm:p-6">{section === "profile" ? <ProfilePanel currentSession={currentSession} displayName={displayName} setDisplayName={setDisplayName} avatarSeed={avatarSeed} setAvatarSeed={setAvatarSeed} savePending={save.isPending} saveError={save.error} canSave={Boolean(query.data) && (displayName.trim() !== query.data?.displayName || avatarSeed !== query.data?.avatarSeed)} onSave={() => save.mutate()} /> : <UpdatesPanel query={updates} installing={install.isPending} installError={install.error} onCheck={() => void updates.refetch()} onInstall={() => install.mutate()} />}</div>
+      <aside className="border-b bg-[var(--tiny-sidebar)] p-3 md:border-b-0 md:border-r"><SelectionList className="grid-cols-3 md:grid-cols-1"><SelectionRow selected={section === "profile"} onClick={() => setSection("profile")}>My Profile</SelectionRow><SelectionRow selected={section === "security"} onClick={() => setSection("security")}>Security</SelectionRow><SelectionRow selected={section === "updates"} onClick={() => setSection("updates")}>Updates</SelectionRow></SelectionList></aside>
+      <div className="overflow-auto p-4 sm:p-6">{section === "profile" ? <ProfilePanel currentSession={currentSession} displayName={displayName} setDisplayName={setDisplayName} avatarSeed={avatarSeed} setAvatarSeed={setAvatarSeed} savePending={save.isPending} saveError={save.error} canSave={Boolean(query.data) && (displayName.trim() !== query.data?.displayName || avatarSeed !== query.data?.avatarSeed)} onSave={() => save.mutate()} /> : section === "security" ? <SecurityPanel /> : <UpdatesPanel query={updates} installing={install.isPending} installError={install.error} onCheck={() => void updates.refetch()} onInstall={() => install.mutate()} />}</div>
     </section>
   </main>;
+}
+
+function SecurityPanel(): ReactElement {
+  const [adding, setAdding] = useState(false);
+  const [message, setMessage] = useState("");
+  async function addPasskey(): Promise<void> {
+    setAdding(true); setMessage("");
+    const result = await authClient.passkey.addPasskey({ name: "Backup Owner passkey" });
+    setAdding(false);
+    setMessage(result?.error ? result.error.message || "Passkey could not be added." : "Backup passkey added.");
+  }
+  async function signOut(): Promise<void> {
+    await authClient.signOut();
+    window.location.assign("/");
+  }
+  return <section className="tiny-settings-primary-surface grid max-w-3xl gap-5 rounded-md border p-5">
+    <div><h2 className="font-semibold">Owner security</h2><p className="mt-1 text-sm text-muted-foreground">Passkeys unlock this one-person office. Add a second passkey on another device or hardware key before you need it.</p></div>
+    <div className="tiny-settings-fact flex flex-wrap items-center justify-between gap-4 p-4"><div><div className="font-medium">Backup passkey</div><div className="mt-1 text-sm text-muted-foreground">The operating system will ask where to save the new credential.</div></div><Button variant="outline" disabled={adding} onClick={() => void addPasskey()}><KeyRound />{adding ? "Adding…" : "Add passkey"}</Button></div>
+    <div className="flex flex-wrap items-center gap-3"><Button variant="outline" onClick={() => void signOut()}><LogOut />Sign out</Button>{message ? <span role="status" className="text-sm text-muted-foreground">{message}</span> : null}</div>
+  </section>;
 }
 
 function ProfilePanel({ currentSession, displayName, setDisplayName, avatarSeed, setAvatarSeed, savePending, saveError, canSave, onSave }: {
@@ -45,7 +66,7 @@ function ProfilePanel({ currentSession, displayName, setDisplayName, avatarSeed,
   onSave(): void;
 }): ReactElement {
   return <section className="tiny-settings-primary-surface grid max-w-3xl gap-5 rounded-md border p-5">
-    <div className="flex items-start justify-between"><div><h2 className="font-semibold">My Profile</h2><p className="mt-1 text-sm text-muted-foreground">Your account identity is shared across Companies. Company roles remain governed separately.</p></div><Badge variant="secondary">{currentSession?.authMode ?? "session"}</Badge></div>
+    <div className="flex items-start justify-between"><div><h2 className="font-semibold">My Profile</h2><p className="mt-1 text-sm text-muted-foreground">Your Owner identity is shared across Companies. Company roles remain governed separately.</p></div><Badge variant="secondary">Owner</Badge></div>
     {avatarSeed ? <AvatarSeedEditor memberId={currentSession?.user.id ?? "current-user"} displayName={displayName || "You"} avatarSeed={avatarSeed} disabled={savePending} onChange={setAvatarSeed} /> : null}
     <label className="grid gap-2 text-sm"><span className="font-medium">Display name</span><Input value={displayName} maxLength={80} onChange={(event) => setDisplayName(event.currentTarget.value)} /></label>
     <div className="tiny-settings-comparison grid sm:grid-cols-3"><ProfileValue label="Account id" value={currentSession?.user.id ?? "Unavailable"} /><ProfileValue label="Current Company" value={currentSession?.companyId ?? currentSession?.currentCompanyId ?? "None"} /><ProfileValue label="Company role" value={currentSession?.member?.role ?? "Not assigned"} /></div>

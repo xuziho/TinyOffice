@@ -228,6 +228,7 @@ test("postgres migrations include the baseline and Channel role hard cut without
       "pg_009_user_current_company_20260712",
       "pg_010_persisted_member_avatars_20260712",
       "pg_011_chat_attachment_references_20260713",
+      "pg_012_single_owner_authentication_20260714",
     ],
   );
   assert.equal(postgresSchemaMigrations[0]?.sql, buildInitialPostgresSchemaSql());
@@ -288,6 +289,7 @@ test("postgres migration runner applies pending migrations transactionally", asy
     "pg_009_user_current_company_20260712",
     "pg_010_persisted_member_avatars_20260712",
     "pg_011_chat_attachment_references_20260713",
+    "pg_012_single_owner_authentication_20260714",
   ]);
   assert.ok(client.queries.some((query) => query === "BEGIN"));
   assert.ok(client.queries.some((query) => /CREATE TABLE IF NOT EXISTS schema_migrations/.test(query)));
@@ -313,6 +315,7 @@ test("postgres migration runner applies current migrations after the baseline", 
     "pg_009_user_current_company_20260712",
     "pg_010_persisted_member_avatars_20260712",
     "pg_011_chat_attachment_references_20260713",
+    "pg_012_single_owner_authentication_20260714",
   ]);
   assert.ok(client.queries.some((query) => /ALTER TABLE chat_channel_members\s+DROP COLUMN IF EXISTS role/.test(query)));
   assert.ok(client.queries.some((query) => /CREATE TABLE IF NOT EXISTS work_blocked_recovery_requests/.test(query)));
@@ -332,6 +335,7 @@ test("postgres migration runner skips current migrations when already applied", 
     "pg_009_user_current_company_20260712",
     "pg_010_persisted_member_avatars_20260712",
     "pg_011_chat_attachment_references_20260713",
+    "pg_012_single_owner_authentication_20260714",
   ]);
 
   const result = await runPostgresSchemaMigrations(client);

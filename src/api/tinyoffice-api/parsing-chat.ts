@@ -13,7 +13,7 @@ import type {
   UpdateChannelDetailsInput,
 } from "../../collaboration/channel/channel-service.js";
 import type { MessageServiceCreateConversationInput, MessageServiceSendMessageOptions } from "../../collaboration/message/message-service.js";
-import { authMode, currentMemberSession } from "./auth-helpers.js";
+import { currentMemberSession } from "./auth-helpers.js";
 import type { TinyOfficeApiOptions } from "./contracts.js";
 import { validateBodyCompanyId } from "./parsing-company.js";
 import { actorIdentityFromRequest, chatParticipantIdentity, viewerIdentityFromReadRequest } from "./parsing-identity.js";
@@ -43,9 +43,7 @@ export function parseChannelCreateBody(
   assertNoForbiddenPublicCarrierFields(body);
   validateBodyCompanyId(body, companyId);
   const actor = chatParticipantIdentity(actorIdentityFromRequest(options, c, body, companyId));
-  const sessionDisplayName = authMode(options) === "development-preview"
-    ? undefined
-    : currentMemberSession(options, c, companyId).displayName;
+  const sessionDisplayName = currentMemberSession(options, c, companyId).displayName;
   const actorDisplayName = sessionDisplayName || stringFrom(body.actorDisplayName);
   if (!actorDisplayName) {
     throw new Error("actor.displayName is required");
@@ -314,23 +312,12 @@ export function parseRestoreTopicBody(
   };
 }
 
-export function actorIdentityBodyFields(body: Record<string, unknown>): Pick<ChatCreateEntryInput, "actorMemberId"> {
-  const actorMemberId = stringFrom(body.actorMemberId);
-  if (actorMemberId) {
-    return { actorMemberId };
-  }
-  return { actorMemberId: requireString(body, "actorMemberId") };
-}
-
 export function actorIdentityFieldsFromRequest(
   options: TinyOfficeApiOptions,
   c: Context,
   body: Record<string, unknown>,
   companyId: string,
 ): Pick<ChatCreateEntryInput, "actorMemberId"> {
-  if (authMode(options) === "development-preview") {
-    return actorIdentityBodyFields(body);
-  }
   const session = currentMemberSession(options, c, companyId);
   const bodyMemberId = stringFrom(body.actorMemberId);
   if (bodyMemberId && bodyMemberId !== session.memberId) {

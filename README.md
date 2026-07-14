@@ -12,7 +12,7 @@ TinyOffice is an early-stage, self-hosted company-operations foundation for pers
 
 <!-- Creator note reserved for the project author before the public launch announcement. -->
 
-> TinyOffice is available as an early public Alpha and is not ready for production use. Authentication and deployment hardening are still incomplete.
+> TinyOffice is an early public Alpha intended for a single Owner. Passkey authentication is built in; internet-facing deployments still require HTTPS, backups, host patching, and network hardening.
 
 ## What is in the repository
 
@@ -38,14 +38,12 @@ Local company records, employee workspaces, uploaded assets, secrets, runtime da
 npm run setup
 npm run runtime:postgres:ensure
 npm run runtime:postgres:init-schema
-$env:TINYOFFICE_PREVIEW_USER_ID = "local-owner"
-$env:TINYOFFICE_PREVIEW_USER_DISPLAY_NAME = "Local Owner"
-node --import tsx scripts/runtime/run-real-chat-preview.ts
+npm start
 ```
 
 The setup command installs both the root runtime dependencies and the standalone shadcn frontend dependencies. Confirm `node --version` reports Node.js 22.19 or newer before setup; unsupported Node versions may allow installation with warnings but are not a valid TinyOffice runtime.
 
-The preview serves the web app on `http://127.0.0.1:5175` and the runtime API on `http://127.0.0.1:8095`. `TINYOFFICE_PREVIEW_USER_ID` is the stable local development identity; the display name is optional. Do not set `TINYOFFICE_PREVIEW_COMPANY_ID` for a clean first-user run. Company and member records are created through the product lifecycle; the repository does not ship a hidden default company. See the [first-user onboarding acceptance runbook](docs/developer/runbooks/first-user-onboarding.md) for an isolated path that does not touch an existing local Company.
+TinyOffice serves the web app on `http://localhost:5175` and the runtime API on `http://127.0.0.1:8095`. On a clean database, startup prints a one-time URL for creating the Owner passkey. The browser then continues into Company onboarding; the repository does not ship a hidden user or default Company. See [Owner authentication](docs/product/owner-authentication.md) and the [first-user onboarding acceptance runbook](docs/developer/runbooks/first-user-onboarding.md).
 
 Useful checks:
 

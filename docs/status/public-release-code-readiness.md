@@ -25,7 +25,7 @@ This is an engineering inventory, not legal advice. Dependency changes must reru
 
 These concentrations are real maintenance debt but are not release blockers while their tests and ownership remain clear:
 
-- `src/runtime/realtime/tinyoffice-chat-preview-server.ts` combines development-preview composition and lifecycle wiring;
+- `src/runtime/realtime/tinyoffice-server.ts` still combines runtime service composition and HTTP lifecycle wiring;
 - `src/api/contracts/tinyoffice-frontend-api-contracts.ts` is a large public contract barrel spanning multiple domains;
 - `src/work/tasks-view-model.ts` and `src/work/work-service.ts` contain broad Work projection and lifecycle behavior;
 - several frontend route components and integration test files are large.
@@ -48,4 +48,4 @@ The first public Alpha clean-install pass then cloned that canonical repository 
 
 ## Public Alpha boundary
 
-The first public Alpha is an evaluation release, not a production-ready deployment. It includes the current collaboration, runtime, Work, configuration, evidence, and local preview surfaces. Production authentication and deployment hardening remain outside this release and must not be implied by the tag or GitHub release notes.
+The first public Alpha is an evaluation release for a single Owner. It includes passkey authentication plus the current collaboration, runtime, Work, configuration, and evidence surfaces. Internet-facing operation still requires ordinary deployment hardening such as HTTPS, host patching, backup protection, and network policy; the tag and release notes must not imply that TinyOffice supplies those host-operations guarantees.

@@ -39,4 +39,4 @@ npm run smoke:no-carrier-chat
 npm run smoke:standalone-frontend-browser
 ```
 
-Use `node --import tsx scripts/runtime/run-real-chat-preview.ts` for a real local PostgreSQL-backed Chat preview.
+Use `npm start` for a real local PostgreSQL-backed Chat preview.

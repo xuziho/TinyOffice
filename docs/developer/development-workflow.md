@@ -82,7 +82,7 @@ Product smoke:
 ```powershell
 npm run smoke:no-carrier-chat
 npm run smoke:standalone-frontend-browser
-node --import tsx scripts/runtime/run-real-chat-preview.ts
+npm start
 ```
 
 Use the real Chat preview when the question is whether the current local product path works against PostgreSQL-backed runtime data.

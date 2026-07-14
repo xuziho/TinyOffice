@@ -5,7 +5,7 @@ import type { CompanyDirectoryApiSource, CompanyDirectoryDto } from "../../colla
 import type { ConversationApiMessageService } from "../../collaboration/api/conversation-api-service.js";
 import type { ChannelService } from "../../collaboration/channel/channel-service.js";
 import type { TinyOfficeRealtimePublisher } from "../../collaboration/contracts/tinyoffice-realtime-contract.js";
-import type { TinyOfficeAuthOptions, TinyOfficeCurrentUserSession } from "../../auth/tinyoffice-session.js";
+import type { TinyOfficeAuthProvider, TinyOfficeCurrentUserSession } from "../../auth/tinyoffice-session.js";
 import type { CompaniesAdminViewModel, CompanyMemberDirectoryResponse, DeleteCompanyResult, EmployeeRuntimeSummaryViewModel, OwnedCreateCompanyResult, RecruitEmployeeRequest, RecruitEmployeeResult, RuntimeModelsResponse, SessionExplorerViewModel, TasksViewModel } from "../contracts/tinyoffice-api-contracts.js";
 import type { ExecuteTasksRunActionInput, TasksRunActionResult } from "../../work/tasks-run-actions.js";
 import type { CreateWorkInput, CreateWorkResult, WorkTaskLifecycleInput } from "../../work/work-service.js";
@@ -56,7 +56,7 @@ export interface TinyOfficeApiOptions {
   processTraceService?: ProcessTraceApiService | ((companyId: string) => Promise<ProcessTraceApiService>);
   realtimePublisher?: TinyOfficeRealtimePublisher;
   chatDispatchSink?: ChatDispatchApiSink;
-  auth?: TinyOfficeAuthOptions;
+  auth: TinyOfficeAuthProvider;
 }
 
 export interface ChatAttachmentApiService {

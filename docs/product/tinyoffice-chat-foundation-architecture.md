@@ -79,7 +79,7 @@ Product identity is member-first.
 
 TinyOffice API production requests use a TinyOffice-owned current member session as the product authorization context. The standalone frontend loads that current session from the backend before loading Company directory, Chat projection, room messages, or write endpoints. Production product paths must not treat `companyId`, `memberId`, `viewerMemberId`, `employeeId`, or `viewerEmployeeId` URL parameters as login identity.
 
-URL-driven `companyId` / `memberId` preview is an explicit `development-preview` mode for local preview and smoke paths. Development preview may pass member selectors directly to Chat APIs to exercise projection behavior, but it is not the production identity contract.
+Chat identity comes only from the authenticated Owner session. URL-driven `companyId`, `memberId`, viewer, and actor selectors are not login inputs and are ignored or rejected at the structured request boundary. Tests inject an internal authentication provider rather than activating a second product identity mode.
 
 There must be no hidden member-to-employee fallback:
 

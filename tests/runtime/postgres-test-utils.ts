@@ -20,6 +20,12 @@ const localDogfoodRuntimePostgresDatabaseUrl =
   "postgresql://tinyoffice:tinyoffice_dev@127.0.0.1:55432/tinyoffice?sslmode=disable";
 
 const runtimeTables = [
+  "auth_passkeys",
+  "auth_sessions",
+  "auth_accounts",
+  "auth_verifications",
+  "auth_users",
+  "user_profiles",
   "companies",
   "company_members",
   "member_runtime_profiles",

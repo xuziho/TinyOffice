@@ -22,7 +22,7 @@ export function registerCompanyRoutes(app: Hono, options: TinyOfficeApiOptions):
 
   app.post("/api/companies", async (c) => {
     const companyLifecycleService = resolveCompanyLifecycleService(options);
-    const currentUser = currentUserFromRequest(c.req.raw, options.auth);
+    const currentUser = currentUserFromRequest(c.req.raw);
     const input = parseCreateCompanyBody(await readJsonBody(c));
     const created = await companyLifecycleService.createCompany({
       ...input,

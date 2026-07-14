@@ -392,7 +392,6 @@ function createRuntimeServer(): Promise<SmokeServer> {
       json(res, 200, {
         schema: "tinyoffice-current-session",
         version: 1,
-        authMode: "development-preview",
         user: { id: viewerMemberId, displayName: viewerMemberDisplayName },
         currentCompanyId: companyId,
         companyId,
@@ -402,7 +401,6 @@ function createRuntimeServer(): Promise<SmokeServer> {
           role: viewerMemberRole,
         },
         needsInitialization: false,
-        source: "development-preview",
       });
       return;
     }
@@ -413,7 +411,6 @@ function createRuntimeServer(): Promise<SmokeServer> {
       json(res, 200, {
         schema: "tinyoffice-current-session",
         version: 1,
-        authMode: "development-preview",
         user: { id: viewerMemberId, displayName: viewerMemberDisplayName },
         currentCompanyId: companyId,
         companyId,
@@ -423,7 +420,6 @@ function createRuntimeServer(): Promise<SmokeServer> {
           role: viewerMemberRole,
         },
         needsInitialization: false,
-        source: "development-preview",
       });
       return;
     }

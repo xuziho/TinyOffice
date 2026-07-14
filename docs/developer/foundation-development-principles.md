@@ -107,7 +107,7 @@ Do not introduce hidden fallback for:
 - provider selection
 - legacy file or database state
 
-Development preview may use explicit parameters, but product runtime must not silently choose a default company, first employee, old global store, or legacy alias.
+Tests may inject explicit fixtures, but the product runtime must not accept identity parameters or silently choose a default company, first employee, old global store, or legacy alias.
 
 ## Provider Adapter Boundary
 

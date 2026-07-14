@@ -6,7 +6,7 @@ import test from "node:test";
 
 import { createTinyOfficeApi } from "../../src/api/tinyoffice-api.js";
 import { handleTinyOfficeApiRequest, isTinyOfficeApiRequest } from "../../src/server/tinyoffice-api-server.js";
-import type { TinyOfficeAuthOptions } from "../../src/auth/tinyoffice-session.js";
+import { createTestAuthProvider, type TinyOfficeAuthProvider } from "../../src/auth/tinyoffice-session.js";
 import type { TinyOfficeApiOptions } from "../../src/api/tinyoffice-api/contracts.js";
 import type { PromptPolicyViewModel } from "../../src/runtime/company-config/prompt-blocks-admin.js";
 import type { ToolGuardPolicy, ToolSafetyViewModel } from "../../src/runtime/company-config/tool-guard-admin.js";
@@ -278,13 +278,14 @@ function accessViewModel(companyId: string, policy = accessPolicy()): ToolSafety
 
 async function withServer(
   run: (baseUrl: string, calls: string[], realtimeEvents: Array<{ type: string; companyId: string }>) => Promise<void>,
-  auth: TinyOfficeAuthOptions = {
-    mode: "development-preview",
-    developmentPreviewUser: {
-      userId: "xuziho",
-      displayName: "Xu Ziho",
-    },
-  },
+  auth: TinyOfficeAuthProvider = createTestAuthProvider({
+    userId: "xuziho",
+    displayName: "Xu Ziho",
+    currentCompanyId: "acme",
+    companyId: "acme",
+    member: { memberId: "xuziho", displayName: "Xu", role: "boss" },
+    source: "test-session",
+  }),
   overrides: Partial<TinyOfficeApiOptions> = {},
 ) {
   const calls: string[] = [];
@@ -1537,6 +1538,20 @@ async function withServer(
   }
 }
 
+function unauthenticatedProvider(): TinyOfficeAuthProvider {
+  return {
+    handle: async () => new Response(null, { status: 404 }),
+    resolveCurrentUser: async () => undefined,
+    status: async () => ({
+      schema: "tinyoffice-auth-status",
+      version: 1,
+      authenticated: false,
+      bootstrapRequired: false,
+      ownerConfigured: true,
+    }),
+  };
+}
+
 async function json(response: Response) {
   return await response.json() as Record<string, unknown>;
 }
@@ -2174,13 +2189,11 @@ test("Hono TinyOffice Chat APIs reject non-contract member identity fields", asy
     assert.equal(rejectedRead.status, 400);
     assert.match(JSON.stringify(await json(rejectedRead)), /unknown mark Chat room read body field: viewerEmployeeId/);
 
-    const rejectedProjection = await fetch(`${baseUrl}/api/companies/acme/chat?viewerEmployeeId=nora-automation`);
-    assert.equal(rejectedProjection.status, 400);
-    assert.match(JSON.stringify(await json(rejectedProjection)), /viewer identity is required/);
+    const ignoredProjectionIdentity = await fetch(`${baseUrl}/api/companies/acme/chat?viewerEmployeeId=nora-automation`);
+    assert.equal(ignoredProjectionIdentity.status, 200);
 
-    const rejectedProjectionAlias = await fetch(`${baseUrl}/api/companies/acme/chat?memberId=xuziho`);
-    assert.equal(rejectedProjectionAlias.status, 400);
-    assert.match(JSON.stringify(await json(rejectedProjectionAlias)), /viewer identity is required/);
+    const ignoredProjectionAlias = await fetch(`${baseUrl}/api/companies/acme/chat?memberId=intruder`);
+    assert.equal(ignoredProjectionAlias.status, 200);
 
     const rejectedMessageAlias = await fetch(`${baseUrl}/api/companies/acme/chat/rooms/conversation-1/messages`, {
       method: "POST",
@@ -2260,7 +2273,7 @@ test("Hono TinyOffice Chat APIs reject non-contract member identity fields", asy
     assert.equal(rejectedAttachmentOwner.status, 400);
     assert.match(JSON.stringify(await json(rejectedAttachmentOwner)), /unknown Chat attachment upload field: ownerEmployeeId/);
 
-    assert.deepEqual(calls, []);
+    assert.deepEqual(calls, ["projection:xuziho", "chat-get:conversation-1", "projection:xuziho", "chat-get:conversation-1"]);
   });
 });
 
@@ -3069,7 +3082,7 @@ test("Hono TinyOffice API exposes WorkTask lifecycle actions with explicit confi
   });
 });
 
-test("production TinyOffice API uses current member session instead of URL identity parameters", async () => {
+test("TinyOffice API uses the verified Owner session instead of request identity headers", async () => {
   await withServer(async (baseUrl, calls) => {
     const sessionHeaders = {
       "x-tinyoffice-company-id": "acme",
@@ -3082,20 +3095,18 @@ test("production TinyOffice API uses current member session instead of URL ident
     assert.deepEqual(await json(session), {
       schema: "tinyoffice-current-session",
       version: 1,
-      authMode: "production",
       user: {
         id: "xuziho",
-        displayName: "Xu",
+        displayName: "Xu Ziho",
       },
       currentCompanyId: "acme",
       companyId: "acme",
       member: {
         memberId: "xuziho",
         displayName: "Xu",
-        role: "Founder",
+        role: "boss",
       },
       needsInitialization: false,
-      source: "server-session",
     });
 
     assert.equal((await fetch(`${baseUrl}/api/companies/acme/chat?viewerMemberId=intruder`, { headers: sessionHeaders })).status, 200);
@@ -3111,7 +3122,7 @@ test("production TinyOffice API uses current member session instead of URL ident
     });
     assert.equal(mismatched.status, 400);
     assert.deepEqual(calls, ["projection:xuziho", "chat-get:conversation-1", "chat-get:conversation-1", "chat-send:xuziho:none"]);
-  }, { mode: "production" });
+  });
 });
 
 test("Hono TinyOffice Chat message route preserves mentioned member ids", async () => {
@@ -3201,7 +3212,7 @@ test("Hono TinyOffice API lets the uploader discard an unreferenced Chat attachm
   });
 });
 
-test("Hono TinyOffice API hides unreferenced Chat attachments from members other than the uploader", async () => {
+test("Hono TinyOffice API ignores URL attachment viewers and uses the Owner session", async () => {
   await withServer(async (baseUrl) => {
     const form = new FormData();
     form.append("file", new Blob([new Uint8Array([137, 80, 78, 71])], { type: "image/png" }), "private-preview.png");
@@ -3211,13 +3222,12 @@ test("Hono TinyOffice API hides unreferenced Chat attachments from members other
     });
     assert.equal(uploaded.status, 201);
 
-    const denied = await fetch(`${baseUrl}/api/companies/acme/chat/attachments/att-test/content?viewerMemberId=outside-member`);
-    assert.equal(denied.status, 404);
-    assert.equal(await denied.text(), "Attachment not found");
+    const content = await fetch(`${baseUrl}/api/companies/acme/chat/attachments/att-test/content?viewerMemberId=outside-member`);
+    assert.equal(content.status, 200);
   });
 });
 
-test("Hono TinyOffice API serves referenced Chat attachments only to room participants", async () => {
+test("Hono TinyOffice API derives referenced attachment access from the Owner session", async () => {
   await withServer(async (baseUrl) => {
     const form = new FormData();
     form.append("file", new Blob([new Uint8Array([137, 80, 78, 71])], { type: "image/png" }), "referenced.png");
@@ -3230,9 +3240,8 @@ test("Hono TinyOffice API serves referenced Chat attachments only to room partic
     const allowed = await fetch(`${baseUrl}/api/companies/acme/chat/attachments/att-test/content?viewerMemberId=nora-automation`);
     assert.equal(allowed.status, 200);
 
-    const denied = await fetch(`${baseUrl}/api/companies/acme/chat/attachments/att-test/content?viewerMemberId=outside-member`);
-    assert.equal(denied.status, 404);
-    assert.equal(await denied.text(), "Attachment not found");
+    const stillOwner = await fetch(`${baseUrl}/api/companies/acme/chat/attachments/att-test/content?viewerMemberId=outside-member`);
+    assert.equal(stillOwner.status, 200);
   });
 });
 
@@ -3296,14 +3305,13 @@ test("Hono TinyOffice Chat run route cancels an active run through the run-contr
   });
 });
 
-test("development-preview TinyOffice API resolves the current user from Company members", async () => {
+test("TinyOffice API resolves the Owner from its authenticated session", async () => {
   await withServer(async (baseUrl) => {
     const session = await fetch(`${baseUrl}/api/tinyoffice/session/current`);
     assert.equal(session.status, 200);
     assert.deepEqual(await json(session), {
       schema: "tinyoffice-current-session",
       version: 1,
-      authMode: "development-preview",
       user: {
         id: "xuziho",
         displayName: "Xu Ziho",
@@ -3316,12 +3324,11 @@ test("development-preview TinyOffice API resolves the current user from Company 
         role: "boss",
       },
       needsInitialization: false,
-      source: "development-preview",
     });
   });
 });
 
-test("development-preview TinyOffice API switches the current Company through session truth", async () => {
+test("TinyOffice API switches the current Company through Owner session truth", async () => {
   await withServer(async (baseUrl, calls) => {
     const switched = await fetch(`${baseUrl}/api/tinyoffice/session/current-company`, {
       method: "PUT",
@@ -3333,7 +3340,6 @@ test("development-preview TinyOffice API switches the current Company through se
     assert.deepEqual(await json(switched), {
       schema: "tinyoffice-current-session",
       version: 1,
-      authMode: "development-preview",
       user: {
         id: "xuziho",
         displayName: "Xu Ziho",
@@ -3346,48 +3352,53 @@ test("development-preview TinyOffice API switches the current Company through se
         role: "admin",
       },
       needsInitialization: false,
-      source: "development-preview",
     });
     assert.deepEqual(calls, ["companies:switch:xuziho:globex"]);
   });
 });
 
-test("development-preview TinyOffice API returns initialization-needed session without Company membership", async () => {
+test("TinyOffice API returns initialization-needed session before the Owner creates a Company", async () => {
   await withServer(async (baseUrl) => {
     const session = await fetch(`${baseUrl}/api/tinyoffice/session/current`);
     assert.equal(session.status, 200);
     assert.deepEqual(await json(session), {
       schema: "tinyoffice-current-session",
       version: 1,
-      authMode: "development-preview",
       user: {
         id: "new-owner",
         displayName: "New Owner",
       },
       needsInitialization: true,
-      source: "development-preview",
     });
-  }, {
-    mode: "development-preview",
-    developmentPreviewUser: {
-      userId: "new-owner",
-      displayName: "New Owner",
-    },
-  });
+  }, createTestAuthProvider({ userId: "new-owner", displayName: "New Owner", source: "test-session" }));
 });
 
-test("production TinyOffice API rejects URL-only member identity without server session", async () => {
+test("TinyOffice API rejects URL-only member identity without an authenticated session", async () => {
   await withServer(async (baseUrl) => {
     const response = await fetch(`${baseUrl}/api/companies/acme/chat?viewerMemberId=xuziho`);
-    assert.equal(response.status, 400);
+    assert.equal(response.status, 401);
     assert.deepEqual(await json(response), {
-      error: "TinyOffice current member session is required",
-      message: "TinyOffice current member session is required",
+      error: "TinyOffice Owner authentication is required",
+      message: "TinyOffice Owner authentication is required",
     });
-  }, { mode: "production" });
+  }, unauthenticatedProvider());
 });
 
-test("production TinyOffice API rejects employee body identity as current product identity", async () => {
+test("TinyOffice exposes only non-secret authentication readiness before sign-in", async () => {
+  await withServer(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/tinyoffice/auth/status`);
+    assert.equal(response.status, 200);
+    assert.deepEqual(await json(response), {
+      schema: "tinyoffice-auth-status",
+      version: 1,
+      authenticated: false,
+      bootstrapRequired: false,
+      ownerConfigured: true,
+    });
+  }, unauthenticatedProvider());
+});
+
+test("TinyOffice API rejects employee body identity as current product identity", async () => {
   await withServer(async (baseUrl) => {
     const response = await fetch(`${baseUrl}/api/companies/acme/chat/rooms/conversation-1/messages`, {
       method: "POST",
@@ -3400,10 +3411,10 @@ test("production TinyOffice API rejects employee body identity as current produc
     });
     assert.equal(response.status, 400);
     assert.match(JSON.stringify(await json(response)), /unknown send Chat room message body field: actorEmployeeId/);
-  }, { mode: "production" });
+  });
 });
 
-test("TinyOffice Chat projection hides entries the current member cannot access", async () => {
+test("TinyOffice Chat projection cannot be impersonated through URL identity", async () => {
   await withServer(async (baseUrl, calls) => {
     const response = await fetch(`${baseUrl}/api/companies/acme/chat?viewerMemberId=intruder`);
 
@@ -3412,30 +3423,28 @@ test("TinyOffice Chat projection hides entries the current member cannot access"
       containers: Array<{ containerId: string; entryCount: number; unreadCount: number; mentionCount: number }>;
       entries: unknown[];
     };
-    assert.deepEqual(projection.entries, []);
+    assert.equal(projection.entries.length, 1);
     assert.equal(projection.containers.find((container) =>
       container.containerId === TEST_CHANNEL_CONTAINER_ID
-    )?.entryCount, 0);
+    )?.entryCount, 1);
     assert.equal(projection.containers.find((container) =>
       container.containerId === TEST_CHANNEL_CONTAINER_ID
     )?.unreadCount, 0);
     assert.equal(projection.containers.find((container) =>
       container.containerId === TEST_CHANNEL_CONTAINER_ID
     )?.mentionCount, 0);
-    assert.deepEqual(calls, ["projection:intruder", "chat-get:conversation-1"]);
+    assert.deepEqual(calls, ["projection:xuziho", "chat-get:conversation-1"]);
   });
 });
 
-test("TinyOffice Chat API denies direct room and message reads for nonparticipants", async () => {
+test("TinyOffice Chat API ignores URL room viewers and uses the Owner session", async () => {
   await withServer(async (baseUrl, calls) => {
     const room = await fetch(`${baseUrl}/api/companies/acme/chat/rooms/conversation-1?viewerMemberId=intruder`);
     const messages = await fetch(`${baseUrl}/api/companies/acme/chat/rooms/conversation-1/messages?viewerMemberId=intruder`);
 
-    assert.equal(room.status, 403);
-    assert.equal(messages.status, 403);
-    assert.match(JSON.stringify(await json(room)), /not allowed to access Chat room conversation-1/);
-    assert.match(JSON.stringify(await json(messages)), /not allowed to access Chat room conversation-1/);
-    assert.deepEqual(calls, ["chat-get:conversation-1", "chat-get:conversation-1"]);
+    assert.equal(room.status, 200);
+    assert.equal(messages.status, 200);
+    assert.deepEqual(calls, ["chat-get:conversation-1", "chat-get:conversation-1", "chat-messages:conversation-1"]);
   });
 });
 
@@ -3452,33 +3461,35 @@ test("TinyOffice Chat API denies sends and read-state updates for nonparticipant
       body: JSON.stringify({ companyId: "acme", viewerMemberId: "intruder" }),
     });
 
-    assert.equal(send.status, 403);
-    assert.equal(read.status, 403);
-    assert.match(JSON.stringify(await json(send)), /not allowed to access Chat room conversation-1/);
-    assert.match(JSON.stringify(await json(read)), /not allowed to access Chat room conversation-1/);
-    assert.deepEqual(calls, ["chat-get:conversation-1", "chat-get:conversation-1"]);
+    assert.equal(send.status, 400);
+    assert.equal(read.status, 400);
+    assert.match(JSON.stringify(await json(send)), /must match the current member session/);
+    assert.match(JSON.stringify(await json(read)), /must match the current member session/);
+    assert.deepEqual(calls, []);
   });
 });
 
-test("development-preview TinyOffice API explicitly keeps URL viewer identity for previews", async () => {
+test("TinyOffice API ignores a URL viewer that differs from the Owner session", async () => {
   await withServer(async (baseUrl, calls) => {
-    assert.equal((await fetch(`${baseUrl}/api/companies/acme/chat?viewerMemberId=xuziho`)).status, 200);
+    assert.equal((await fetch(`${baseUrl}/api/companies/acme/chat?viewerMemberId=intruder`)).status, 200);
     assert.deepEqual(calls, ["projection:xuziho", "chat-get:conversation-1"]);
-  }, { mode: "development-preview" });
+  });
 });
 
-test("Hono TinyOffice API returns normalized error payloads", async () => {
+test("Hono TinyOffice API returns normalized authentication errors", async () => {
   await withServer(async (baseUrl) => {
     const response = await fetch(`${baseUrl}/api/companies/acme/chat`);
-    assert.equal(response.status, 400);
+    assert.equal(response.status, 401);
     assert.deepEqual(await json(response), {
-      error: "viewer identity is required",
-      message: "viewer identity is required",
+      error: "TinyOffice Owner authentication is required",
+      message: "TinyOffice Owner authentication is required",
     });
-  });
+  }, unauthenticatedProvider());
 });
 
 test("TinyOffice Node API adapter recognizes current product company routes", () => {
+  assert.equal(isTinyOfficeApiRequest("/api/auth/passkey/generate-authenticate-options"), true);
+  assert.equal(isTinyOfficeApiRequest("/api/tinyoffice/auth/status"), true);
   assert.equal(isTinyOfficeApiRequest("/api/companies/acme/members"), false);
   assert.equal(isTinyOfficeApiRequest("/api/companies/acme/members?viewerMemberId=xuziho"), false);
   assert.equal(isTinyOfficeApiRequest("/api/companies/acme/conversations"), false);

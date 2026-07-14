@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   updated_at timestamptz NOT NULL
 );
 
+${buildOwnerAuthenticationSchemaSql()}
+
 ${buildSystemAiProviderConfigAuditSql()}
 
 CREATE TABLE IF NOT EXISTS company_members (
@@ -672,6 +674,76 @@ export function buildCompanyConfigSeedSql(): string {
   return "-- TinyOffice pre-release baseline does not seed product data during schema initialization.";
 }
 
+export function buildOwnerAuthenticationSchemaSql(): string {
+  return `
+CREATE TABLE IF NOT EXISTS auth_users (
+  id text PRIMARY KEY,
+  name text NOT NULL,
+  email text NOT NULL UNIQUE,
+  "emailVerified" boolean NOT NULL DEFAULT false,
+  image text,
+  "createdAt" timestamptz NOT NULL,
+  "updatedAt" timestamptz NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS auth_sessions (
+  id text PRIMARY KEY,
+  "userId" text NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE,
+  token text NOT NULL UNIQUE,
+  "expiresAt" timestamptz NOT NULL,
+  "ipAddress" text,
+  "userAgent" text,
+  "createdAt" timestamptz NOT NULL,
+  "updatedAt" timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions("userId");
+CREATE INDEX IF NOT EXISTS idx_auth_sessions_expiry ON auth_sessions("expiresAt");
+
+CREATE TABLE IF NOT EXISTS auth_accounts (
+  id text PRIMARY KEY,
+  "userId" text NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE,
+  "accountId" text NOT NULL,
+  "providerId" text NOT NULL,
+  "accessToken" text,
+  "refreshToken" text,
+  "accessTokenExpiresAt" timestamptz,
+  "refreshTokenExpiresAt" timestamptz,
+  scope text,
+  "idToken" text,
+  password text,
+  "createdAt" timestamptz NOT NULL,
+  "updatedAt" timestamptz NOT NULL,
+  UNIQUE ("providerId", "accountId")
+);
+CREATE INDEX IF NOT EXISTS idx_auth_accounts_user ON auth_accounts("userId");
+
+CREATE TABLE IF NOT EXISTS auth_verifications (
+  id text PRIMARY KEY,
+  identifier text NOT NULL,
+  value text NOT NULL,
+  "expiresAt" timestamptz NOT NULL,
+  "createdAt" timestamptz NOT NULL,
+  "updatedAt" timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_auth_verifications_identifier ON auth_verifications(identifier);
+
+CREATE TABLE IF NOT EXISTS auth_passkeys (
+  id text PRIMARY KEY,
+  name text,
+  "publicKey" text NOT NULL,
+  "userId" text NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE,
+  "credentialID" text NOT NULL UNIQUE,
+  counter integer NOT NULL,
+  "deviceType" text NOT NULL,
+  "backedUp" boolean NOT NULL,
+  transports text,
+  "createdAt" timestamptz,
+  aaguid text
+);
+CREATE INDEX IF NOT EXISTS idx_auth_passkeys_user ON auth_passkeys("userId");
+`;
+}
+
 function buildSystemAiProviderConfigAuditSql(): string {
   return `
 CREATE TABLE IF NOT EXISTS system_ai_provider_configs (
@@ -944,5 +1016,9 @@ JOIN chat_attachments attachment
 WHERE attachment_snapshot ->> 'attachmentId' IS NOT NULL
 ON CONFLICT (company_id, attachment_id, message_id) DO NOTHING;
 `,
+  },
+  {
+    id: "pg_012_single_owner_authentication_20260714",
+    sql: buildOwnerAuthenticationSchemaSql(),
   },
 ];

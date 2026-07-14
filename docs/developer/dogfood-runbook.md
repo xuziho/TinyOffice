@@ -17,7 +17,7 @@ npm run smoke:standalone-frontend-browser
 For the real local Chat runtime preview:
 
 ```powershell
-node --import tsx scripts/runtime/run-real-chat-preview.ts
+npm start
 ```
 
 ## Boundary

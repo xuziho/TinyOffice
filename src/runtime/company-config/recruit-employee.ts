@@ -19,6 +19,7 @@ import {
   loadCompanyMemberDirectory,
   saveCompanyMemberProfile,
 } from "../members/company-member-directory.js";
+import { deriveUniqueEmployeeId } from "./employee-id.js";
 
 export interface RecruitEmployeeInput {
   repoRoot: string;
@@ -64,15 +65,6 @@ function requiredString(value: string, fieldName: string): string {
   return normalized;
 }
 
-function slugifyEmployeeId(value: string): string {
-  const slug = value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return slug || "employee";
-}
-
 async function resolveRecruitEmployeeId(input: {
   repoRoot: string;
   companyId: string;
@@ -84,21 +76,13 @@ async function resolveRecruitEmployeeId(input: {
     return requestedEmployeeId;
   }
 
-  const baseEmployeeId = slugifyEmployeeId(input.displayName);
   const directory = await loadCompanyMemberDirectory(input.repoRoot, {
     companyId: input.companyId,
   });
-  const existingIds = new Set(directory.members.map((member) => member.id.toLowerCase()));
-  if (!existingIds.has(baseEmployeeId.toLowerCase())) {
-    return baseEmployeeId;
-  }
-  for (let suffix = 2; suffix < 1000; suffix += 1) {
-    const candidate = `${baseEmployeeId}-${suffix}`;
-    if (!existingIds.has(candidate.toLowerCase())) {
-      return candidate;
-    }
-  }
-  throw new Error(`Unable to derive a unique employeeId from ${input.displayName}.`);
+  return deriveUniqueEmployeeId({
+    displayName: input.displayName,
+    existingIds: directory.members.map((member) => member.id),
+  });
 }
 
 function employeeInstructionContent(): string {

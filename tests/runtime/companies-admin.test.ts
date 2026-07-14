@@ -79,9 +79,12 @@ test("creates isolated Companies from the default blueprint", async () => {
         0,
       );
 
-      for (const companyId of [firstCompanyId, secondCompanyId]) {
+      for (const [companyId, hrEmployeeId] of [
+        [firstCompanyId, "avery-owner"],
+        [secondCompanyId, "blake-owner"],
+      ] as const) {
         assert.equal(
-          Number((await pool.query("SELECT COUNT(*) AS count FROM company_members WHERE company_id = $1 AND id = 'employee-hr'", [companyId])).rows[0].count),
+          Number((await pool.query("SELECT COUNT(*) AS count FROM company_members WHERE company_id = $1 AND id = $2", [companyId, hrEmployeeId])).rows[0].count),
           1,
         );
         for (const tableName of businessTables) {
@@ -99,8 +102,8 @@ test("creates isolated Companies from the default blueprint", async () => {
       assert.equal(owner.rows[0]?.display_name, "Xu Ziho");
       assert.equal(owner.rows[0]?.role, "boss");
       const hrRuntime = await pool.query(
-        "SELECT model_provider, model_id, thinking_level FROM member_runtime_profiles WHERE company_id = $1 AND member_id = 'employee-hr'",
-        [firstCompanyId],
+        "SELECT model_provider, model_id, thinking_level FROM member_runtime_profiles WHERE company_id = $1 AND member_id = $2",
+        [firstCompanyId, "avery-owner"],
       );
       assert.equal(hrRuntime.rows[0]?.model_provider, null);
       assert.equal(hrRuntime.rows[0]?.model_id, null);
@@ -116,12 +119,12 @@ test("creates isolated Companies from the default blueprint", async () => {
     const firstHomePath = companyEmployeeHomePath({
       repoRoot,
       companyId: firstCompanyId,
-      employeeId: "employee-hr",
+      employeeId: "avery-owner",
     });
     const secondHomePath = companyEmployeeHomePath({
       repoRoot,
       companyId: secondCompanyId,
-      employeeId: "employee-hr",
+      employeeId: "blake-owner",
     });
     assert.notEqual(firstHomePath, secondHomePath);
     assert.match(await readFile(path.join(firstHomePath, "AGENTS.md"), "utf8"), /Avery Owner/);
@@ -133,6 +136,56 @@ test("creates isolated Companies from the default blueprint", async () => {
     assert.match(recruitSkill, /"capabilityId": "employee\.recruit"/);
     assert.ok((await stat(path.join(firstHomePath, "workspace"))).isDirectory());
     assert.ok((await stat(path.join(secondHomePath, "workspace"))).isDirectory());
+  } finally {
+    await rm(repoRoot, { recursive: true, force: true });
+  }
+});
+
+test("Company HR id uses the recruited employee derivation rule and avoids the Owner id", async () => {
+  const repoRoot = await mkdtempRepoRoot("tinyoffice-company-hr-id-");
+  try {
+    await createCompany({
+      repoRoot,
+      companyId: "identity-labs",
+      displayName: "Identity Labs",
+      ownerMemberId: "mira-hr",
+      ownerDisplayName: "Mira Boss",
+      hrEmployeeDisplayName: "Mira HR",
+    });
+    await createCompany({
+      repoRoot,
+      companyId: "fallback-hr-labs",
+      displayName: "Fallback HR Labs",
+    });
+
+    const databaseUrl = process.env.TINYOFFICE_DATABASE_URL?.trim();
+    assert(databaseUrl, "TINYOFFICE_DATABASE_URL is required for companies admin tests.");
+    const pool = new Pool({ connectionString: databaseUrl });
+    try {
+      const members = await pool.query(
+        "SELECT id, display_name, role FROM company_members WHERE company_id = $1 ORDER BY id ASC",
+        ["identity-labs"],
+      );
+      assert.deepEqual(members.rows, [
+        { id: "mira-hr", display_name: "Mira Boss", role: "boss" },
+        { id: "mira-hr-2", display_name: "Mira HR", role: "hr" },
+      ]);
+      const fallbackHr = await pool.query(
+        "SELECT id, display_name, role FROM company_members WHERE company_id = $1",
+        ["fallback-hr-labs"],
+      );
+      assert.deepEqual(fallbackHr.rows, [
+        { id: "company-hr", display_name: "Company HR", role: "hr" },
+      ]);
+    } finally {
+      await pool.end();
+    }
+
+    assert.ok((await stat(companyEmployeeHomePath({
+      repoRoot,
+      companyId: "identity-labs",
+      employeeId: "mira-hr-2",
+    }))).isDirectory());
   } finally {
     await rm(repoRoot, { recursive: true, force: true });
   }
@@ -326,7 +379,7 @@ test("deletes a Company PostgreSQL graph and file assets while preserving other 
         `INSERT INTO operating_events (
   company_id, id, timestamp, actor_member_id, severity, title, message
 )
-VALUES ($1, 'operating-delete-1', NOW(), 'employee-hr', 'info', 'delete test', 'delete test')`,
+VALUES ($1, 'operating-delete-1', NOW(), 'sam-owner', 'info', 'delete test', 'delete test')`,
         ["support-ops"],
       );
     } finally {
@@ -348,12 +401,12 @@ VALUES ($1, 'operating-delete-1', NOW(), 'employee-hr', 'info', 'delete test', '
     await assert.rejects(stat(companyEmployeeHomePath({
       repoRoot,
       companyId: "support-ops",
-      employeeId: "employee-hr",
+      employeeId: "sam-owner",
     })), /ENOENT/);
     assert.ok((await stat(companyEmployeeHomePath({
       repoRoot,
       companyId: "sales-ops",
-      employeeId: "employee-hr",
+      employeeId: "sasha-owner",
     }))).isDirectory());
   } finally {
     await rm(repoRoot, { recursive: true, force: true });

@@ -340,10 +340,10 @@ async function withServer(
           hr: {
             companyId: "globex",
             displayName: String(input.displayName),
-            hrEmployeeId: "employee-hr",
+            hrEmployeeId: "avery-owner",
             hrEmployeeDisplayName: String(input.hrEmployeeDisplayName),
-            hrEmployeeHomePath: "/companies/globex/employees/employee-hr",
-            hrEmployeeWorkspacePath: "/companies/globex/employees/employee-hr/workspace",
+            hrEmployeeHomePath: "/companies/globex/employees/avery-owner",
+            hrEmployeeWorkspacePath: "/companies/globex/employees/avery-owner/workspace",
           },
           owner: {
             memberId: String(input.ownerMemberId),

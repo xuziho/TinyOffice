@@ -29,7 +29,7 @@ Product framing: read Employee Config as Member Runtime Configuration. Visible c
 | --- | --- |
 | Employee | Current implementation name for a runtime-capable company member with identity, role, and runtime configuration. Do not use it as a product category opposite non-runtime members. |
 | Member Runtime | Product-facing framing for a configured runtime-capable member, including runtime model, presence, filesystem resource defaults, workspace assets, and reload controls. |
-| Company HR | The Company Blueprint seed with internal employee id `employee-hr`, used as the first setup contact for creating durable runtime-capable members. |
+| Company HR | The Company Blueprint seed whose employee id is derived from its display name with the same rule as later recruited employees, used as the first setup contact for creating durable runtime-capable members. |
 | Runtime model | The provider and model used when the employee starts a PI session. Operators select it from the locally available PI model registry; the UI should not require hand-entered provider strings. |
 | Personal guidance | Employee-specific long-term guidance stored in `companies/<companyId>/employees/<employeeId>/AGENTS.md`. |
 | Employee-private skill | Employee-specific reusable workflow knowledge stored under `companies/<companyId>/employees/<employeeId>/skills/**/SKILL.md`. |
@@ -91,11 +91,11 @@ The employee workspace path is `companies/<companyId>/employees/<employeeId>/wor
 
 When a Company is created from the default Company Blueprint, Employee Config starts with one Company HR record:
 
-- `employeeId`: `employee-hr`
+- `employeeId`: derived from the HR display name, with a company-local numeric suffix when needed
 - default role: `hr`
 - display name: provided by the Company create flow's `hrEmployeeDisplayName`, or fallback `Company HR`
 - purpose: initial member setup, not the full HR Agent or natural-language member-draft workflow
-- local assets: `companies/<companyId>/employees/employee-hr/AGENTS.md`, `skills/`, and `workspace/`
+- local assets: `companies/<companyId>/employees/<derivedHrEmployeeId>/AGENTS.md`, `skills/`, and `workspace/`
 - default skill: `skills/recruit-employee/SKILL.md`, which guides HR through checking existing member names, selecting an available runtime model, confirming a draft, and calling the TinyOffice employee creation API
 
 The Company HR uses the same Company-scoped Prompt Policy and Access boundaries as other runtime-capable members. Its default Access relationship is intentionally narrow: own workspace allowed, repository and other member workspaces require approval, and secrets are denied.

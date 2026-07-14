@@ -637,7 +637,7 @@ export function buildWorkRunExecutionPrompt(detail: WorkRunExecutionDetail): str
   return [
     `Start background work_run_execution session for WorkRun ${detail.run.id}.`,
     `Title: ${detail.task.title}`,
-    "Use the attached WorkRun context section for the full WorkTask, WorkRun state, recent events, and execution policy.",
+    "Use the attached WorkRun context section for the full WorkTask, WorkRun state, and recent events.",
   ].join("\n");
 }
 
@@ -662,15 +662,6 @@ export function buildWorkRunExecutionContextBlock(
       "",
       "Recent WorkRun events:",
       formatWorkRunEvents(detail.events),
-      "",
-      "Execution instructions:",
-      "- This is a background work_run_execution session.",
-      "- The dispatcher has already started this WorkRun.",
-      "- Finish the turn by calling finish_work_turn.",
-      "- Return complete only after executing, self-checking the acceptance criteria, and collecting concrete evidence.",
-      "- Return blocked if you need outside input, material, an external dependency, or a decision.",
-      "- Sensitive resource approvals belong to Access/tool policy, not the WorkRun final-result contract.",
-      "- Return failed if the WorkRun cannot be completed.",
     ].join("\n"),
   };
 }
@@ -683,7 +674,7 @@ export function buildWorkRunAutoContinuationPrompt(
   return [
     `Continue background work_run_execution session for WorkRun ${detail.run.id}.`,
     `Continuation turn ${turn}/${maxTurns}.`,
-    "Use the attached WorkRun context section for current state, recent events, and continuation policy.",
+    "Use the attached WorkRun context section for current state and recent events.",
   ].join("\n");
 }
 
@@ -703,14 +694,7 @@ export function buildWorkRunAutoContinuationContextBlock(
       "Recent WorkRun events:",
       formatWorkRunEvents(detail.events),
       "",
-      "Auto-continuation instructions:",
-      `- This is continuation turn ${turn} of at most ${maxTurns} for the same background work_run_execution session.`,
-      "- Continue working toward acceptanceCriteria.",
-      "- Finish the turn by calling finish_work_turn.",
-      "- If acceptanceCriteria is satisfied, return complete with summary and concrete evidence.",
-      "- If you need outside input, material, an external dependency, or a decision, return blocked with a reason.",
-      "- Sensitive resource approvals belong to Access/tool policy, not the WorkRun final-result contract.",
-      "- If the WorkRun cannot be completed, return failed with a reason.",
+      `Continuation turn ${turn} of at most ${maxTurns}.`,
     ].join("\n"),
   };
 }
@@ -722,7 +706,7 @@ export function buildWorkRunResumePrompt(
   return [
     `Resume background work_run_execution session for WorkRun ${detail.run.id}.`,
     "A participant reply was returned to this WorkRun session.",
-    "Use the attached WorkRun context section for the full WorkTask, WorkRun state, recent events, participant reply, and continuation policy.",
+    "Use the attached WorkRun context section for the full WorkTask, WorkRun state, recent events, and participant reply.",
   ].join("\n");
 }
 
@@ -743,15 +727,6 @@ export function buildWorkRunResumeContextBlock(
       "",
       "Participant reply:",
       participantMessage,
-      "",
-      "Continuation instructions:",
-      "- This is the same background work_run_execution session for this WorkRun.",
-      "- Finish the turn by calling finish_work_turn.",
-      "- If the participant reply and available evidence satisfy acceptanceCriteria, return complete with summary and concrete evidence.",
-      "- If the participant reply resolves the blocker but work still needs execution, return in_progress.",
-      "- If the WorkRun should no longer continue, return canceled with a reason.",
-      "- If the WorkRun cannot be completed, return failed with a reason.",
-      "- If the blocker remains, return blocked with the updated reason.",
     ].join("\n"),
   };
 }

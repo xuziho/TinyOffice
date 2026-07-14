@@ -124,13 +124,12 @@ export function buildPromptInputPackage(input: {
   }));
   const stablePrefix = [
     input.systemPromptAppend,
-    ...promptBlocks.map((block) => block.content),
     ...employeeInstructions.map((file) => file.content),
   ].join("\n\n");
   const fullInput = [
     input.systemPromptAppend,
-    ...promptBlocks.map((block) => block.content),
     ...employeeInstructions.map((file) => file.content),
+    ...promptBlocks.map((block) => block.content),
     input.userPrompt,
   ].join("\n\n");
 

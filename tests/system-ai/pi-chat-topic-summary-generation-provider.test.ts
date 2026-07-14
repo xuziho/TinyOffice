@@ -7,6 +7,7 @@ test("PI chat topic summary provider uses the configured PI model and a no-tools
   const calls: Array<{
     modelProvider: string;
     modelId: string;
+    systemPrompt: string;
     prompt: string;
     tools: string[];
   }> = [];
@@ -56,7 +57,8 @@ test("PI chat topic summary provider uses the configured PI model and a no-tools
   assert.equal(calls[0]?.modelProvider, "openai-codex");
   assert.equal(calls[0]?.modelId, "gpt-5.4-mini");
   assert.deepEqual(calls[0]?.tools, []);
-  assert.match(calls[0]?.prompt || "", /Only output the updated topic summary/);
+  assert.match(calls[0]?.systemPrompt || "", /Only output the updated topic summary/);
+  assert.doesNotMatch(calls[0]?.prompt || "", /Only output the updated topic summary/);
   assert.match(calls[0]?.prompt || "", /Existing topic summary/);
   assert.match(calls[0]?.prompt || "", /Earlier summary/);
   assert.match(calls[0]?.prompt || "", /Iris/);

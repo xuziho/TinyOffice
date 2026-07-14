@@ -227,11 +227,7 @@ async function dispatchRuntimeIntakeEvent(input: {
 
   await generateNaturalLanguageEmployeeReply({
     employee,
-    message: [
-      "External intake event received.",
-      "Read the intake event context and finish this intake turn with `finish_intake_turn`.",
-      "Create Work only when the event is actionable according to the event content or employee guidance; otherwise record an operating event.",
-    ].join("\n"),
+    message: "External intake event received.",
     sessionKey,
     threadId: input.receipt.eventId,
     actorMemberId: employee.employeeId,

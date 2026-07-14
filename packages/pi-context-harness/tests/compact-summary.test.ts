@@ -31,9 +31,7 @@ test("builds the harness compact summary schema", () => {
 		"User Constraints And Preferences",
 		"Completed Work",
 		"Key Decisions",
-		"Files Read",
-		"Files Modified",
-		"Tool Results And External Evidence",
+		"Artifacts And Evidence",
 		"Open Questions Or Blockers",
 		"Immediate Next Steps",
 		"Continuation Instruction",
@@ -43,6 +41,7 @@ test("builds the harness compact summary schema", () => {
 	assert.match(summary, /src\/index\.ts/);
 	assert.match(summary, /src\/compact-summary\.ts/);
 	assert.match(summary, /bash call-1/);
+	assert.doesNotMatch(summary, /None explicitly identified/);
 });
 
 test("includes previous summary and split turn prefix", () => {

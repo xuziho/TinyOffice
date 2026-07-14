@@ -19,6 +19,7 @@ import type { SystemAiProviderConfigRecord } from "./provider-config.js";
 export interface PiChatTitlePromptInput {
   modelProvider: string;
   modelId: string;
+  systemPrompt: string;
   prompt: string;
   tools: string[];
 }
@@ -61,8 +62,6 @@ function cleanGeneratedTitle(value: string): string {
 
 function buildPrompt(request: SystemAiChatTitleGenerationRequest): string {
   return [
-    TITLE_SYSTEM_PROMPT,
-    "",
     "User's first message:",
     request.sourceMessage.body,
     "",
@@ -85,8 +84,9 @@ async function runPiPrompt(input: PiChatTitlePromptInput & { repoRoot?: string }
   const resourceLoader = new DefaultResourceLoader({
     cwd,
     agentDir,
+    noContextFiles: true,
     noSkills: true,
-    systemPromptOverride: () => TITLE_SYSTEM_PROMPT,
+    systemPromptOverride: () => input.systemPrompt,
   });
   await resourceLoader.reload();
   const settingsManager = SettingsManager.inMemory({
@@ -100,7 +100,7 @@ async function runPiPrompt(input: PiChatTitlePromptInput & { repoRoot?: string }
     model,
     resourceLoader,
     settingsManager,
-    sessionManager: SessionManager.continueRecent(cwd, path.join(cwd, ".scratch", "system-ai-title-sessions")),
+    sessionManager: SessionManager.inMemory(cwd),
     tools: input.tools,
   });
   let reply = "";
@@ -147,6 +147,7 @@ export class PiChatTitleGenerationProvider implements SystemAiChatTitleGeneratio
     const output = await this.runPrompt({
       modelProvider: model.provider,
       modelId: model.id,
+      systemPrompt: TITLE_SYSTEM_PROMPT,
       prompt: buildPrompt(request),
       tools: [],
     });

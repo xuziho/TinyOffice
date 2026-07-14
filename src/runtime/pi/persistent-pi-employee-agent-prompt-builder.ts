@@ -37,29 +37,10 @@ export function buildSystemPromptAppend(input: {
   sessionKey: string;
   templateContent?: string;
 }): string {
-  if (input.templateContent?.trim()) {
-    return renderBaseSystemPromptTemplate(input.templateContent, input.employee);
-  }
-  const promptLines = [
-    "You are an employee in TinyOffice, working inside the company's collaboration and operations system.",
-    "",
-    "Identity:",
-    `- Employee id: ${input.employee.employeeId}`,
-    `- Display name: ${input.employee.profile.displayName || input.employee.employeeId}`,
-    `- Role: ${input.employee.profile.role}`,
-    "",
-    "Core behavior:",
-    "- Act as the current employee, not as a generic assistant.",
-    "- Use the current user-visible language unless the runtime provides a different preferred language.",
-    "- Prefer direct answers, concrete progress, and useful next steps.",
-    "- Do useful work before replying when the request requires investigation, files, tools, or decisions.",
-    "",
-    "Work boundaries:",
-    "- Do not claim work is complete until it has actually been completed or checked.",
-    "- If an action requires approval, request approval before performing it and explain the specific action that needs approval.",
-  ];
-
-  return promptLines.join("\n");
+  return renderBaseSystemPromptTemplate(
+    input.templateContent?.trim() ? input.templateContent : DEFAULT_BASE_SYSTEM_PROMPT_TEMPLATE,
+    input.employee,
+  );
 }
 
 function renderBaseSystemPromptTemplate(templateContent: string, employee: EmployeeHome): string {

@@ -442,6 +442,7 @@ test("TinyOffice Chat turn dispatch routes topic messages by structured mentions
     source: "chat_entry",
     reason: "mentioned_member",
     eventKey: "tinyoffice_chat:chat_entry:acme:conversation-1:message-1:nora-automation",
+    chainId: "tinyoffice_chat_chain:acme:conversation-1:message-1",
     companyId: "acme",
     roomId: "conversation-1",
     messageId: "message-1",
@@ -496,7 +497,7 @@ test("TinyOffice Chat turn dispatch fails closed for unsupported conversation ki
   );
 });
 
-test("TinyOffice Chat turn dispatch ignores topic messages without a target employee", () => {
+test("TinyOffice Chat turn dispatch chooses one stable runtime participant when a topic message has no mention", () => {
   const decisions = buildTinyOfficeChatTurnDispatches({
     source: "chat_room_message",
     companyId: "acme",
@@ -508,17 +509,10 @@ test("TinyOffice Chat turn dispatch ignores topic messages without a target empl
     employeeIds: ["iris-growth", "nora-automation"],
   });
 
-  assert.deepEqual(decisions, [{
-    kind: "ignored",
-    source: "chat_room_message",
-    reason: "no_target_member",
-    eventKey: "tinyoffice_chat:chat_room_message:acme:conversation-1:message-3:iris-growth",
-    companyId: "acme",
-    roomId: "conversation-1",
-    messageId: "message-3",
-    actorMemberId: "iris-growth",
-    targetMemberId: undefined,
-  }]);
+  assert.equal(decisions.length, 1);
+  assert.equal(decisions[0]?.kind, "routable");
+  assert.equal(decisions[0]?.reason, "stable_random_topic_member");
+  assert.equal(decisions[0]?.targetMemberId, "nora-automation");
 });
 
 test("TinyOffice Chat turn dispatch routes member actors in direct rooms to the runtime peer", () => {
@@ -538,6 +532,7 @@ test("TinyOffice Chat turn dispatch routes member actors in direct rooms to the 
     source: "chat_room_message",
     reason: "direct_room_peer",
     eventKey: "tinyoffice_chat:chat_room_message:acme:conversation-dm-member:message-member-dm:nora-automation",
+    chainId: "tinyoffice_chat_chain:acme:conversation-dm-member:message-member-dm",
     companyId: "acme",
     roomId: "conversation-dm-member",
     messageId: "message-member-dm",
@@ -571,6 +566,7 @@ test("TinyOffice Chat turn dispatch routes member mentions only to the explicit 
     source: "chat_room_message",
     reason: "mentioned_member",
     eventKey: "tinyoffice_chat:chat_room_message:acme:conversation-topic-member:message-member-mention:nora-automation",
+    chainId: "tinyoffice_chat_chain:acme:conversation-topic-member:message-member-mention",
     companyId: "acme",
     roomId: "conversation-topic-member",
     messageId: "message-member-mention",
@@ -1000,7 +996,7 @@ test("TinyOffice Chat structured handoff inherits active turn image inputs", asy
   }]);
 });
 
-test("TinyOffice Chat turn dispatch ignores member topic messages without explicit runtime target", () => {
+test("TinyOffice Chat turn dispatch stably routes member topic messages without explicit runtime target", () => {
   const decisions = buildTinyOfficeChatTurnDispatches({
     source: "chat_room_message",
     companyId: "acme",
@@ -1012,17 +1008,46 @@ test("TinyOffice Chat turn dispatch ignores member topic messages without explic
     employeeIds: ["iris-growth", "nora-automation"],
   });
 
-  assert.deepEqual(decisions, [{
-    kind: "ignored",
+  assert.equal(decisions.length, 1);
+  assert.equal(decisions[0]?.kind, "routable");
+  assert.equal(decisions[0]?.reason, "stable_random_topic_member");
+  assert.equal(decisions[0]?.targetMemberId, "iris-growth");
+});
+
+test("TinyOffice Chat turn dispatch selects only the first structured mention", () => {
+  const decisions = buildTinyOfficeChatTurnDispatches({
     source: "chat_room_message",
-    reason: "no_target_member",
-    eventKey: "tinyoffice_chat:chat_room_message:acme:conversation-topic-member:message-member-no-target:xuziho",
     companyId: "acme",
     roomId: "conversation-topic-member",
-    messageId: "message-member-no-target",
     actorMemberId: "xuziho",
-    targetMemberId: undefined,
-  }]);
+    messageId: "message-multiple-mentions",
+    body: "@Nora and @Iris please coordinate.",
+    mentionedMemberIds: ["nora-automation", "iris-growth"],
+    conversation: memberTopicConversation("conversation-topic-member"),
+    employeeIds: ["iris-growth", "nora-automation"],
+  });
+
+  assert.equal(decisions.length, 1);
+  assert.equal(decisions[0]?.kind, "routable");
+  assert.equal(decisions[0]?.targetMemberId, "nora-automation");
+});
+
+test("TinyOffice Chat turn dispatch treats literal @all as ordinary no-mention text", () => {
+  const input = {
+    source: "chat_room_message" as const,
+    companyId: "acme",
+    roomId: "conversation-topic-member",
+    actorMemberId: "xuziho",
+    messageId: "message-all",
+    conversation: memberTopicConversation("conversation-topic-member"),
+    employeeIds: ["iris-growth", "nora-automation"],
+  };
+  const literalAll = buildTinyOfficeChatTurnDispatches({ ...input, body: "@all please review." });
+  const plain = buildTinyOfficeChatTurnDispatches({ ...input, body: "Please review." });
+
+  assert.equal(literalAll[0]?.kind, "routable");
+  assert.equal(literalAll[0]?.reason, "stable_random_topic_member");
+  assert.equal(literalAll[0]?.targetMemberId, plain[0]?.targetMemberId);
 });
 
 test("TinyOffice Chat turn dispatch rejects carrier fields at the owned boundary", () => {
@@ -1401,7 +1426,7 @@ test("TinyOffice Chat room context becomes natural language execution input with
   assert.equal(naturalLanguageInput.userMessagePayload?.messageId, "message-8");
   assert.equal(naturalLanguageInput.contextBlocks?.[0]?.source, "tinyoffice.chat_topic_context");
   assert.equal(naturalLanguageInput.contextBlocks?.[0]?.label, "Topic context");
-  assert.match(naturalLanguageInput.contextBlocks?.[0]?.text || "", /Topic context:/);
+  assert.doesNotMatch(naturalLanguageInput.contextBlocks?.[0]?.text || "", /^Topic context:/);
   assert.match(naturalLanguageInput.contextBlocks?.[0]?.text || "", /Handoff candidates:/);
   assert.match(naturalLanguageInput.contextBlocks?.[0]?.text || "", /Use the owned Chat context only\./);
   assert.equal(Object.prototype.hasOwnProperty.call(naturalLanguageInput, "completionPolicy"), false);
@@ -1496,20 +1521,15 @@ test("TinyOffice Chat channel context can render only messages after the previou
         return conversationWithTopicSummary();
       },
       async listRecentMessages() {
+        throw new Error("incremental context must not use the bounded recent-message query");
+      },
+      async listMessagesAfter(_companyId, _roomId, cursor) {
+        assert.deepEqual(cursor, {
+          messageId: "message-2",
+          createdAt: "2026-06-24T04:41:00.000Z",
+        });
         return {
           messages: [
-            message({
-              messageId: "message-1",
-              senderMemberId: "iris-growth",
-              body: "Old discovery already sent to the runtime.",
-              createdAt: "2026-06-24T04:40:00.000Z",
-            }),
-            message({
-              messageId: "message-2",
-              senderMemberId: "nora-automation",
-              body: "Previous cursor message already sent to the runtime.",
-              createdAt: "2026-06-24T04:41:00.000Z",
-            }),
             message({
               messageId: "message-3",
               senderMemberId: "iris-growth",
@@ -1841,7 +1861,7 @@ test("HR Chat turns do not expose a dedicated recruit employee tool", async () =
   assert.equal(Object.prototype.hasOwnProperty.call(hrInput, "completionPolicy"), false);
 });
 
-test("TinyOffice Chat channel execution requires handoff_topic_turn and exposes structured handoff target", async () => {
+test("TinyOffice Chat channel execution requires one structured handoff target", async () => {
   const [decision] = buildTinyOfficeChatTurnDispatches({
     source: "chat_room_message",
     companyId: "acme",
@@ -2492,7 +2512,7 @@ test("TinyOffice Chat execution dispatch ignores non-routable decisions without 
     messageId: "message-7",
     body: "General update.",
     conversation: conversation("topic"),
-    employeeIds: ["iris-growth", "nora-automation"],
+    employeeIds: ["iris-growth"],
   })[0];
   assert.equal(decision?.kind, "ignored");
   if (!decision || decision.kind !== "ignored") {
@@ -2871,7 +2891,7 @@ test("TinyOffice Chat runtime dispatch sink requests topic summary refresh after
       providerId: "provider-neutral-test",
       async warm() {},
       async reply(input) {
-        emitHandoffTopicTurn(input, { toId: "iris-growth" });
+        emitHandoffTopicTurn(input, { toId: "xuziho" });
         return "I updated the checklist and will keep ownership for the next pass.";
       },
       async abortWhere() {
@@ -2896,7 +2916,6 @@ test("TinyOffice Chat runtime dispatch sink requests topic summary refresh after
       },
     },
     topicSummaryMinMessageCount: 2,
-    maxHandoffDepth: 0,
   });
 
   await sink.handleChatDispatchEvent({
@@ -2984,7 +3003,7 @@ test("TinyOffice Chat runtime dispatch uses prior topic context cursor for repea
       async warm() {},
       async reply(input) {
         capturedInputs.push(input);
-        emitHandoffTopicTurn(input, { toId: "iris-growth" });
+        emitHandoffTopicTurn(input, { toId: "xuziho" });
         return capturedInputs.length === 1
           ? "Nora processed the first topic turn."
           : "Nora processed the second topic turn.";
@@ -2996,7 +3015,6 @@ test("TinyOffice Chat runtime dispatch uses prior topic context cursor for repea
         return { reloadedCount: 0, sessionKeys: [] };
       },
     },
-    maxHandoffDepth: 0,
   });
 
   await sink.handleChatDispatchEvent({
@@ -3035,7 +3053,6 @@ test("TinyOffice Chat runtime dispatch uses prior topic context cursor for repea
   assert.equal(secondBlock?.metadata?.lastMessageId, secondMessage.message.messageId);
   assert.match(secondBlock?.text || "", /New raw messages since previous Topic context:/);
   assert.doesNotMatch(secondBlock?.text || "", /first topic context that should not be resent/);
-  assert.match(secondBlock?.text || "", /Nora processed the first topic turn/);
   assert.match(secondBlock?.text || "", /second topic context that should be incremental/);
 });
 
@@ -3296,9 +3313,48 @@ test("TinyOffice Chat runtime dispatch sink can cancel the currently running han
   );
   assert.ok(parentReplyCreatedIndex >= 0);
   assert.ok(childFirstStatusIndex > parentReplyCreatedIndex);
+  const parentCompletedIndex = realtimePublisher.payloads.findIndex((event) =>
+    event.type === "chat.runtime_status.changed" &&
+    event.targetMemberId === "nora-automation" &&
+    event.status === "completed"
+  );
+  assert.ok(childFirstStatusIndex < parentCompletedIndex);
+  const parentRun = realtimePublisher.payloads.find((event) =>
+    event.type === "chat.runtime_status.changed" &&
+    event.targetMemberId === "nora-automation" &&
+    event.status === "completed"
+  );
+  assert.equal(parentRun?.type, "chat.runtime_status.changed");
+  if (!parentRun || parentRun.type !== "chat.runtime_status.changed") {
+    return;
+  }
+
+  assert.deepEqual(await sink.getActiveChatRun?.("acme", {
+    roomId: "conversation-1",
+    actor: { memberId: "xuziho" },
+  }), {
+    companyId: "acme",
+    roomId: "conversation-1",
+    chainId: parentRun.chainId,
+    runId: irisThinkingEvent.runId,
+    sourceMessageId: userMessage.message.messageId,
+    targetMemberId: "iris-growth",
+    status: "active",
+  });
+  await assert.rejects(() => sink.assertCanDispatch?.("acme", {
+    roomId: "conversation-1",
+    actor: { memberId: "xuziho" },
+  }) ?? Promise.resolve(), /already has an active employee/);
+
+  await assert.rejects(() => sink.cancelChatRun?.("acme", {
+    runId: parentRun.runId,
+    actor: { memberId: "outsider" },
+    reason: "Unauthorized stop attempt.",
+  }), /not available to the current Topic participant/);
+  assert.deepEqual(abortAttempts, []);
 
   const cancelResult = await sink.cancelChatRun?.("acme", {
-    runId: irisThinkingEvent.runId,
+    runId: parentRun.runId,
     actor: { memberId: "xuziho" },
     reason: "User stopped the current handoff run.",
   });
@@ -3326,7 +3382,139 @@ test("TinyOffice Chat runtime dispatch sink can cancel the currently running han
     employeeId: "iris-growth",
     sessionKey: "iris-growth|chat_topic_room|conversation-1",
   }]);
+  assert.equal(await sink.getActiveChatRun?.("acme", {
+    roomId: "conversation-1",
+    actor: { memberId: "xuziho" },
+  }), null);
   assert.deepEqual(backgroundErrors, []);
+});
+
+test("TinyOffice Chat repairs one missing Channel handoff without replacing the visible reply", async () => {
+  const [decision] = buildTinyOfficeChatTurnDispatches({
+    source: "chat_room_message",
+    companyId: "acme",
+    roomId: "conversation-1",
+    actorMemberId: "iris-growth",
+    messageId: "message-missing-handoff",
+    body: "Nora, introduce yourself and pass this to Iris.",
+    mentionedMemberIds: ["nora-automation"],
+    conversation: conversation("topic"),
+    employeeIds: ["iris-growth", "nora-automation"],
+  });
+  assert.equal(decision?.kind, "routable");
+  if (!decision || decision.kind !== "routable") {
+    return;
+  }
+  const context = await assembleTinyOfficeChatRoomContext({
+    decision,
+    resolver: {
+      async getConversation() {
+        return conversation("topic");
+      },
+      async listRecentMessages() {
+        return { messages: [message({
+          messageId: "message-missing-handoff",
+          senderMemberId: "iris-growth",
+          body: "Nora, introduce yourself and pass this to Iris.",
+          mentionedMemberIds: ["nora-automation"],
+          createdAt: "2026-06-24T04:35:00.000Z",
+        })] };
+      },
+    },
+    participantProfiles: [
+      { id: "iris-growth", displayName: "Iris", runtimeCapable: true },
+      { id: "nora-automation", displayName: "Nora", runtimeCapable: true },
+    ],
+  });
+  const calls: NaturalLanguageResponseInput[] = [];
+  const result = await executeTinyOfficeChatNaturalLanguageTurn({
+    context,
+    employee: employeeHome(),
+    runtimeSessionRepository: memoryRuntimeSessionRepository().repository,
+    runtimeProvider: {
+      async reply(runtimeInput) {
+        calls.push(runtimeInput);
+        if (calls.length === 1) {
+          return "I am Nora, and Iris should continue next.";
+        }
+        emitHandoffTopicTurn(runtimeInput, { toId: "iris-growth" });
+        return "";
+      },
+    },
+  });
+
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[1]?.activeToolNames, ["handoff_topic_turn"]);
+  assert.match(calls[1]?.contextBlocks?.[0]?.text || "", /Do not write another visible reply/);
+  assert.equal(result.chatOutput.message, "I am Nora, and Iris should continue next.");
+  assert.equal(result.stateAction?.targetMemberId, "iris-growth");
+});
+
+test("TinyOffice Chat channel context omits a provisional title that repeats the trigger body", async () => {
+  const triggerBody = "请大家依次介绍自己的职责，并把球传给下一位。介绍时说明姓名、职责和最擅长帮助团队解决的问题。";
+  const baseConversation = memberTopicConversation("conversation-provisional-title");
+  const topicConversation: ConversationDto = {
+    ...baseConversation,
+    title: triggerBody.slice(0, 40),
+    topic: baseConversation.topic ? { ...baseConversation.topic, title: triggerBody.slice(0, 40) } : undefined,
+  };
+  const [decision] = buildTinyOfficeChatTurnDispatches({
+    source: "chat_room_message",
+    companyId: "acme",
+    roomId: topicConversation.conversationId,
+    actorMemberId: "xuziho",
+    messageId: "message-introduction-round",
+    body: triggerBody,
+    mentionedMemberIds: ["nora-automation"],
+    conversation: topicConversation,
+    employeeIds: ["iris-growth", "nora-automation"],
+  });
+  assert.equal(decision?.kind, "routable");
+  if (!decision || decision.kind !== "routable") {
+    return;
+  }
+  const context = await assembleTinyOfficeChatRoomContext({
+    decision,
+    resolver: {
+      async getConversation() {
+        return topicConversation;
+      },
+      async listRecentMessages() {
+        return {
+          messages: [message({
+            conversationId: topicConversation.conversationId,
+            messageId: "message-introduction-round",
+            senderMemberId: "xuziho",
+            body: triggerBody,
+            createdAt: fixedNow,
+          })],
+        };
+      },
+    },
+  });
+  const naturalLanguageInput = buildNaturalLanguageInputFromTinyOfficeChatRoomContext({
+    context,
+    employee: employeeHome(),
+  });
+  const text = naturalLanguageInput.contextBlocks?.[0]?.text || "";
+
+  assert.doesNotMatch(text, /- title:/);
+  assert.equal(text.match(new RegExp(triggerBody, "g"))?.length, 1);
+});
+
+test("TinyOffice Chat state action rejects a Channel turn that omits handoff_topic_turn", () => {
+  const result = resolveChatTurnStateAction({
+    sceneType: "channel",
+    topicId: "topic-1",
+    assistantMessage: "I finished my part and am returning the topic.",
+    reachableParticipants: [{ id: "xuziho", displayName: "Xu Ziho", role: "boss" }],
+    events: [],
+  });
+
+  assert.deepEqual(result, {
+    ok: false,
+    error: "handoff_topic_turn must be called exactly once in every Channel Topic turn.",
+  });
 });
 
 test("TinyOffice Chat runtime dispatch sink suppresses late provider replies after cancellation", async () => {

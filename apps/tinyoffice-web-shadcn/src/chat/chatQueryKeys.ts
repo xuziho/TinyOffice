@@ -34,6 +34,10 @@ export const chatQueryKeys = {
     ...chatQueryKeys.roomMessagesScope(companyId, roomId),
     viewer?.memberId ? `member:${viewer.memberId}` : "viewer:none",
   ] as const,
+  activeRun: (companyId?: string, roomId?: string, viewer?: ViewerKey) => [
+    "tinyoffice", "chat", "active-run", companyId ?? "", roomId ?? "",
+    viewer?.memberId ? `member:${viewer.memberId}` : "viewer:none",
+  ] as const,
   roomActivityScope: (companyId?: string, roomId?: string) => ["tinyoffice", "chat", "room-activity", companyId ?? "", roomId ?? ""] as const,
   roomActivity: (companyId?: string, roomId?: string, viewer?: ViewerKey, filter?: ActivityFilterKey) => [
     ...chatQueryKeys.roomActivityScope(companyId, roomId),

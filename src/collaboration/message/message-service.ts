@@ -310,6 +310,28 @@ export class MessageService {
     };
   }
 
+  async listMessagesAfter(
+    companyId: string,
+    conversationId: string,
+    cursor: { createdAt: string; messageId: string },
+  ): Promise<MessagePage> {
+    const scopedCompanyId = ensureConversationCompanyScope({ companyId });
+    const scopedConversationId = trimRequired(conversationId, "conversationId");
+    const conversation = await this.loadConversation(scopedCompanyId, scopedConversationId);
+    if (!conversation) {
+      return { messages: [] };
+    }
+    const records = await this.repository.listMessagesAfter({
+      companyId: scopedCompanyId,
+      conversationId: scopedConversationId,
+      afterCreatedAt: trimRequired(cursor.createdAt, "cursor.createdAt"),
+      afterMessageId: trimRequired(cursor.messageId, "cursor.messageId"),
+    });
+    return {
+      messages: records.map((record) => publicMessage(record.message)),
+    };
+  }
+
   async sendMessage(
     companyId: string,
     conversationId: string,

@@ -24,6 +24,11 @@ export interface TinyOfficeChatRoomContextResolver {
     roomId: string,
     cursor?: { limit?: number },
   ): Promise<{ messages: MessageDto[] }>;
+  listMessagesAfter?(
+    companyId: string,
+    roomId: string,
+    cursor: TinyOfficeChatTopicContextCursor,
+  ): Promise<{ messages: MessageDto[] }>;
 }
 
 export interface TinyOfficeChatParticipantProfile {
@@ -132,7 +137,19 @@ export async function assembleTinyOfficeChatRoomContext(input: {
   assertConversationScope(conversation, companyId, roomId);
   assertRuntimeContextAccess(conversation, input.decision);
 
-  const page = await input.resolver.listRecentMessages(companyId, roomId, { limit: recentMessageLimit });
+  let page: { messages: MessageDto[] };
+  if (input.priorTopicContextCursor) {
+    if (!input.resolver.listMessagesAfter) {
+      throw new Error("Incremental Topic context requires listMessagesAfter cursor support.");
+    }
+    page = await input.resolver.listMessagesAfter(
+      companyId,
+      roomId,
+      normalizeTopicContextCursor(input.priorTopicContextCursor),
+    );
+  } else {
+    page = await input.resolver.listRecentMessages(companyId, roomId, { limit: recentMessageLimit });
+  }
   assertNoForbiddenPublicCarrierFields(page);
   const recentMessages = page.messages
     .filter((message) => message.companyId === companyId && message.conversationId === roomId)
@@ -208,8 +225,14 @@ export function formatTinyOfficeChatTopicContextForExecution(context: TinyOffice
       return details.length > 0 ? `- ${label}: ${details.join("; ")}` : `- ${label}`;
     })
     : ["- none"];
+  const currentMessageBody = context.currentMessage?.body.trim();
+  const conversationTitle = context.conversation.title.trim();
+  const repeatsCurrentMessage = Boolean(
+    currentMessageBody &&
+    (conversationTitle === currentMessageBody ||
+      (conversationTitle.length >= 40 && currentMessageBody.startsWith(conversationTitle))),
+  );
   const lines = [
-    "Topic context:",
     `- companyId: ${context.companyId}`,
     `- roomId: ${context.roomId}`,
     `- conversationId: ${context.conversationId}`,
@@ -219,7 +242,9 @@ export function formatTinyOfficeChatTopicContextForExecution(context: TinyOffice
     `- messageId: ${context.messageId}`,
     ...(context.entryId ? [`- entryId: ${context.entryId}`] : []),
     `- conversationKind: ${context.conversation.conversationKind}`,
-    `- title: ${context.conversation.title}`,
+    ...(conversationTitle && !repeatsCurrentMessage
+      ? [`- title: ${conversationTitle}`]
+      : []),
     "",
     "Handoff candidates:",
     ...candidateLines,
@@ -251,7 +276,8 @@ export function formatTinyOfficeChatTopicContextForExecution(context: TinyOffice
             `  - ${attachment.fileName} (${attachment.mimeType}, attachmentId=${attachment.attachmentId})`
           ).join("\n")}`
         : "";
-      return `- [${message.createdAt}] ${sender}${mentions}: ${message.body}${imageAttachments}`;
+      const trigger = message.messageId === context.messageId ? "[trigger] " : "";
+      return `- ${trigger}[${message.createdAt}] ${sender}${mentions}: ${message.body}${imageAttachments}`;
     }),
   ];
   return lines.join("\n");
@@ -271,9 +297,7 @@ function buildTopicContextWindow(input: {
   messages: TinyOfficeChatRoomContextMessage[];
   priorCursor?: TinyOfficeChatTopicContextCursor;
 }): TinyOfficeChatTopicContextWindow {
-  const messages = input.priorCursor
-    ? input.messages.filter((message) => isMessageAfterTopicContextCursor(message, input.priorCursor!))
-    : input.messages;
+  const messages = input.messages;
   const last = messages.at(-1);
   return {
     mode: input.priorCursor ? "incremental" : "initial",
@@ -293,15 +317,6 @@ function normalizeTopicContextCursor(cursor: TinyOfficeChatTopicContextCursor): 
     messageId: trimRequired(cursor.messageId, "priorTopicContextCursor.messageId"),
     createdAt: trimRequired(cursor.createdAt, "priorTopicContextCursor.createdAt"),
   };
-}
-
-function isMessageAfterTopicContextCursor(
-  message: TinyOfficeChatRoomContextMessage,
-  cursor: TinyOfficeChatTopicContextCursor,
-): boolean {
-  const normalized = normalizeTopicContextCursor(cursor);
-  return message.createdAt.localeCompare(normalized.createdAt) > 0 ||
-    (message.createdAt === normalized.createdAt && message.messageId.localeCompare(normalized.messageId) > 0);
 }
 
 function compareMessagesForPromptContext(left: MessageDto, right: MessageDto): number {

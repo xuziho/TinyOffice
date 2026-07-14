@@ -26,6 +26,7 @@ import { registerTasksRoutes } from "./tinyoffice-api/tasks-routes.js";
 import { registerUpdateRoutes } from "./tinyoffice-api/update-routes.js";
 import { registerWorkRoutes } from "./tinyoffice-api/work-routes.js";
 import type { TinyOfficeApiOptions } from "./tinyoffice-api/context.js";
+import { resolveCompanyLifecycleService } from "./tinyoffice-api/service-resolvers.js";
 
 export type {
   AccessApiService,
@@ -61,10 +62,16 @@ export function createTinyOfficeApi(options: TinyOfficeApiOptions): Hono {
 
   registerAuthenticationRoutes(app, options);
   app.use("/api/*", async (c, next) => {
-    const session = await options.auth.resolveCurrentUser(c.req.raw);
-    if (!session) {
+    const authenticatedSession = await options.auth.resolveCurrentUser(c.req.raw);
+    if (!authenticatedSession) {
       throw new TinyOfficeAuthenticationError();
     }
+    const companyLifecycleService = options.companyLifecycleService
+      ? await resolveCompanyLifecycleService(options)
+      : undefined;
+    const session = companyLifecycleService?.resolveCurrentUserSession
+      ? await companyLifecycleService.resolveCurrentUserSession(authenticatedSession)
+      : authenticatedSession;
     bindAuthenticatedRequest(c.req.raw, session);
     await next();
   });

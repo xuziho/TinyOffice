@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import {
   assertNoForbiddenPublicCarrierFields,
   type ConversationDto,
@@ -13,6 +15,7 @@ export type TinyOfficeChatTurnDispatchSceneType =
 export type TinyOfficeChatTurnDispatchReason =
   | "mentioned_member"
   | "direct_room_peer"
+  | "stable_random_topic_member"
   | "formal_structured_handoff";
 export type TinyOfficeChatTurnDispatchIgnoredReason =
   | "actor_message_not_routable"
@@ -40,6 +43,7 @@ export interface TinyOfficeChatTurnDispatchReady {
   source: TinyOfficeChatTurnDispatchSource;
   reason: TinyOfficeChatTurnDispatchReason;
   eventKey: string;
+  chainId: string;
   companyId: string;
   roomId: string;
   entryId?: string;
@@ -129,8 +133,8 @@ export function buildTinyOfficeChatTurnDispatches(
   const knownMemberIds = input.employeeIds
     ? new Set(input.employeeIds.map((employeeId) => employeeId.trim()).filter(Boolean))
     : undefined;
-  const candidates = resolveTargetCandidates(input, actor.memberId);
-  if (candidates.length === 0) {
+  const candidate = resolveTargetCandidate(input, actor.memberId, knownMemberIds);
+  if (!candidate) {
     return [ignored(input, "no_target_member")];
   }
 
@@ -138,18 +142,18 @@ export function buildTinyOfficeChatTurnDispatches(
     text: normalizedMessage,
     env: input.env || process.env,
   });
-  return candidates.map((candidate) => {
-    if (actor.memberId && candidate.memberId === actor.memberId) {
-      return ignored(input, "actor_message_not_routable", candidate.memberId);
-    }
-    if (knownMemberIds && !knownMemberIds.has(candidate.memberId)) {
-      return ignored(input, "unknown_target_member", candidate.memberId);
-    }
-    return {
+  if (actor.memberId && candidate.memberId === actor.memberId) {
+    return [ignored(input, "actor_message_not_routable", candidate.memberId)];
+  }
+  if (knownMemberIds && !knownMemberIds.has(candidate.memberId)) {
+    return [ignored(input, "unknown_target_member", candidate.memberId)];
+  }
+  return [{
       kind: "routable",
       source: input.source,
       reason: candidate.reason,
       eventKey: buildTinyOfficeChatTurnDispatchEventKey(input, candidate.memberId),
+      chainId: buildTinyOfficeChatTurnChainId(input),
       companyId,
       roomId,
       ...(input.entryId ? { entryId: trimRequired(input.entryId, "entryId") } : {}),
@@ -161,8 +165,19 @@ export function buildTinyOfficeChatTurnDispatches(
       prefersChinese: preferredLanguage.toLowerCase().startsWith("zh"),
       sceneType,
       sessionKey: `${candidate.memberId}|${sceneType}|${roomId}`,
-    };
-  });
+    }];
+}
+
+export function buildTinyOfficeChatTurnChainId(
+  input: Pick<TinyOfficeChatTurnDispatchInput, "companyId" | "roomId" | "messageId"> & { attemptId?: string },
+): string {
+  return [
+    "tinyoffice_chat_chain",
+    trimRequired(input.companyId, "companyId"),
+    trimRequired(input.roomId, "roomId"),
+    trimRequired(input.messageId, "messageId"),
+    ...(input.attemptId ? [trimRequired(input.attemptId, "attemptId")] : []),
+  ].join(":");
 }
 
 export function buildTinyOfficeChatTurnDispatchEventKey(
@@ -180,24 +195,36 @@ export function buildTinyOfficeChatTurnDispatchEventKey(
   ].join(":");
 }
 
-function resolveTargetCandidates(
+function resolveTargetCandidate(
   input: TinyOfficeChatTurnDispatchInput,
   actorMemberId: string | undefined,
-): Array<{ memberId: string; reason: TinyOfficeChatTurnDispatchReason }> {
+  knownMemberIds: Set<string> | undefined,
+): { memberId: string; reason: TinyOfficeChatTurnDispatchReason } | undefined {
   const mentioned = uniqueStrings(input.mentionedMemberIds || []);
   if (mentioned.length > 0) {
-    return mentioned.map((memberId) => ({ memberId, reason: "mentioned_member" }));
+    return { memberId: mentioned[0] as string, reason: "mentioned_member" };
   }
-  if (input.conversation.conversationKind !== "direct") {
-    return [];
-  }
-  return uniqueStrings(
+  const participants = uniqueStrings(
     input.conversation.participants
       .map((participant) => participant.memberId)
       .filter((memberId): memberId is string => Boolean(memberId)),
   )
-    .filter((memberId) => !actorMemberId || memberId !== actorMemberId)
-    .map((memberId) => ({ memberId, reason: "direct_room_peer" }));
+    .filter((memberId) => !actorMemberId || memberId !== actorMemberId);
+  if (input.conversation.conversationKind === "direct") {
+    const memberId = participants[0];
+    return memberId ? { memberId, reason: "direct_room_peer" } : undefined;
+  }
+  const eligible = participants
+    .filter((memberId) => !knownMemberIds || knownMemberIds.has(memberId))
+    .sort((left, right) => left.localeCompare(right));
+  if (eligible.length === 0) {
+    return undefined;
+  }
+  const digest = createHash("sha256")
+    .update([input.companyId, input.roomId, input.messageId].join(":"))
+    .digest();
+  const index = digest.readUInt32BE(0) % eligible.length;
+  return { memberId: eligible[index] as string, reason: "stable_random_topic_member" };
 }
 
 function actorIdentity(input: Pick<TinyOfficeChatTurnDispatchInput, "actorMemberId">): {

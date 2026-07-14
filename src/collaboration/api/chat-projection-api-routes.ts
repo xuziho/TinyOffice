@@ -102,6 +102,16 @@ export type ChatDispatchApiEvent =
     };
 
 export interface ChatDispatchApiSink {
+  assertCanDispatch?(companyId: string, input: { roomId: string; actor: ChatParticipantIdentitySelector }): Promise<void>;
+  getActiveChatRun?(companyId: string, input: { roomId: string; actor: ChatParticipantIdentitySelector }): Promise<{
+    companyId: string;
+    roomId: string;
+    chainId: string;
+    runId: string;
+    sourceMessageId: string;
+    targetMemberId: string;
+    status: "active" | "cancel_requested";
+  } | null>;
   handleChatDispatchEvent(event: ChatDispatchApiEvent): void | Promise<void>;
   cancelChatRun?(companyId: string, input: {
     runId: string;
@@ -332,6 +342,10 @@ export async function handleChatProjectionApiRequest(
       }
       if (req.method === "POST" && match.child === "messages") {
         const body = parseSendMessageBody(await readJsonBody(req), companyId);
+        await options.chatDispatchSink?.assertCanDispatch?.(companyId, {
+          roomId,
+          actor: normalizeChatViewerIdentity(body.actor, "actor"),
+        });
         const sent = await messageService.sendMessage(companyId, roomId, body.actor, body.body, {
           ...body.options,
         });

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { TinyOfficeRealtimeEvent, TinyOfficeRealtimeEventPayload } from "tinyoffice/realtime-contracts";
-import { activeChatRunForRoom, applyChatRunRealtimeEvent, draftReplyForRoom, emptyChatRunState, streamingReplyForRoom } from "./chatRunState";
+import { activeChatRunForRoom, applyChatRunRealtimeEvent, draftReplyForRoom, emptyChatRunState, reconcileActiveChatRun, streamingReplyForRoom } from "./chatRunState";
 
 test("chat run state tracks active runtime work by room", () => {
   const state = applyChatRunRealtimeEvent(emptyChatRunState(), realtimeEvent({
@@ -177,6 +177,86 @@ test("chat run state keeps cancel requested active until the backend publishes c
 
   assert.equal(activeChatRunForRoom(canceled, "room-1"), undefined);
   assert.equal(draftReplyForRoom(canceled, "room-1"), undefined);
+});
+
+test("chat run state keeps the handoff child active when the parent completes", () => {
+  const parentThinking = applyChatRunRealtimeEvent(emptyChatRunState(), {
+    schema: "tinyoffice-realtime-event",
+    version: 1,
+    type: "chat.runtime_status.changed",
+    eventId: "event-1",
+    occurredAt: "2026-07-14T00:00:00.000Z",
+    sequence: 1,
+    companyId: "acme",
+    conversationId: "room-1",
+    roomId: "room-1",
+    runId: "run-parent",
+    chainId: "chain-1",
+    sourceMessageId: "message-1",
+    targetMemberId: "nora",
+    status: "thinking",
+  });
+  const childQueued = applyChatRunRealtimeEvent(parentThinking, {
+    schema: "tinyoffice-realtime-event",
+    version: 1,
+    type: "chat.runtime_status.changed",
+    eventId: "event-2",
+    occurredAt: "2026-07-14T00:00:01.000Z",
+    sequence: 2,
+    companyId: "acme",
+    conversationId: "room-1",
+    roomId: "room-1",
+    runId: "run-child",
+    chainId: "chain-1",
+    sourceMessageId: "message-2",
+    targetMemberId: "iris",
+    status: "queued",
+  });
+  const parentCompleted = applyChatRunRealtimeEvent(childQueued, {
+    schema: "tinyoffice-realtime-event",
+    version: 1,
+    type: "chat.runtime_status.changed",
+    eventId: "event-3",
+    occurredAt: "2026-07-14T00:00:02.000Z",
+    sequence: 3,
+    companyId: "acme",
+    conversationId: "room-1",
+    roomId: "room-1",
+    runId: "run-parent",
+    chainId: "chain-1",
+    sourceMessageId: "message-1",
+    targetMemberId: "nora",
+    status: "completed",
+  });
+
+  assert.equal(activeChatRunForRoom(parentCompleted, "room-1")?.runId, "run-child");
+  assert.equal(activeChatRunForRoom(parentCompleted, "room-1")?.chainId, "chain-1");
+});
+
+test("chat run state restores the durable current holder after a page refresh", () => {
+  const restored = reconcileActiveChatRun(emptyChatRunState(), "room-1", {
+    companyId: "acme",
+    roomId: "room-1",
+    chainId: "chain-1",
+    runId: "run-child",
+    sourceMessageId: "message-1",
+    targetMemberId: "iris",
+    status: "active",
+  });
+
+  assert.deepEqual(activeChatRunForRoom(restored, "room-1"), {
+    companyId: "acme",
+    conversationId: "room-1",
+    roomId: "room-1",
+    chainId: "chain-1",
+    runId: "run-child",
+    sourceMessageId: "message-1",
+    targetMemberId: "iris",
+    status: "thinking",
+    streamedContent: "",
+    sequence: 0,
+  });
+  assert.equal(activeChatRunForRoom(reconcileActiveChatRun(restored, "room-1", null), "room-1"), undefined);
 });
 
 test("chat run state ignores process trace payloads as a product activity source", () => {

@@ -199,7 +199,7 @@ export async function executeTinyOfficeChatNaturalLanguageTurn(
     source: "assistant_message",
     message: response.message,
   };
-  const stateAction = resolveChatTurnStateAction({
+  let stateAction = resolveChatTurnStateAction({
     sceneType: finalOutputSceneTypeFromChatScene(input.context.sceneType),
     events: finalOutputEvents,
     assistantMessage: response.message,
@@ -207,6 +207,47 @@ export async function executeTinyOfficeChatNaturalLanguageTurn(
     reachableParticipants: finalOutputReachableParticipants(input.context),
     reachableMemberIds: input.context.conversation.runtimeParticipantIds,
   });
+  if (
+    !stateAction.ok &&
+    finalOutputSceneTypeFromChatScene(input.context.sceneType) === "channel" &&
+    !hasSuccessfulHandoffCall(finalOutputEvents)
+  ) {
+    await generateNaturalLanguageEmployeeReply({
+      ...responseInput,
+      message: "Complete the required Channel state action for the preceding reply.",
+      imageInputs: [],
+      contextBlocks: [{
+        role: "runtime_context",
+        source: "tinyoffice.channel_handoff_repair",
+        label: "Required Channel state action",
+        text: [
+          "The preceding visible reply is already complete, but its required Handoff tool call is missing.",
+          "Call handoff_topic_turn exactly once now.",
+          "Choose one toId from the Handoff candidates below based on the preceding reply and Topic context.",
+          "Do not write another visible reply.",
+          "",
+          "Preceding visible reply:",
+          response.message,
+          "",
+          "Handoff candidates:",
+          ...finalOutputReachableParticipants(input.context).map((participant) =>
+            `- ${participant.displayName || participant.id} (${participant.id})${participant.role ? `: role=${participant.role}` : ""}`
+          ),
+        ].join("\n"),
+      }],
+      activeToolNames: ["handoff_topic_turn"],
+      allowEmptyReply: true,
+      enableTextDeltas: false,
+    });
+    stateAction = resolveChatTurnStateAction({
+      sceneType: "channel",
+      events: finalOutputEvents,
+      assistantMessage: response.message,
+      topicId: input.context.conversation.topicId || input.context.conversation.conversationId,
+      reachableParticipants: finalOutputReachableParticipants(input.context),
+      reachableMemberIds: input.context.conversation.runtimeParticipantIds,
+    });
+  }
   if (!stateAction.ok) {
     throw new Error(`Invalid ${input.context.sceneType} state action: ${stateAction.error}`);
   }
@@ -244,6 +285,14 @@ export async function executeTinyOfficeChatNaturalLanguageTurn(
   return result;
 }
 
+function hasSuccessfulHandoffCall(events: ProcessTraceEvent[]): boolean {
+  return events.some((event) =>
+    event.kind === "model_tool_call" &&
+    event.status === "succeeded" &&
+    event.metadata?.toolName === "handoff_topic_turn"
+  );
+}
+
 export function buildTinyOfficeChatStructuredHandoffDispatch(input: {
   priorDecision: TinyOfficeChatTurnDispatchReady;
   result: TinyOfficeChatNaturalLanguageExecutionResult;
@@ -264,6 +313,7 @@ export function buildTinyOfficeChatStructuredHandoffDispatch(input: {
     kind: "routable",
     source: "chat_room_message",
     reason: "formal_structured_handoff",
+    chainId: input.priorDecision.chainId,
     eventKey: buildTinyOfficeChatTurnDispatchEventKey({
       source: "chat_room_message",
       companyId: input.result.companyId,

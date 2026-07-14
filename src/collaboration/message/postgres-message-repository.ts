@@ -9,6 +9,7 @@ import type {
   ConversationRecord,
   MessageRecord,
   MessageRepository,
+  MessageRepositoryAfterCursorInput,
   MessageRepositoryConversationListInput,
   MessageRepositoryPageInput,
 } from "./message-repository.js";
@@ -263,6 +264,18 @@ LIMIT $3 OFFSET $4`,
 ) recent_messages
 ORDER BY created_at ASC, message_id ASC`,
       [input.companyId, input.conversationId, input.limit ?? 100],
+    );
+    return rows.rows.map((row) => ({ message: this.messageFromRow(row) }));
+  }
+
+  async listMessagesAfter(input: MessageRepositoryAfterCursorInput): Promise<MessageRecord[]> {
+    const rows = await this.client.query<Record<string, unknown>>(
+      `SELECT * FROM conversation_messages
+WHERE company_id = $1
+  AND conversation_id = $2
+  AND (created_at > $3 OR (created_at = $3 AND message_id > $4))
+ORDER BY created_at ASC, message_id ASC`,
+      [input.companyId, input.conversationId, input.afterCreatedAt, input.afterMessageId],
     );
     return rows.rows.map((row) => ({ message: this.messageFromRow(row) }));
   }

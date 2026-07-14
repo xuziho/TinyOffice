@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const source = readFileSync(new URL("./MessagePanel.tsx", import.meta.url), "utf8");
+const draftEntrySource = readFileSync(new URL("./DraftEntryPanel.tsx", import.meta.url), "utf8");
 
 test("streaming reply uses the final message row geometry from its first visible content", () => {
   const streamingReply = source.match(/function ReplyRunRow\([\s\S]*?<MessageScrollerItem messageId=\{`draft-\$\{draftReply\.runId\}`\}[\s\S]*?<\/MessageScrollerItem>/)?.[0];
@@ -25,4 +26,9 @@ test("Activity selection does not add a persistent second frame around message c
   assert.match(source, /hover:bg-muted\/20 focus-visible:bg-muted\/30 focus-visible:outline-none/);
   assert.doesNotMatch(source, /focus-visible:ring-2 focus-visible:ring-ring/);
   assert.match(source, /aria-pressed=\{activitySource \? isActivitySourceSelected : undefined\}/);
+});
+
+test("channel composers offer literal @all in both new and existing topics", () => {
+  assert.match(source, /allowAllMention=\{model\.selectedContainer\?\.kind === "channel"\}/);
+  assert.match(draftEntrySource, /allowAllMention=\{model\.selectedContainer\?\.kind === "channel"\}/);
 });

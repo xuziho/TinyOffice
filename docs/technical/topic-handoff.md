@@ -8,6 +8,7 @@ This page records the current implementation boundary for Topic / Handoff. Produ
 | --- | --- |
 | `src/channel-topics/` | Topic owner, participants, owned room identity, seen cursors, and handoff rows. |
 | `src/runtime/realtime/handoff-replay-ledger.ts` | Handoff replay/idempotency ledger. Owned action/room identity is preferred over legacy `threadId`. |
+| `src/runtime/chat/chat-topic-chain-repository.ts` | Durable Topic-chain state, one-active-chain constraint, current holder/run revision, and cancel lookup across child runs. |
 
 ## Database Boundary
 
@@ -24,9 +25,11 @@ Topic owner and participant storage is member-only. Current pre-release storage 
 
 `channel_topic_handoffs` and `handoff_replay_ledger` also carry owned room/action evidence. Current pre-release storage should not add legacy carrier evidence fields or migration-diagnostic fields as product identity.
 
-Channel handoff context uses progressive disclosure. The receiver should get shared Topic context from the current handoff message, handoff candidates, a raw-message window within the context budget, and the System AI-maintained Topic summary for older history. The first turn for a persistent Topic `sessionKey` uses the recent raw-message window. Later turns for the same `sessionKey` use the previous Topic context cursor from runtime Session evidence and include only raw messages after that cursor. Older raw messages are available through explicit history lookup tools; there is no product context-mode switch.
+Channel handoff context uses progressive disclosure. The receiver gets shared Topic context from handoff candidates, a raw-message window, and the System AI-maintained Topic summary for older history. The current trigger is marked in the raw window and is not appended again as a standalone message. The first turn for a persistent Topic `sessionKey` uses the newest 20 messages. Later turns use the previous Topic context cursor from runtime Session evidence and include every raw message after that cursor. Older raw messages are available through explicit history lookup tools; there is no product context-mode switch.
 
 Runtime context exposes `Handoff candidates` rather than the full visible participant roster. Candidate context includes display name, stable id, and product role/responsibility, and excludes the runtime member taking the current turn. `handoff_topic_turn.toId` must target a listed candidate. Runtime Dispatch owns the execution decision after the model selects `toId`; prompt context must not describe candidates as human-vs-AI or return-to-user handoff classes.
+
+`chat_topic_chains` is the durable single-ball control record. `chat_topic_chain_runs` links every child `runId` to the same `chainId`. A partial unique index permits only one `active` or `cancel_requested` chain per Topic room. Handoff advances `current_run_id` and `current_holder_member_id` with an expected-current-run guard before the child queued event is published. Cancel can therefore resolve an older visible run id to the actual current holder.
 
 ## Rules
 
@@ -38,6 +41,10 @@ Runtime context exposes `Handoff candidates` rather than the full visible partic
 - Replay/idempotency should use a handoff `actionId` when available, then owned room identity.
 - Recovered or suppressed handoff action evidence should preserve `roomId`, `conversationId`, `chatEntryId`, and `actionId`.
 - Recovered or suppressed handoff action evidence must use owned room, conversation, chat entry, action, and participant ids.
+- A Topic message produces one initial dispatch only. Multiple structured mentions select the first id; no mention uses a SHA-256-derived stable selection over sorted eligible runtime participant ids.
+- `handoff_topic_turn` must appear exactly once in every Channel Topic turn. Selecting the user's participant id returns control to the user.
+- Handoff count is unlimited. Runtime/provider timeouts remain operational failure boundaries, not product Handoff limits.
+- Topic cancellation validates the requesting actor against Conversation participation, marks the chain `cancel_requested`, aborts its current run, blocks a later Handoff, and suppresses late provider output.
 
 ## Focused Tests
 

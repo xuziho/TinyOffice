@@ -7,14 +7,7 @@ export function registerSessionRoutes(app: Hono, options: TinyOfficeApiOptions):
   const { currentSessionResponse, currentUserFromRequest, jsonResponse, parseSwitchCurrentCompanyBody, readJsonBody, resolveCompanyLifecycleService } = api;
 
   app.get("/api/tinyoffice/session/current", async (c) => {
-    const currentUser = currentUserFromRequest(c.req.raw);
-    const companyLifecycleService = options.companyLifecycleService
-      ? resolveCompanyLifecycleService(options)
-      : undefined;
-    const resolvedSession = companyLifecycleService?.resolveCurrentUserSession
-      ? await companyLifecycleService.resolveCurrentUserSession(currentUser)
-      : currentUser;
-    return jsonResponse(c, currentSessionResponse(resolvedSession));
+    return jsonResponse(c, currentSessionResponse(currentUserFromRequest(c.req.raw)));
   });
 
   app.put("/api/tinyoffice/session/current-company", async (c) => {

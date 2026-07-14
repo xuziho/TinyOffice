@@ -37,7 +37,7 @@ type TinyOfficeRealtimeEventPayload =
   | { type: "chat.message.created"; companyId: string; conversationId: string; roomId: string; messageId: string }
   | { type: "chat.read_state.updated"; companyId: string; roomId: string; memberId: string }
   | { type: "chat.projection.changed"; companyId: string; viewerMemberId: string }
-  | { type: "chat.runtime_status.changed"; companyId: string; conversationId: string; roomId: string; runId: string; sourceMessageId: string; targetMemberId: string; status: ChatRuntimeStatus; sessionKey?: string; sessionRecordId?: string; runtimeProviderId?: string; replyMessageId?: string; errorMessage?: string }
+  | { type: "chat.runtime_status.changed"; companyId: string; conversationId: string; roomId: string; runId: string; chainId?: string; sourceMessageId: string; targetMemberId: string; status: ChatRuntimeStatus; sessionKey?: string; sessionRecordId?: string; runtimeProviderId?: string; replyMessageId?: string; errorMessage?: string }
   | { type: "chat.process_trace.appended"; companyId: string; conversationId: string; roomId: string; runId: string; sourceMessageId: string; targetMemberId: string; sessionKey?: string; replyMessageId?: string; processTraceEvent: ProcessTraceEvent }
   | { type: "chat.reply.delta"; companyId: string; conversationId: string; roomId: string; runId: string; sourceMessageId: string; targetMemberId: string; sessionKey?: string; delta: string; sequenceInRun: number }
   | { type: "chat.reply.snapshot"; companyId: string; conversationId: string; roomId: string; runId: string; sourceMessageId: string; targetMemberId: string; sessionKey?: string; content: string; sequenceInRun: number };
@@ -85,11 +85,11 @@ The standalone shadcn web app subscribes to the current socket.io route and impo
 
 An AI reply run is the realtime-visible unit of work for send-button pending state, stop/cancel controls, streaming drafts, Session evidence, and process-trace linkage.
 
-- `runId` is required for runtime status, process trace, and reply streaming events.
+- `runId` is required for runtime status, process trace, and reply streaming events. Channel Topic runs also carry their shared `chainId`.
 - `sourceMessageId` is the user or employee message that triggered the run.
 - `targetMemberId` is the runtime-capable company member doing the Chat work.
 - `sessionKey` and `sessionRecordId` link the run to runtime/session evidence when present.
-- Channel handoff does not make the whole topic one cancel target. Each handoff recipient starts a new AI reply run with its own `runId`; that child run must be registered as active before the provider session starts so Stop targets the currently running employee.
+- A Channel Topic handoff chain has one durable `chainId` and exactly one current `runId`. Each recipient still gets a separate AI reply run for Session, Process Trace, and streaming evidence, while Stop resolves any run in the chain to the actual current holder. The child run is registered and published as queued before the parent becomes terminal so the selected Topic Stop control remains continuous.
 - The cancel control calls `POST /api/companies/:companyId/chat/runs/:runId/cancel`; realtime broadcasts `cancel_requested` and then `canceled` when the runtime abort succeeds. The UI must not synthesize cancellation by only hiding a spinner.
 - If the runtime provider does not acknowledge abort immediately, the run can remain `cancel_requested` until the provider returns or the backend resolves the run through a later terminal path. The UI may show cancellation as pending, but it must not promote the run to `canceled` without the backend terminal event.
 - Cancellation is a hard write-back boundary. If a provider returns text or tool actions after the TinyOffice run has been canceled, the runtime must not publish reply draft snapshots, must not persist a Conversation reply, and must not dispatch the next Channel handoff. The owned Chat execution session is marked `canceled`, and a `canceled` Process Trace event records that no visible reply was persisted. If the active client had already received streamed draft text before cancellation, it may keep that text visible as a stopped draft, clearly marked as not sent; it is not a persisted Conversation message.

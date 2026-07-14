@@ -821,6 +821,40 @@ test("message service lists latest conversation messages in chronological order 
   ]);
 });
 
+test("message service lists every conversation message after a runtime context cursor", async () => {
+  let timestampIndex = 0;
+  const repository = new InMemoryMessageRepository();
+  const service = new MessageService({
+    createId: deterministicIds(),
+    now: () => new Date(Date.UTC(2026, 6, 14, 10, 0, timestampIndex++)).toISOString(),
+    repository,
+  });
+  await service.createConversation("acme", {
+    title: "Long incremental topic",
+    conversationKind: "topic",
+    topic: { topicId: "topic-incremental", title: "Long incremental topic", status: "open" },
+    participants: [{ participantKind: "company_member", memberId: "iris-growth", displayName: "Iris" }],
+  });
+  const sent = [];
+  for (let index = 1; index <= 25; index += 1) {
+    sent.push(await service.sendMessage(
+      "acme",
+      "conversation-1",
+      { participantKind: "company_member", memberId: "iris-growth" },
+      `Incremental ${index}`,
+    ));
+  }
+
+  const after = await service.listMessagesAfter("acme", "conversation-1", {
+    messageId: sent[1]!.message.messageId,
+    createdAt: sent[1]!.message.createdAt,
+  });
+
+  assert.equal(after.messages.length, 23);
+  assert.equal(after.messages[0]?.body, "Incremental 3");
+  assert.equal(after.messages.at(-1)?.body, "Incremental 25");
+});
+
 test("message service updates topic summary only on topic conversations", async () => {
   const { service } = makeService();
   const created = await service.createConversationWithFirstMessage("acme", {

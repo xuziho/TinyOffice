@@ -155,7 +155,8 @@ test("prompt policy view model audits scene contracts and effective prompts", as
   assert.deepEqual(channel.sceneBlocks.map((block) => block.path), ["channel-scene"]);
   assert.match(channel.effectivePrompt, /handoff_topic_turn/);
   assert.match(channel.effectivePrompt, /exactly once/);
-  assert.match(channel.effectivePrompt, /during this channel turn/i);
+  assert.match(channel.effectivePrompt, /return the ball to the user/);
+  assert.match(channel.effectivePrompt, /before ending every channel turn/i);
   assert.doesNotMatch(channel.effectivePrompt, /After the visible reply/i);
   assert.doesNotMatch(channel.effectivePrompt, /human|operator/i);
   assert.doesNotMatch(channel.effectivePrompt, /return to|hand back/i);
@@ -182,7 +183,7 @@ test("prompt policy view model exposes foundation prompt templates with variable
   const runtime = viewModel.templates.find((template) => template.id === "runtime-prompt-template");
   assert(runtime);
   assert.equal(runtime.label, "Runtime Prompt Template");
-  assert.deepEqual(runtime.variableHints, ["{sceneType}", "{promptBlocks}", "{contextBlocks}", "{userMessage}"]);
+  assert.deepEqual(runtime.variableHints, ["{sceneType}", "{contextBlocks}", "{userMessage}"]);
   assert.match(runtime.content, /Runtime Context:/);
   assert.match(runtime.content, /\{userMessage\}/);
   assert.doesNotMatch(runtime.content, /\{completionPolicy\}/);

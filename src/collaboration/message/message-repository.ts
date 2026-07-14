@@ -17,6 +17,13 @@ export interface MessageRepositoryPageInput {
   limit?: number;
 }
 
+export interface MessageRepositoryAfterCursorInput {
+  companyId: string;
+  conversationId: string;
+  afterCreatedAt: string;
+  afterMessageId: string;
+}
+
 export interface MessageRepositoryConversationListInput extends MessageRepositoryPageInput {
   viewerMemberId?: string;
   viewerParticipantId?: string;
@@ -31,6 +38,7 @@ export interface MessageRepository {
   upsertMessage(record: MessageRecord): Promise<void>;
   listMessages(input: MessageRepositoryPageInput & { conversationId: string }): Promise<MessageRecord[]>;
   listRecentMessages(input: MessageRepositoryPageInput & { conversationId: string }): Promise<MessageRecord[]>;
+  listMessagesAfter(input: MessageRepositoryAfterCursorInput): Promise<MessageRecord[]>;
 }
 
 function cloneConversationRecord(record: ConversationRecord): ConversationRecord {
@@ -157,6 +165,26 @@ export class InMemoryMessageRepository implements MessageRepository {
         right.message.messageId.localeCompare(left.message.messageId)
       )
       .slice(0, limit)
+      .sort((left, right) =>
+        left.message.createdAt.localeCompare(right.message.createdAt) ||
+        left.message.messageId.localeCompare(right.message.messageId)
+      );
+    return records.map(cloneMessageRecord);
+  }
+
+  async listMessagesAfter(input: MessageRepositoryAfterCursorInput): Promise<MessageRecord[]> {
+    const records = [...this.messages.values()]
+      .filter((record) =>
+        record.message.companyId === input.companyId &&
+        record.message.conversationId === input.conversationId &&
+        (
+          record.message.createdAt.localeCompare(input.afterCreatedAt) > 0 ||
+          (
+            record.message.createdAt === input.afterCreatedAt &&
+            record.message.messageId.localeCompare(input.afterMessageId) > 0
+          )
+        )
+      )
       .sort((left, right) =>
         left.message.createdAt.localeCompare(right.message.createdAt) ||
         left.message.messageId.localeCompare(right.message.messageId)

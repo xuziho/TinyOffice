@@ -9,9 +9,11 @@ import { useEffect, useRef, useState, type ClipboardEvent, type FocusEvent, type
 import { canAcceptImageFile, pendingImageFromFile, type PendingImageAttachment } from "./imageAttachmentState";
 import {
   applyMentionSelection,
+  applyAllMentionSelection,
   buildComposerSubmitValue,
   composerErrorMessage,
   ensureMentionStarter,
+  isAllMentionOptionVisible,
   visibleMentionOptions,
   type ComposerSubmitValue,
   type MentionCandidate,
@@ -58,6 +60,7 @@ export function RoomReplyComposer({
   placeholder,
   onSendReply,
   mentionCandidates = [],
+  allowAllMention = false,
   submitLabel = "Send",
   pendingLabel = "Sending...",
   isRunActive = false,
@@ -72,6 +75,7 @@ export function RoomReplyComposer({
   placeholder: string;
   onSendReply(value: ComposerSubmitValue): Promise<void>;
   mentionCandidates?: MentionCandidate[];
+  allowAllMention?: boolean;
   submitLabel?: string;
   pendingLabel?: string;
   isRunActive?: boolean;
@@ -96,8 +100,9 @@ export function RoomReplyComposer({
   const discardedImageIdsRef = useRef(new Set<string>());
   const hadComposerFocusRef = useRef(false);
   const mentionOptions = visibleMentionOptions(draft, mentionCandidates);
-  const showMentionOptions = mentionMenuOpen && mentionOptions.length > 0;
-  const canMention = mentionCandidates.some((candidate) =>
+  const showAllMentionOption = allowAllMention && isAllMentionOptionVisible(draft);
+  const showMentionOptions = mentionMenuOpen && (showAllMentionOption || mentionOptions.length > 0);
+  const canMention = allowAllMention || mentionCandidates.some((candidate) =>
     Boolean(candidate.memberId?.trim() && candidate.displayName.trim() && candidate.hasRuntimeProfile !== false)
   );
   const isUploadingAttachments = pendingImages.some((image) => image.status === "queued" || image.status === "uploading");
@@ -157,11 +162,18 @@ export function RoomReplyComposer({
     requestAnimationFrame(() => textareaRef.current?.focus());
   }
 
+  function selectAllMention(): void {
+    onClearNotice?.();
+    setDraft((current) => applyAllMentionSelection(current));
+    setMentionMenuOpen(false);
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  }
+
   function openMentionPicker(): void {
     const currentDraft = textareaRef.current?.value ?? draft;
     const nextDraft = ensureMentionStarter(currentDraft);
     setDraft(nextDraft);
-    setMentionMenuOpen(visibleMentionOptions(nextDraft, mentionCandidates).length > 0);
+    setMentionMenuOpen((allowAllMention && isAllMentionOptionVisible(nextDraft)) || visibleMentionOptions(nextDraft, mentionCandidates).length > 0);
     hadComposerFocusRef.current = true;
     requestAnimationFrame(() => textareaRef.current?.focus());
   }
@@ -372,7 +384,7 @@ export function RoomReplyComposer({
                 const nextDraft = event.currentTarget.value;
                 onClearNotice?.();
                 setDraft(nextDraft);
-                setMentionMenuOpen(visibleMentionOptions(nextDraft, mentionCandidates).length > 0);
+                setMentionMenuOpen((allowAllMention && isAllMentionOptionVisible(nextDraft)) || visibleMentionOptions(nextDraft, mentionCandidates).length > 0);
               }}
               onKeyDown={(event) => {
                 if (event.key === "Escape") {
@@ -397,6 +409,18 @@ export function RoomReplyComposer({
             <Command shouldFilter={false} className="tiny-chat-mention-command">
               <CommandList className="max-h-56">
                 <CommandGroup>
+                  {showAllMentionOption ? (
+                    <CommandItem
+                      value="all"
+                      className="tiny-chat-mention-item"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onSelect={selectAllMention}
+                    >
+                      <span className="flex size-7 items-center justify-center rounded-full bg-muted text-xs font-semibold">@</span>
+                      <span className="min-w-0 flex-1 truncate">all</span>
+                      <span className="text-xs text-muted-foreground">Message everyone</span>
+                    </CommandItem>
+                  ) : null}
                   {mentionOptions.map((candidate) => (
                     <CommandItem
                       key={candidate.memberId}

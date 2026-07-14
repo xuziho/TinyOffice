@@ -35,6 +35,10 @@ import {
   type TinyOfficeChatTurnDispatchDecision,
 } from "../realtime/tinyoffice-chat-turn-dispatch.js";
 import type { TinyOfficeChatTopicContextCursor } from "../realtime/tinyoffice-chat-room-context.js";
+import {
+  InMemoryChatTopicChainRepository,
+  type ChatTopicChainRepository,
+} from "./chat-topic-chain-repository.js";
 
 export interface TinyOfficeChatRuntimeProcessTracePublisher {
   publishProcessTrace(event: TinyOfficeChatRuntimeProcessTraceEventInput): Promise<ProcessTraceEvent>;
@@ -66,7 +70,7 @@ export interface TinyOfficeChatRuntimeDispatchSinkConfig {
     repository: RuntimeSessionRepositoryLike;
     close?: () => void;
   }>;
-  maxHandoffDepth?: number;
+  topicChainRepository?: ChatTopicChainRepository;
   trace?: (entry: TinyOfficeChatRuntimeDispatchTraceEntry) => void | Promise<void>;
   onRuntimeSessionPersisted?: (persisted: RuntimeSessionPersistResult) => void | Promise<void>;
   topicSummaryGenerationService?: {
@@ -100,7 +104,51 @@ export function createTinyOfficeChatRuntimeDispatchSink(
   config: TinyOfficeChatRuntimeDispatchSinkConfig,
 ): ChatDispatchApiSink {
   const activeRuns = new Map<string, ActiveChatRun>();
+  const activeChains = new Map<string, ActiveChatChain>();
+  const topicChainRepository = config.topicChainRepository ?? new InMemoryChatTopicChainRepository();
+  const recoveredCompanies = new Set<string>();
   const sink: ChatDispatchApiSink = {
+    async getActiveChatRun(companyId, input) {
+      const messageService = await config.serviceForCompany(companyId);
+      const conversation = await messageService.getConversation(companyId, input.roomId);
+      if (!conversation?.participants.some((participant) => participant.memberId === input.actor.memberId)) {
+        throw new Error("Chat room is not available to the current member.");
+      }
+      if (conversation.conversationKind !== "topic") {
+        return null;
+      }
+      if (!recoveredCompanies.has(companyId)) {
+        await topicChainRepository.recoverInterruptedChains(companyId);
+        recoveredCompanies.add(companyId);
+      }
+      const chain = await topicChainRepository.findActiveByRoom(companyId, input.roomId);
+      return chain ? {
+        companyId: chain.companyId,
+        roomId: chain.roomId,
+        chainId: chain.chainId,
+        runId: chain.currentRunId,
+        sourceMessageId: chain.sourceMessageId,
+        targetMemberId: chain.currentHolderMemberId,
+        status: chain.status === "cancel_requested" ? "cancel_requested" : "active",
+      } : null;
+    },
+    async assertCanDispatch(companyId, input) {
+      const messageService = await config.serviceForCompany(companyId);
+      const conversation = await messageService.getConversation(companyId, input.roomId);
+      if (!conversation?.participants.some((participant) => participant.memberId === input.actor.memberId)) {
+        throw new Error("Chat room is not available to the current member.");
+      }
+      if (conversation.conversationKind !== "topic") {
+        return;
+      }
+      if (!recoveredCompanies.has(companyId)) {
+        await topicChainRepository.recoverInterruptedChains(companyId);
+        recoveredCompanies.add(companyId);
+      }
+      if (await topicChainRepository.findActiveByRoom(companyId, input.roomId)) {
+        throw new ChatTopicAlreadyActiveError();
+      }
+    },
     async handleChatDispatchEvent(event: ChatDispatchApiEvent) {
       try {
         if (await tryHandleWorkBlockedRecoveryMessage(config, event)) {
@@ -155,6 +203,38 @@ export function createTinyOfficeChatRuntimeDispatchSink(
           if (decision.kind !== "routable") {
             continue;
           }
+          if (decision.sceneType === "chat_topic_room") {
+            if (!recoveredCompanies.has(decision.companyId)) {
+              await topicChainRepository.recoverInterruptedChains(decision.companyId);
+              recoveredCompanies.add(decision.companyId);
+            }
+            const chain = await topicChainRepository.tryStart({
+              companyId: decision.companyId,
+              chainId: decision.chainId,
+              roomId: decision.roomId,
+              sourceMessageId: decision.messageId,
+              startedByMemberId: requiredMemberId(decision.actorMemberId, "Topic chain starter"),
+              currentRunId: decision.eventKey,
+              currentHolderMemberId: decision.targetMemberId,
+            });
+            if (!chain) {
+              await trace(config, {
+                phase: "tinyoffice_chat_runtime_dispatch.topic_chain_already_active",
+                companyId: decision.companyId,
+                roomId: decision.roomId,
+                messageId: decision.messageId,
+                chainId: decision.chainId,
+              });
+              continue;
+            }
+            activeChains.set(chain.chainId, {
+              chainId: chain.chainId,
+              companyId: chain.companyId,
+              roomId: chain.roomId,
+              currentRunId: chain.currentRunId,
+              cancelRequested: false,
+            });
+          }
           publishRuntimeStatus(config.realtimePublisher, decision, {
             status: "queued",
             runtimeProviderId: config.runtimeProvider?.providerId,
@@ -172,7 +252,8 @@ export function createTinyOfficeChatRuntimeDispatchSink(
             messageService,
             decision,
             activeRuns,
-            depth: 0,
+            activeChains,
+            topicChainRepository,
           });
           if (config.runInBackground) {
             config.runInBackground(task);
@@ -192,12 +273,38 @@ export function createTinyOfficeChatRuntimeDispatchSink(
       }
     },
     async cancelChatRun(companyId, input) {
-      const run = activeRuns.get(input.runId);
-      if (!run || run.decision.companyId !== companyId) {
+      const requestedRun = activeRuns.get(input.runId);
+      const existingChain = await topicChainRepository.findByRun(companyId, input.runId);
+      const roomId = requestedRun?.decision.roomId ?? existingChain?.roomId;
+      if (!roomId) {
         return {
           companyId,
           runId: input.runId,
           status: "not_found",
+          canceledCount: 0,
+        };
+      }
+
+      const messageService = await config.serviceForCompany(companyId);
+      const conversation = await messageService.getConversation(companyId, roomId);
+      if (!conversation?.participants.some((participant) => participant.memberId === input.actor.memberId)) {
+        throw new Error("Chat run is not available to the current Topic participant.");
+      }
+
+      const persistedChain = existingChain
+        ? await topicChainRepository.requestCancel(companyId, input.runId)
+        : undefined;
+      const chain = persistedChain ? activeChains.get(persistedChain.chainId) : undefined;
+      if (chain) {
+        chain.cancelRequested = true;
+        chain.currentRunId = persistedChain?.currentRunId ?? chain.currentRunId;
+      }
+      const run = chain ? activeRuns.get(chain.currentRunId) : requestedRun;
+      if (!run || run.decision.companyId !== companyId) {
+        return {
+          companyId,
+          runId: input.runId,
+          status: persistedChain?.status === "cancel_requested" ? "cancel_requested" : "not_found",
           canceledCount: 0,
         };
       }
@@ -215,7 +322,11 @@ export function createTinyOfficeChatRuntimeDispatchSink(
           status: "canceled",
           runtimeProviderId: config.runtimeProvider?.providerId,
         });
-        activeRuns.delete(input.runId);
+        activeRuns.delete(run.decision.eventKey);
+        if (chain) {
+          await topicChainRepository.finish(companyId, chain.chainId, "canceled");
+          activeChains.delete(chain.chainId);
+        }
       }
       return {
         companyId,
@@ -285,6 +396,23 @@ interface ActiveChatRun {
   streamedContent: string;
 }
 
+export class ChatTopicAlreadyActiveError extends Error {
+  readonly statusCode = 409;
+
+  constructor() {
+    super("This Topic already has an active employee. Stop the current Topic turn before sending another message.");
+    this.name = "ChatTopicAlreadyActiveError";
+  }
+}
+
+interface ActiveChatChain {
+  chainId: string;
+  companyId: string;
+  roomId: string;
+  currentRunId: string;
+  cancelRequested: boolean;
+}
+
 function findPriorTopicContextCursor(
   repository: RuntimeSessionRepositoryLike,
   input: {
@@ -332,6 +460,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function requiredMemberId(value: string | undefined, label: string): string {
+  const normalized = value?.trim();
+  if (!normalized) {
+    throw new Error(`${label} memberId is required`);
+  }
+  return normalized;
+}
+
 function ensureActiveChatRun(
   activeRuns: Map<string, ActiveChatRun>,
   decision: Extract<TinyOfficeChatTurnDispatchDecision, { kind: "routable" }>,
@@ -357,30 +493,11 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
   messageService: ConversationApiMessageService;
   decision: Extract<TinyOfficeChatTurnDispatchDecision, { kind: "routable" }>;
   activeRuns: Map<string, ActiveChatRun>;
-  depth: number;
+  activeChains: Map<string, ActiveChatChain>;
+  topicChainRepository: ChatTopicChainRepository;
 }): Promise<void> {
   const { config, runtime, messageService, decision } = input;
   const activeRun = ensureActiveChatRun(input.activeRuns, decision);
-  const maxHandoffDepth = config.maxHandoffDepth ?? 8;
-  if (input.depth > maxHandoffDepth) {
-    await trace(config, {
-      phase: "tinyoffice_chat_runtime_execution.handoff_depth_exhausted",
-      eventKey: decision.eventKey,
-      companyId: decision.companyId,
-      roomId: decision.roomId,
-      messageId: decision.messageId,
-      targetMemberId: decision.targetMemberId,
-      maxHandoffDepth,
-    });
-    const failedTraceEvent = await publishTurnFailed(runtime, decision, "Structured Chat handoff depth limit was reached.", "Chat handoff stopped");
-    publishChatProcessTraceAppended(config.realtimePublisher, decision, failedTraceEvent);
-    publishRuntimeStatus(config.realtimePublisher, decision, {
-      status: "failed",
-      runtimeProviderId: config.runtimeProvider?.providerId,
-      errorMessage: "Structured Chat handoff depth limit was reached.",
-    });
-    return;
-  }
 
   const employee = runtime.employeeHomesById.get(decision.targetMemberId);
   if (!employee) {
@@ -491,6 +608,7 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
             sourceMessageId: decision.messageId,
             chatEntryId: decision.entryId,
             runId: decision.eventKey,
+            chainId: decision.chainId,
             eventKey: decision.eventKey,
             targetMemberId: decision.targetMemberId,
           },
@@ -498,7 +616,7 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
         publishChatProcessTraceAppended(config.realtimePublisher, decision, processTraceEvent);
       },
     });
-    if (activeRun.cancelRequested) {
+    if (chatExecutionCanceled(input, activeRun)) {
       await finishCanceledChatRun({
         config,
         runtime,
@@ -507,6 +625,10 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
         runtimeSessionRecordId: result.runtimeEvidence?.sessionRecordId,
         providerReplyObserved: true,
       });
+      if (decision.sceneType === "chat_topic_room") {
+        await input.topicChainRepository.finish(decision.companyId, decision.chainId, "canceled");
+        input.activeChains.delete(decision.chainId);
+      }
       return;
     }
     publishChatReplySnapshot(config.realtimePublisher, decision, result.response.message, activeRun);
@@ -520,6 +642,50 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
       messageService,
       realtimePublisher: config.realtimePublisher,
     });
+    if (chatExecutionCanceled(input, activeRun)) {
+      await finishCanceledChatRun({
+        config,
+        runtime,
+        decision,
+        repository,
+        runtimeSessionRecordId: result.runtimeEvidence?.sessionRecordId,
+        providerReplyObserved: true,
+      });
+      if (decision.sceneType === "chat_topic_room") {
+        await input.topicChainRepository.finish(decision.companyId, decision.chainId, "canceled");
+        input.activeChains.delete(decision.chainId);
+      }
+      return;
+    }
+
+    let handoffDecision = buildTinyOfficeChatStructuredHandoffDispatch({
+      priorDecision: decision,
+      result,
+      replyMessageId: persisted.message.messageId,
+    });
+    if (handoffDecision && chatExecutionCanceled(input, activeRun)) {
+      handoffDecision = undefined;
+    }
+    if (handoffDecision) {
+      const advanced = await input.topicChainRepository.advance({
+        companyId: decision.companyId,
+        chainId: decision.chainId,
+        expectedRunId: decision.eventKey,
+        nextRunId: handoffDecision.eventKey,
+        nextHolderMemberId: handoffDecision.targetMemberId,
+      });
+      const activeChain = input.activeChains.get(decision.chainId);
+      if (!advanced || !activeChain || activeChain.cancelRequested) {
+        handoffDecision = undefined;
+      } else {
+        activeChain.currentRunId = handoffDecision.eventKey;
+        ensureActiveChatRun(input.activeRuns, handoffDecision);
+        publishRuntimeStatus(config.realtimePublisher, handoffDecision, {
+          status: "queued",
+          runtimeProviderId: config.runtimeProvider?.providerId,
+        });
+      }
+    }
     publishRuntimeStatus(config.realtimePublisher, decision, {
       status: "completed",
       runtimeProviderId: config.runtimeProvider?.providerId,
@@ -560,6 +726,7 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
         replyMessageId: persisted.message.messageId,
         chatEntryId: result.entryId,
         runId: decision.eventKey,
+        chainId: decision.chainId,
         eventKey: decision.eventKey,
         targetMemberId: result.targetMemberId,
         stateActionToolName: result.stateAction?.toolName,
@@ -576,11 +743,6 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
       decision,
     });
 
-    const handoffDecision = buildTinyOfficeChatStructuredHandoffDispatch({
-      priorDecision: decision,
-      result,
-      replyMessageId: persisted.message.messageId,
-    });
     if (handoffDecision) {
       await trace(config, {
         phase: "tinyoffice_chat_runtime_execution.structured_handoff",
@@ -599,8 +761,12 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
         messageService,
         decision: handoffDecision,
         activeRuns: input.activeRuns,
-        depth: input.depth + 1,
+        activeChains: input.activeChains,
+        topicChainRepository: input.topicChainRepository,
       });
+    } else if (decision.sceneType === "chat_topic_room") {
+      await input.topicChainRepository.finish(decision.companyId, decision.chainId, "completed");
+      input.activeChains.delete(decision.chainId);
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -613,7 +779,7 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
       targetMemberId: decision.targetMemberId,
       error: error instanceof Error ? error.stack || error.message : String(error),
     }).catch(() => undefined);
-    if (activeRun?.cancelRequested) {
+    if (chatExecutionCanceled(input, activeRun)) {
       await finishCanceledChatRun({
         config,
         runtime,
@@ -621,6 +787,10 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
         repository,
         errorMessage,
       }).catch(() => undefined);
+      if (decision.sceneType === "chat_topic_room") {
+        await input.topicChainRepository.finish(decision.companyId, decision.chainId, "canceled").catch(() => undefined);
+        input.activeChains.delete(decision.chainId);
+      }
     } else {
       await updateTinyOfficeChatExecutionDispatchStatus({
         decision,
@@ -635,12 +805,23 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
       });
       const failedTraceEvent = await publishTurnFailed(runtime, decision, errorMessage, "Chat turn failed").catch(() => undefined);
       publishChatProcessTraceAppended(config.realtimePublisher, decision, failedTraceEvent);
+      if (decision.sceneType === "chat_topic_room") {
+        await input.topicChainRepository.finish(decision.companyId, decision.chainId, "failed").catch(() => undefined);
+        input.activeChains.delete(decision.chainId);
+      }
       config.onError?.(error);
     }
   } finally {
     input.activeRuns.delete(decision.eventKey);
     repositoryHandle.close?.();
   }
+}
+
+function chatExecutionCanceled(
+  input: Pick<Parameters<typeof executeTinyOfficeChatRuntimeDecision>[0], "activeChains">,
+  run: ActiveChatRun,
+): boolean {
+  return run.cancelRequested || Boolean(input.activeChains.get(run.decision.chainId)?.cancelRequested);
 }
 
 async function finishCanceledChatRun(input: {
@@ -689,6 +870,7 @@ async function finishCanceledChatRun(input: {
       sourceMessageId: input.decision.messageId,
       chatEntryId: input.decision.entryId,
       runId: input.decision.eventKey,
+      chainId: input.decision.chainId,
       eventKey: input.decision.eventKey,
       targetMemberId: input.decision.targetMemberId,
       runtimeSessionRecordId: input.runtimeSessionRecordId,
@@ -764,6 +946,7 @@ function publishRuntimeStatus(
     targetMemberId: decision.targetMemberId,
     status: input.status,
     runId: decision.eventKey,
+    chainId: decision.chainId,
     sessionKey: decision.sessionKey,
     ...(input.sessionRecordId ? { sessionRecordId: input.sessionRecordId } : {}),
     ...(input.runtimeProviderId ? { runtimeProviderId: input.runtimeProviderId } : {}),
@@ -789,6 +972,7 @@ function publishChatProcessTraceAppended(
     conversationId: decision.roomId,
     roomId: decision.roomId,
     runId: decision.eventKey,
+    chainId: decision.chainId,
     sourceMessageId: decision.messageId,
     targetMemberId: decision.targetMemberId,
     sessionKey: event.sessionKey,
@@ -819,6 +1003,7 @@ async function publishChatRunStartedTrace(
       sourceMessageId: decision.messageId,
       chatEntryId: decision.entryId,
       runId: decision.eventKey,
+      chainId: decision.chainId,
       eventKey: decision.eventKey,
       targetMemberId: decision.targetMemberId,
       ...(input.runtimeProviderId ? { runtimeProviderId: input.runtimeProviderId } : {}),
@@ -851,6 +1036,7 @@ function publishReplyDeltaFromProcessEvent(
     conversationId: decision.roomId,
     roomId: decision.roomId,
     runId: decision.eventKey,
+    chainId: decision.chainId,
     sourceMessageId: decision.messageId,
     targetMemberId: decision.targetMemberId,
     sessionKey: decision.sessionKey,
@@ -875,6 +1061,7 @@ function publishChatReplySnapshot(
     conversationId: decision.roomId,
     roomId: decision.roomId,
     runId: decision.eventKey,
+    chainId: decision.chainId,
     sourceMessageId: decision.messageId,
     targetMemberId: decision.targetMemberId,
     sessionKey: decision.sessionKey,
@@ -917,6 +1104,7 @@ async function publishTurnFailed(
       sourceMessageId: decision.messageId,
       chatEntryId: decision.entryId,
       runId: decision.eventKey,
+      chainId: decision.chainId,
       eventKey: decision.eventKey,
       targetMemberId: decision.targetMemberId,
     },

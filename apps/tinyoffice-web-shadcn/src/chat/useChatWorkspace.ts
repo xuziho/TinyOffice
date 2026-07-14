@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAccessRequests, resolveAccessRequest } from "@/api/accessClient";
-import { addChatChannelMembers, archiveChatRoomTopic, cancelChatRun, createChatChannel, createChatEntry, dissolveChatChannel, getChatProjection, listChatRoomActivity, listChatRoomMessages, markChatRoomRead, removeChatChannelMember, restoreChatRoomTopic, retryChatRun, sendChatRoomMessage, updateChatChannelDetails, updateChatRoomTitle } from "@/api/chatClient";
+import { addChatChannelMembers, archiveChatRoomTopic, cancelChatRun, createChatChannel, createChatEntry, dissolveChatChannel, getActiveChatRun, getChatProjection, listChatRoomActivity, listChatRoomMessages, markChatRoomRead, removeChatChannelMember, restoreChatRoomTopic, retryChatRun, sendChatRoomMessage, updateChatChannelDetails, updateChatRoomTitle } from "@/api/chatClient";
 import { getCurrentSession } from "@/api/currentSessionClient";
 import { getCompanyDirectory } from "@/api/directoryClient";
 import { getEmployeeRuntimeSummary } from "@/api/employeeRuntimeSummaryClient";
@@ -10,11 +10,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildChatShellModel, type ChatShellModel, type ChatShellSurface } from "./chatShellModel";
 import { accessDecisionContinuationMessage, accessRequestForegroundRoomId, accessRequestsForRoom } from "./chatAccessRequests";
 import { mentionedMemberIdsForChatSubmit } from "./chatMentionRouting";
-import { noTargetMemberNoticeForChatSubmit } from "./chatNoTargetNotice";
 import { navigationAlertState, type NavigationAlertState } from "./navigationAlertState";
 import { memberDisplayNamesForCreateEntry } from "./chatCreateEntryDisplayNames";
 import { projectionWithCreatedEntry } from "./chatProjectionCache";
-import { activeChatRunForRoom, applyChatRunRealtimeEvent, draftReplyForRoom, emptyChatRunState, type ChatRunRecord, type DraftReply } from "./chatRunState";
+import { activeChatRunForRoom, applyChatRunRealtimeEvent, draftReplyForRoom, emptyChatRunState, reconcileActiveChatRun, type ChatRunRecord, type DraftReply } from "./chatRunState";
 import { activeEntryContainerId, parentSurfaceFor } from "./chatUiUtils";
 import { chatQueryKeys } from "./chatQueryKeys";
 import { activitySourceForMessage, latestActivitySourceForMessages } from "./messageActivitySource";
@@ -27,6 +26,37 @@ type ActivitySelection = {
   sourceMessageId?: string;
   processTraceId?: string;
 };
+
+type ActivityDisplaySnapshot = {
+  activity: RuntimeActivity;
+  selection?: ActivitySelection;
+};
+
+const EMPTY_RUNTIME_ACTIVITY: RuntimeActivity = { items: [] };
+
+export function activityQueryPlaceholderData(previousData: RuntimeActivity | undefined): RuntimeActivity | undefined {
+  return previousData;
+}
+
+export function activityDisplaySnapshot(input: {
+  currentActivity?: RuntimeActivity;
+  currentSelection?: ActivitySelection;
+  activeSourceMessageId?: string;
+  isPlaceholderData: boolean;
+  settled?: ActivityDisplaySnapshot;
+}): ActivityDisplaySnapshot {
+  const current = {
+    activity: input.currentActivity ?? EMPTY_RUNTIME_ACTIVITY,
+    selection: input.currentSelection,
+  };
+  const currentSelectionIsActive = Boolean(
+    input.activeSourceMessageId &&
+      input.activeSourceMessageId === input.currentSelection?.sourceMessageId,
+  );
+  const currentActivityIsReady = !input.isPlaceholderData && current.activity.items.length > 0;
+  const shouldKeepSettled = input.isPlaceholderData || (currentSelectionIsActive && !currentActivityIsReady);
+  return shouldKeepSettled && input.settled ? input.settled : current;
+}
 
 export type ActivitySourceSummary = {
   senderName: string;
@@ -75,6 +105,7 @@ export function useChatWorkspace(input: { requestedRoomId?: string; currentSessi
   const queryClient = useQueryClient();
   const [selectedSurface, setSelectedSurface] = useState<ChatShellSurface>();
   const [activitySelection, setActivitySelection] = useState<ActivitySelection | undefined>();
+  const [settledActivityDisplay, setSettledActivityDisplay] = useState<ActivityDisplaySnapshot | undefined>();
   const [chatRunState, setChatRunState] = useState(emptyChatRunState);
   const [composerNotice, setComposerNotice] = useState<string | undefined>();
   const markedReadKey = useRef<string | undefined>(undefined);
@@ -141,6 +172,19 @@ export function useChatWorkspace(input: { requestedRoomId?: string; currentSessi
     enabled: Boolean(hasCompanyScope && baseModel.selectedRoomId),
   });
 
+  const activeRunQuery = useQuery({
+    queryKey: chatQueryKeys.activeRun(companyId, baseModel.selectedRoomId, viewer),
+    queryFn: () => getActiveChatRun({ companyId, roomId: baseModel.selectedRoomId, actorMemberId: viewer.memberId }),
+    enabled: Boolean(hasCompanyScope && baseModel.selectedRoomId),
+    refetchInterval: 2000,
+  });
+
+  useEffect(() => {
+    if (baseModel.selectedRoomId && activeRunQuery.isSuccess) {
+      setChatRunState((current) => reconcileActiveChatRun(current, baseModel.selectedRoomId!, activeRunQuery.data));
+    }
+  }, [activeRunQuery.data, activeRunQuery.isSuccess, baseModel.selectedRoomId]);
+
   const activityQuery = useQuery({
     queryKey: chatQueryKeys.roomActivity(companyId, baseModel.selectedRoomId, viewer, activitySelection),
     queryFn: () => listChatRoomActivity({
@@ -152,6 +196,7 @@ export function useChatWorkspace(input: { requestedRoomId?: string; currentSessi
       ...viewer,
     }),
     enabled: Boolean(hasCompanyScope && baseModel.selectedRoomId && activitySelection),
+    placeholderData: activityQueryPlaceholderData,
   });
 
   const accessRequestsQuery = useQuery({
@@ -175,10 +220,20 @@ export function useChatWorkspace(input: { requestedRoomId?: string; currentSessi
     [session, projectionQuery.data, directoryQuery.data, employeeRuntimeSummaryQuery.data, chatRunState, tasksQuery.data, messagesQuery.data, baseModel.surface],
   );
   const activeRun = useMemo(() => activeChatRunForRoom(chatRunState, model.selectedRoomId), [chatRunState, model.selectedRoomId]);
-  const activity = useMemo(() => activityQuery.data ?? { items: [] }, [activityQuery.data]);
+  const displayedActivity = useMemo(
+    () => activityDisplaySnapshot({
+      currentActivity: activityQuery.data,
+      currentSelection: activitySelection,
+      activeSourceMessageId: activeRun?.sourceMessageId,
+      isPlaceholderData: activityQuery.isPlaceholderData,
+      settled: settledActivityDisplay,
+    }),
+    [activeRun?.sourceMessageId, activityQuery.data, activityQuery.isPlaceholderData, activitySelection, settledActivityDisplay],
+  );
+  const activity = displayedActivity.activity;
   const activitySource = useMemo(
-    () => activitySourceSummaryForSelection(messagesQuery.data?.messages ?? [], activitySelection?.sourceMessageId),
-    [activitySelection?.sourceMessageId, messagesQuery.data?.messages],
+    () => activitySourceSummaryForSelection(messagesQuery.data?.messages ?? [], displayedActivity.selection?.sourceMessageId),
+    [displayedActivity.selection?.sourceMessageId, messagesQuery.data?.messages],
   );
   const draftReply = useMemo(() => draftReplyForRoom(chatRunState, model.selectedRoomId), [chatRunState, model.selectedRoomId]);
   const roomAccessRequests = useMemo(
@@ -196,7 +251,18 @@ export function useChatWorkspace(input: { requestedRoomId?: string; currentSessi
   );
   useEffect(() => {
     setActivitySelection(undefined);
+    setSettledActivityDisplay(undefined);
   }, [companyId, baseModel.selectedRoomId]);
+
+  useEffect(() => {
+    if (!activitySelection || activityQuery.isPlaceholderData || !activityQuery.data?.items.length) {
+      return;
+    }
+    setSettledActivityDisplay({
+      activity: activityQuery.data,
+      selection: activitySelection,
+    });
+  }, [activityQuery.data, activityQuery.isPlaceholderData, activitySelection]);
 
   useEffect(() => {
     if (activeRun?.sourceMessageId && activitySelection?.sourceMessageId !== activeRun.sourceMessageId) {
@@ -448,21 +514,13 @@ export function useChatWorkspace(input: { requestedRoomId?: string; currentSessi
 
   const createEntry = useCallback(async (value: ComposerSubmitValue) => {
     await createEntryMutation.mutateAsync(value);
-    setComposerNotice(noTargetMemberNoticeForChatSubmit({
-      value,
-      mentionCandidates: model.mentionCandidates,
-      containerKind: model.selectedContainer?.kind,
-    }));
-  }, [createEntryMutation, model.mentionCandidates, model.selectedContainer?.kind]);
+    setComposerNotice(undefined);
+  }, [createEntryMutation]);
 
   const sendReply = useCallback(async (value: ComposerSubmitValue) => {
     await sendReplyMutation.mutateAsync(value);
-    setComposerNotice(noTargetMemberNoticeForChatSubmit({
-      value,
-      mentionCandidates: model.mentionCandidates,
-      containerKind: model.selectedContainer?.kind,
-    }));
-  }, [sendReplyMutation, model.mentionCandidates, model.selectedContainer?.kind]);
+    setComposerNotice(undefined);
+  }, [sendReplyMutation]);
 
   const clearComposerNotice = useCallback(() => {
     setComposerNotice(undefined);
@@ -543,7 +601,7 @@ export function useChatWorkspace(input: { requestedRoomId?: string; currentSessi
     openMessageActivity,
     activeRun,
     activity,
-    activitySelection,
+    activitySelection: displayedActivity.selection,
     activitySource,
     draftReply,
     isCancelingRun: cancelRunMutation.isPending,

@@ -23,13 +23,13 @@ Realtime Intake only does lightweight target resolution. It does not infer arbit
 
 | Source | Routing rule |
 | --- | --- |
-| Channel/Topic message | Only explicit runtime-capable participant mentions are routed. |
-| Channel/Topic message without runtime-capable target | Not delivered to runtime by default. |
+| Channel/Topic message | The first structured runtime-capable mention is routed. |
+| Channel/Topic message without runtime-capable target | One eligible runtime participant is selected deterministically. Literal `@all` follows this same route. |
 | DM message | Routed only when the DM uniquely maps to one runtime-capable peer. |
 | Runtime handoff | Routed by structured `toId`; visible mentions are only text. Runtime Dispatch validates the selected participant and decides whether another runtime turn can be started. |
 | External intake event | Must provide `routing.targetMemberId`. |
 
-For TinyOffice-owned Chat, DM and Channel/Topic employee replies are written from the model's normal assistant reply. Channel/Topic turns additionally require `handoff_topic_turn.toId` as the structured handoff target. Runtime Dispatch records the selected participant and starts the next runtime turn only when that participant can be executed. The handoff tool is a state action only and must not carry a visible reply message. Runtime failures stay in Session and Process Trace evidence and do not create successful Chat reply messages.
+For TinyOffice-owned Chat, DM and Channel/Topic employee replies are written from the model's normal assistant reply. Every Channel/Topic turn must additionally use `handoff_topic_turn.toId` exactly once as the structured handoff target. Runtime Dispatch records that participant and starts the next runtime turn only when the selected participant can be executed; selecting the user returns the ball without starting an employee turn. The handoff tool is a state action only and must not carry a visible reply message. Runtime failures stay in Session and Process Trace evidence and do not create successful Chat reply messages.
 
 ## API Entries
 

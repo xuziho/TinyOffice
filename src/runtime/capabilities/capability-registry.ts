@@ -344,7 +344,11 @@ export const capabilityRegistry = {
             description: "Stable lowercase employee id. If omitted, the capability derives a unique id from displayName.",
           },
           displayName: { type: "string", description: "Human-readable employee name." },
-          role: { type: "string", description: "Short company role." },
+          role: {
+            type: "string",
+            description:
+              "Concise, human-readable English Company title of 1-3 natural words, such as Content Ops or SEO Specialist. Do not use an id, kebab-case, or a responsibility sentence.",
+          },
           summary: {
             type: "string",
             description: "Short company-directory responsibility. Keep detailed guidance out of this field.",

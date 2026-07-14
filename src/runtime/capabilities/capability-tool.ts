@@ -1,4 +1,5 @@
 import { loadCompanyDirectoryApiSnapshot } from "../../collaboration/api/company-directory-api-routes.js";
+import { publishToRegisteredTinyOfficeRealtimePublishers } from "../../collaboration/contracts/tinyoffice-realtime-publisher-registry.js";
 import { projectCompanyMemberDirectoryEntries } from "../../api/tinyoffice-api/member-directory-view.js";
 import { ChannelService, type ChannelMemberInput } from "../../collaboration/channel/channel-service.js";
 import { PostgresChannelRepository } from "../../collaboration/channel/postgres-channel-repository.js";
@@ -498,6 +499,10 @@ export async function executeTinyOfficeCapabilityCallTool(
       instructionContent: typeof employeeInput.instructionContent === "string"
         ? employeeInput.instructionContent
         : undefined,
+    });
+    publishToRegisteredTinyOfficeRealtimePublishers({
+      type: "company.directory.changed",
+      companyId: request.companyId,
     });
   } else if (request.entry.id === "chat.channel.create") {
     if (!request.companyId) {

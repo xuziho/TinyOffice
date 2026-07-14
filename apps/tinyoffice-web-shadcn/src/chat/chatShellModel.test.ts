@@ -8,7 +8,7 @@ import type {
   TasksViewModel,
   TinyOfficeCurrentSession,
 } from "tinyoffice/frontend-api-contracts";
-import { buildChatShellModel } from "./chatShellModel";
+import { buildChatShellModel, isDirectMessageNavigationItemSelected } from "./chatShellModel";
 import { activeEntryContainerId, entryListHeaderFor, formatEntryCount, memberDisplayNameFor, threadSubtitleFor } from "./chatUiUtils";
 
 const session: TinyOfficeCurrentSession = {
@@ -21,6 +21,17 @@ const session: TinyOfficeCurrentSession = {
   needsProfileInitialization: false,
   needsCompanyInitialization: false,
 };
+
+test("directory-only direct messages remain selected before a chat container exists", () => {
+  assert.equal(isDirectMessageNavigationItemSelected({
+    surface: { kind: "dm-directory", memberId: "lina", containerId: "dm:xuziho:lina" },
+    item: { id: "lina", containerId: "dm:xuziho:lina" },
+  }), true);
+  assert.equal(isDirectMessageNavigationItemSelected({
+    surface: { kind: "dm-directory", memberId: "mira", containerId: "dm:xuziho:mira" },
+    item: { id: "lina", containerId: "dm:xuziho:lina" },
+  }), false);
+});
 
 const projection: ChatProjectionPage = {
   containers: [

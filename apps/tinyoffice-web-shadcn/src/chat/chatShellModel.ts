@@ -22,6 +22,19 @@ export type ChatShellSurface =
   | { kind: "dm-directory"; memberId: string; containerId?: string }
   | { kind: "empty" };
 
+export function isDirectMessageNavigationItemSelected(input: {
+  surface: ChatShellSurface;
+  selectedContainerId?: string;
+  item: Pick<ChatShellNavigationItem, "id" | "containerId">;
+}): boolean {
+  if (input.surface.kind === "dm-directory") {
+    return input.surface.memberId === input.item.id;
+  }
+  return Boolean(
+    input.item.containerId && input.selectedContainerId === input.item.containerId,
+  );
+}
+
 export type ChatShellNavigationItem = {
   id: string;
   avatarSeed?: string;

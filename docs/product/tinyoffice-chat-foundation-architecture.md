@@ -88,7 +88,7 @@ There must be no hidden member-to-employee fallback:
 - Missing runtime capability is an invalid execution state, not a reason to pick a default employee, first employee, or global employee.
 - Product APIs should expose member-first data and only include employee/runtime selectors where the current implementation needs them.
 - Runtime dispatch may keep a product member as the actor while routing to an explicit runtime-capable target derived from a DM peer, explicit mention, or formal handoff.
-- Runtime dispatch refuses execution when a Chat event has only a product member actor and no explicit runtime target.
+- In a Channel Topic, Runtime Dispatch selects exactly one runtime-capable participant: the first structured mention, or a deterministic stable-random eligible participant when no structured mention exists. A literal `@all` remains ordinary text. Direct rooms continue to route to the peer.
 
 ## Realtime Boundary
 

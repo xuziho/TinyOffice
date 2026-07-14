@@ -263,6 +263,7 @@ function EntryRoomSurface({
         notice={composerNotice}
         onClearNotice={onClearComposerNotice}
         mentionCandidates={model.mentionCandidates}
+        allowAllMention={model.selectedContainer?.kind === "channel"}
         isRunActive={Boolean(activeRun)}
         isCancelingRun={isCancelingRun}
         onCancelRun={onCancelRun}

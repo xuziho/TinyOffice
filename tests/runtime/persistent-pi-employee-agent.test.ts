@@ -479,7 +479,7 @@ test("loadCompanyPromptBlocks requires DB scene bindings instead of applying cod
   );
 });
 
-test("buildUserPrompt keeps explicit runtime context and user message separate from the system prompt append", async () => {
+test("buildUserPrompt keeps the Channel trigger inside explicit runtime context", async () => {
   const employee = await createEmployeeHome();
   const prompt = buildUserPrompt({
     employee,
@@ -510,6 +510,7 @@ test("buildUserPrompt keeps explicit runtime context and user message separate f
         "- nora-automation",
         "- iris-growth",
         "- Xu Ziho (xuziho): role=boss",
+        "- [trigger] Xu Ziho: Please ask Nora to collaborate on this.",
       ].join("\n"),
     }],
   });
@@ -526,7 +527,8 @@ test("buildUserPrompt keeps explicit runtime context and user message separate f
   assert.doesNotMatch(prompt, /kind=company_member/);
   assert.doesNotMatch(prompt, /handoff=returns to user/);
   assert.doesNotMatch(prompt, /handoff=continues runtime/);
-  assert.match(prompt, /Message:\nPlease ask Nora to collaborate on this\./);
+  assert.doesNotMatch(prompt, /User Message:/);
+  assert.equal(prompt.match(/Please ask Nora to collaborate on this\./g)?.length, 1);
   assert.doesNotMatch(prompt, /Protocol:/);
 });
 
@@ -657,7 +659,7 @@ test("persistent PI employee agent no longer writes PI local prompt files", asyn
   );
 });
 
-test("persistent PI employee agent routes reply prompts through the runtime prompt compiler", async () => {
+test("persistent PI employee agent uses Channel context as the complete turn input", async () => {
   const employee = await createEmployeeHome();
   const transport = new FakeTransport();
   const sessionRootPath = await mkdtemp(path.join(tmpdir(), "tinyoffice-pi-sessions-"));
@@ -669,6 +671,12 @@ test("persistent PI employee agent routes reply prompts through the runtime prom
   await agent.reply({
     message: "Please ask Nora to collaborate on this.",
     sessionKey: "mira-hr|channel_thread|post-compiler",
+    contextBlocks: [{
+      role: "channel_thread_context",
+      source: "tinyoffice.channel_topic_context",
+      label: "TinyOffice Channel/Topic context",
+      text: "- [trigger] Xu: Please ask Nora to collaborate on this.",
+    }],
     reachableMemberIds: ["nora-automation"],
     requesterUsername: "xuziho",
     preferredLanguage: "en-US",
@@ -679,7 +687,8 @@ test("persistent PI employee agent routes reply prompts through the runtime prom
   assert.doesNotMatch(prompt, /Persistent PI reply context:/);
   assert.doesNotMatch(prompt, /Preferred user-visible language/);
   assert.doesNotMatch(prompt, /Handoff candidates:\n- nora-automation/);
-  assert.ok(prompt.includes("User Message:\nPlease ask Nora to collaborate on this."));
+  assert.doesNotMatch(prompt, /User Message:/);
+  assert.equal(prompt.match(/Please ask Nora to collaborate on this\./g)?.length, 1);
   assert.doesNotMatch(prompt, /^Context:/);
   assert.ok(!prompt.includes("\nMessage:\n"));
 });
@@ -713,7 +722,7 @@ test("persistent PI employee agent uses configured prompt policy templates for m
 
   await agent.reply({
     message: "Please use the saved template.",
-    sessionKey: "mira-hr|channel_thread|post-template",
+    sessionKey: "mira-hr|dm_thread|post-template",
     requesterUsername: "xuziho",
   });
 
@@ -721,13 +730,13 @@ test("persistent PI employee agent uses configured prompt policy templates for m
     transport.replyCalls[0]?.systemPromptAppend,
     "Configured base for mira-hr / Mira / hr",
   );
-  assert.match(transport.replyCalls[0]?.userPrompt || "", /Configured scene: channel_thread/);
+  assert.match(transport.replyCalls[0]?.userPrompt || "", /Configured scene: dm_thread/);
   assert.doesNotMatch(transport.replyCalls[0]?.userPrompt || "", /Persistent PI reply context:/);
   assert.match(transport.replyCalls[0]?.userPrompt || "", /Configured user: Please use the saved template\./);
   assert.doesNotMatch(transport.replyCalls[0]?.userPrompt || "", /^Runtime Context:/);
 });
 
-test("persistent PI employee agent keeps room context out of user message", async () => {
+test("persistent PI employee agent includes the Channel trigger only inside room context", async () => {
   const employee = await createEmployeeHome();
   const transport = new FakeTransport();
   const sessionRootPath = await mkdtemp(path.join(tmpdir(), "tinyoffice-pi-sessions-"));
@@ -743,20 +752,16 @@ test("persistent PI employee agent keeps room context out of user message", asyn
       role: "channel_thread_context",
       source: "tinyoffice.channel_topic_context",
       label: "TinyOffice Channel/Topic context",
-      text: "Earlier post: please involve Nora.",
+      text: "Earlier post: please involve Nora.\n- [trigger] Xu: Please decide who owns this topic.",
     }],
   });
 
   const prompt = transport.replyCalls[0]?.userPrompt || "";
-  assert.ok(
-    prompt.indexOf("TinyOffice Channel/Topic context:") < prompt.indexOf("User Message:"),
-    "room context should stay before current message",
-  );
   assert.match(prompt, /TinyOffice Channel\/Topic context:/);
   assert.match(prompt, /Earlier post: please involve Nora\./);
   assert.doesNotMatch(prompt, /Completion Policy:/);
-  assert.match(prompt, /User Message:\nPlease decide who owns this topic\./);
-  assert.doesNotMatch(prompt, /User Message:[\s\S]*Earlier post/);
+  assert.doesNotMatch(prompt, /User Message:/);
+  assert.equal(prompt.match(/Please decide who owns this topic\./g)?.length, 1);
 });
 
 test("persistent PI employee agent opens a session on first reply and reuses continuity for later replies", async () => {
@@ -929,7 +934,7 @@ test("persistent PI employee agent passes configured prompt blocks to the transp
   assert.equal(transport.replyCalls[0]?.promptBlocks?.[0]?.path, "channel-scene");
 });
 
-test("persistent PI employee agent injects prompt policy blocks into each reply prompt", async () => {
+test("persistent PI employee agent keeps scene policy in the system prompt only", async () => {
   const employee = await createEmployeeHome();
   await setPromptPolicy({
     repoRoot: repoRootFromTestEmployeeHome(employee.homePath),
@@ -941,7 +946,7 @@ test("persistent PI employee agent injects prompt policy blocks into each reply 
         "# Channel Scene",
         "",
         "Write the visible assistant reply as normal assistant text.",
-        "During this channel turn, call `handoff_topic_turn` exactly once.",
+        "Before ending every channel turn, call `handoff_topic_turn` exactly once.",
       ].join("\n"),
     },
   });
@@ -959,13 +964,10 @@ test("persistent PI employee agent injects prompt policy blocks into each reply 
   });
 
   const prompt = transport.replyCalls[0]?.userPrompt || "";
-  assert.match(prompt, /Prompt Policy: channel-scene:/);
-  assert.match(prompt, /call `handoff_topic_turn` exactly once/);
-  assert.ok(
-    prompt.indexOf("Prompt Policy: channel-scene:") < prompt.indexOf("User Message:"),
-    "prompt policy must be visible before the current user message",
-  );
-  assert.match(reply.promptInputPackage.runtimePrompt.userPrompt, /call `handoff_topic_turn` exactly once/);
+  assert.doesNotMatch(prompt, /Prompt Policy: channel-scene:/);
+  assert.doesNotMatch(prompt, /call `handoff_topic_turn` exactly once/);
+  assert.doesNotMatch(reply.promptInputPackage.runtimePrompt.userPrompt, /call `handoff_topic_turn` exactly once/);
+  assert.match(transport.replyCalls[0]?.promptBlocks?.[0]?.content || "", /call `handoff_topic_turn` exactly once/);
 });
 
 test("persistent PI employee agent can narrow active tools for forced finalization", async () => {

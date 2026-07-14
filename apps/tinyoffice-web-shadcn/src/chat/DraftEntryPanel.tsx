@@ -41,6 +41,7 @@ export function DraftEntryPanel({
         notice={composerNotice}
         onClearNotice={onClearComposerNotice}
         mentionCandidates={model.mentionCandidates}
+        allowAllMention={model.selectedContainer?.kind === "channel"}
         submitLabel="Start topic"
         pendingLabel="Creating..."
         companyId={model.companyId}

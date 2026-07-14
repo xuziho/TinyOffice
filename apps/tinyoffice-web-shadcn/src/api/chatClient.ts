@@ -330,6 +330,27 @@ export async function cancelChatRun(input: {
   });
 }
 
+export type ActiveChatRunResponse = {
+  companyId: string;
+  roomId: string;
+  chainId: string;
+  runId: string;
+  sourceMessageId: string;
+  targetMemberId: string;
+  status: "active" | "cancel_requested";
+} | null;
+
+export async function getActiveChatRun(input: {
+  companyId?: string;
+  roomId?: string;
+  actorMemberId?: string;
+}): Promise<ActiveChatRunResponse> {
+  const companyId = required(input.companyId, "companyId");
+  const roomId = required(input.roomId, "roomId");
+  const query = viewerQuery(input);
+  return requestJson<ActiveChatRunResponse>(`${chatRoomPath(companyId, roomId)}/active-run${query ? `?${query}` : ""}`);
+}
+
 export type ChatRoomTitleUpdateResponse = {
   companyId: string;
   conversationId: string;

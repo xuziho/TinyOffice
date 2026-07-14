@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { applyMentionSelection, buildComposerSubmitValue, composerErrorMessage, ensureMentionStarter, selectedMentionIds, visibleMentionOptions } from "./mentionComposerModel";
+import { applyAllMentionSelection, applyMentionSelection, buildComposerSubmitValue, composerErrorMessage, ensureMentionStarter, isAllMentionOptionVisible, selectedMentionIds, visibleMentionOptions } from "./mentionComposerModel";
 
 test("visibleMentionOptions filters runtime-capable channel participants after an at-sign query", () => {
   const options = visibleMentionOptions("@as", [
@@ -37,6 +37,15 @@ test("ensureMentionStarter appends an at-sign without replacing existing draft t
   assert.equal(ensureMentionStarter("Can you check"), "Can you check @");
   assert.equal(ensureMentionStarter("Can you check "), "Can you check @");
   assert.equal(ensureMentionStarter("Can @as"), "Can @as");
+});
+
+test("all mention shortcut inserts literal text without creating a structured member mention", () => {
+  assert.equal(isAllMentionOptionVisible("Please ask @al"), true);
+  const body = applyAllMentionSelection("Please ask @al");
+  assert.equal(body, "Please ask @all ");
+  assert.deepEqual(selectedMentionIds(body, [
+    { memberId: "nora-automation", displayName: "Nora", hasRuntimeProfile: true },
+  ]), []);
 });
 
 test("buildComposerSubmitValue allows image-only messages with uploaded attachments", () => {

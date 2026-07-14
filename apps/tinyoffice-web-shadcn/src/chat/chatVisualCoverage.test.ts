@@ -55,3 +55,11 @@ test("Chat uses a responsive Context column and conventional back-action order",
   assert.match(css, /grid-template-columns: 274px minmax\(0, 1fr\) clamp\(248px, 22vw, 320px\);/);
   assert.match(messagePanel, /<header[\s\S]*?aria-label="Back to list"[\s\S]*?tiny-room-title/);
 });
+
+test("Channel participants expose the current Topic holder with a quiet text status", () => {
+  assert.match(contextPanel, /tiny-participant-chat-status/);
+  assert.match(contextPanel, /role="status"/);
+  assert.match(contextPanel, /motion-safe:animate-pulse/);
+  assert.match(css, /\.tiny-participant-chat-status \{/);
+  assert.match(css, /\.tiny-participant-chat-status-stopping \{/);
+});

@@ -107,6 +107,7 @@ import type { TinyOfficeCurrentUserSession } from "../../auth/tinyoffice-session
 import { createTinyOfficeOwnerAuth } from "../../auth/better-auth-owner.js";
 import type { ChatAttachmentApiService } from "../../api/tinyoffice-api/contracts.js";
 import { createTinyOfficeChatRuntimeDispatchSink } from "../chat/tinyoffice-chat-runtime-dispatch.js";
+import { PostgresChatTopicChainRepository } from "../chat/chat-topic-chain-repository.js";
 import type { TinyOfficeChatRuntimeProcessTracePublisher } from "../chat/tinyoffice-chat-runtime-dispatch.js";
 import { listProcessTraceEvents, ProcessTracePublisher } from "./process-trace-store.js";
 import {
@@ -762,6 +763,7 @@ function createRuntimeChatDispatchSink(input: {
 }): ChatDispatchApiSink {
   return createTinyOfficeChatRuntimeDispatchSink({
     repoRoot: input.repoRoot,
+    topicChainRepository: new PostgresChatTopicChainRepository(input.repoRoot),
     serviceForCompany: input.serviceForCompany,
     realtimePublisher: input.realtimePublisher,
     runtimeProvider: input.runtimeProvider,

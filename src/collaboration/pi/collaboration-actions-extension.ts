@@ -346,7 +346,7 @@ export default function collaborationActionsExtension(pi: ExtensionAPI) {
     name: "handoff_topic_turn",
     label: "Handoff Topic Turn",
     description:
-      "Required channel-topic state action. This must be called exactly once during each channel-topic turn to select the single Handoff candidate who owns the next step.",
+      "Required channel-topic state action. Call it exactly once before ending the current channel-topic turn, choosing one Handoff candidate. To return control, choose the user's participant id.",
     parameters: HandoffTopicTurnParams,
     async execute(_toolCallId: string, params: unknown) {
       return {

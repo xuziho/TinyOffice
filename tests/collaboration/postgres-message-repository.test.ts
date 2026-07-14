@@ -374,6 +374,26 @@ test("postgres message repository queries recent runtime messages from latest to
   assert.deepEqual(query.params, ["acme", "conversation-1", 20]);
 });
 
+test("postgres message repository queries all runtime messages after a context cursor", async () => {
+  const client = new FakePostgresMessageClient();
+  const repository = createRepository(client);
+
+  await repository.listMessagesAfter({
+    companyId: "acme",
+    conversationId: "conversation-1",
+    afterCreatedAt: "2026-07-14T10:00:00.000Z",
+    afterMessageId: "message-20",
+  });
+
+  const query = client.queries.at(-1);
+  assert.ok(query);
+  assert.match(query.sql, /created_at > \$3/);
+  assert.match(query.sql, /created_at = \$3 AND message_id > \$4/);
+  assert.match(query.sql, /ORDER BY created_at ASC, message_id ASC/);
+  assert.doesNotMatch(query.sql, /LIMIT/);
+  assert.deepEqual(query.params, ["acme", "conversation-1", "2026-07-14T10:00:00.000Z", "message-20"]);
+});
+
 test("postgres message repository upserts conversations through the runtime PostgreSQL path", async () => {
   const repository = await PostgresMessageRepository.open(process.cwd(), { companyId: "tinyoffice" });
   try {

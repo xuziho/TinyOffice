@@ -681,6 +681,7 @@ function ParticipantsSection({
       <div className="tiny-context-section-label">Participants</div>
       {model.context.participants.map((participant) => {
         const sessions = sessionsByMemberId.get(participant.id) ?? [];
+        const hasSessionAction = showSessions && participant.hasRuntimeProfile;
         return (
           <div key={participant.id} className="tiny-context-row group grid min-w-0 max-w-full grid-cols-[24px_minmax(0,1fr)_auto] items-center gap-2 overflow-hidden p-[5px]">
             <EmployeeAvatar
@@ -694,13 +695,24 @@ function ParticipantsSection({
               <div className="tiny-participant-name truncate">{participant.displayName}</div>
               {participant.role ? <div className="tiny-participant-role truncate">{participant.role}</div> : null}
             </div>
-            {showSessions && participant.hasRuntimeProfile ? (
-              <div className="flex min-w-0 items-center justify-end gap-2">
+            {hasSessionAction || participant.chatStatus ? (
+              <div className="relative flex min-h-6 min-w-0 items-center justify-end">
+                {participant.chatStatus ? (
+                  <div
+                    className={`tiny-participant-chat-status tiny-participant-chat-status-${participant.chatStatus.kind} transition-opacity ${hasSessionAction ? "group-hover:opacity-0 group-focus-within:opacity-0" : ""}`}
+                    role="status"
+                    aria-label={`${participant.displayName} is ${participant.chatStatus.kind}`}
+                  >
+                    <span className="tiny-participant-chat-status-dot motion-safe:animate-pulse" aria-hidden="true" />
+                    <span>{participant.chatStatus.label}</span>
+                  </div>
+                ) : null}
+                {hasSessionAction ? (
                 <Button
                   type="button"
                   size="xs"
                   variant={sessions.length > 0 ? "secondary" : "outline"}
-                  className="gap-1.5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                  className={`gap-1.5 transition-opacity focus-visible:opacity-100 ${participant.chatStatus ? "absolute right-0 opacity-0 group-hover:opacity-100" : "opacity-0 group-hover:opacity-100"}`}
                   onClick={() => onOpenSession?.({
                     employeeId: participant.id,
                     sessionId: sessions[0]?.targetId,
@@ -711,6 +723,7 @@ function ParticipantsSection({
                   <FileTextIcon className="size-3.5" aria-hidden="true" />
                   {sessions.length > 0 ? "Open session" : "Find session"}
                 </Button>
+                ) : null}
               </div>
             ) : <span />}
           </div>

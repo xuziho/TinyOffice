@@ -4,7 +4,8 @@ import test from "node:test";
 import type { ChatShellModel } from "./chatShellModel";
 import { memberDisplayNamesForCreateEntry } from "./chatCreateEntryDisplayNames";
 import { accessDecisionContinuationMessage, accessRequestForegroundRoomId, accessRequestsForRoom } from "./chatAccessRequests";
-import type { AccessRequestDto } from "tinyoffice/frontend-api-contracts";
+import type { AccessRequestDto, RuntimeActivity } from "tinyoffice/frontend-api-contracts";
+import { activityDisplaySnapshot, activityQueryPlaceholderData } from "./useChatWorkspace";
 
 function shellModel(input: Partial<ChatShellModel>): ChatShellModel {
   return {
@@ -63,6 +64,48 @@ test("memberDisplayNamesForCreateEntry sends the DM peer display name for direct
   });
 
   assert.deepEqual(memberDisplayNamesForCreateEntry(model), { alex: "Alex" });
+});
+
+test("Activity keeps the last settled turn visible while a handoff target has no projected trace yet", () => {
+  const previous = runtimeActivity("Run completed");
+  const settled = {
+    activity: previous,
+    selection: { sourceMessageId: "message-avery" },
+  };
+
+  assert.equal(activityQueryPlaceholderData(previous), previous);
+  assert.equal(activityQueryPlaceholderData(undefined), undefined);
+  assert.equal(activityDisplaySnapshot({
+    currentActivity: { items: [] },
+    currentSelection: { sourceMessageId: "message-olivia" },
+    activeSourceMessageId: "message-olivia",
+    isPlaceholderData: false,
+    settled,
+  }), settled);
+  assert.equal(activityDisplaySnapshot({
+    currentActivity: previous,
+    currentSelection: { sourceMessageId: "message-olivia" },
+    activeSourceMessageId: "message-olivia",
+    isPlaceholderData: true,
+    settled,
+  }), settled);
+});
+
+test("Activity switches atomically once the handoff target has real projected trace", () => {
+  const current = runtimeActivity("Run started");
+  const displayed = activityDisplaySnapshot({
+    currentActivity: current,
+    currentSelection: { sourceMessageId: "message-olivia" },
+    activeSourceMessageId: "message-olivia",
+    isPlaceholderData: false,
+    settled: {
+      activity: runtimeActivity("Run completed"),
+      selection: { sourceMessageId: "message-avery" },
+    },
+  });
+
+  assert.equal(displayed.activity, current);
+  assert.deepEqual(displayed.selection, { sourceMessageId: "message-olivia" });
 });
 
 test("memberDisplayNamesForCreateEntry sends the draft DM peer display name from the directory", () => {
@@ -207,6 +250,17 @@ test("accessDecisionContinuationMessage tells the employee whether to retry or s
     "Access approved for this WorkRun for read .env.\nPlease retry the blocked action now through the original tool path.",
   );
 });
+
+function runtimeActivity(title: string): RuntimeActivity {
+  return {
+    items: [{
+      id: `activity-${title}`,
+      kind: title === "Run started" ? "run_started" : "run_completed",
+      title,
+      raw: { eventIds: [], events: [] },
+    }],
+  };
+}
 
 function accessRequest(input: {
   id: string;

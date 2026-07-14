@@ -122,13 +122,16 @@ export function compileRuntimePrompt(input: CompileRuntimePromptInput): Compiled
     });
   }
 
-  sections.push({
-    semanticRole: "user_visible_message",
-    source: "collaboration_surface.user_message",
-    label: "User visible message",
-    visibility: "model_input",
-    text: input.userVisibleMessage,
-  });
+  const rendersStandaloneMessage = !isChannelTopicScene(input.sceneType);
+  if (rendersStandaloneMessage) {
+    sections.push({
+      semanticRole: "user_visible_message",
+      source: "collaboration_surface.user_message",
+      label: "User visible message",
+      visibility: "model_input",
+      text: input.userVisibleMessage,
+    });
+  }
 
   return {
     sceneType: input.sceneType,
@@ -136,10 +139,10 @@ export function compileRuntimePrompt(input: CompileRuntimePromptInput): Compiled
     userVisibleMessage: input.userVisibleMessage,
     userPrompt: buildRuntimeUserPrompt(
       input.sceneType,
-      promptBlocks,
       contextBlocks,
       input.userVisibleMessage,
       input.runtimePromptTemplate,
+      rendersStandaloneMessage,
     ),
     systemPromptAppend,
     promptBlocks,
@@ -155,32 +158,30 @@ export function compileRuntimePrompt(input: CompileRuntimePromptInput): Compiled
 
 function buildRuntimeUserPrompt(
   sceneType: RuntimePromptSceneType,
-  promptBlocks: RuntimePromptBlockSnapshot[],
   contextBlocks: RuntimePromptContextBlockInput[],
   userVisibleMessage: string,
   runtimePromptTemplate?: string,
+  rendersStandaloneMessage = true,
 ): string {
   if (runtimePromptTemplate?.trim()) {
     return renderRuntimePromptTemplate({
       template: runtimePromptTemplate,
       sceneType,
-      promptBlocks,
       contextBlocks,
       userVisibleMessage,
+      rendersStandaloneMessage,
     });
   }
 
   const lines = ["Runtime Context:", `Scene: ${sceneType}`];
 
-  for (const block of promptBlocks) {
-    lines.push("", `Prompt Policy: ${block.path}:`, block.content);
-  }
-
   for (const block of contextBlocks) {
     lines.push("", `${block.label}:`, block.text);
   }
 
-  lines.push("", "User Message:", userVisibleMessage);
+  if (rendersStandaloneMessage) {
+    lines.push("", "User Message:", userVisibleMessage);
+  }
   return lines.join("\n");
 }
 
@@ -190,28 +191,44 @@ function renderContextBlocksSlot(contextBlocks: RuntimePromptContextBlockInput[]
     .join("\n\n");
 }
 
-function renderPromptBlocksSlot(promptBlocks: RuntimePromptBlockSnapshot[]): string {
-  return promptBlocks
-    .map((block) => [`Prompt Policy: ${block.path}:`, block.content].join("\n"))
-    .join("\n\n");
-}
-
 function renderRuntimePromptTemplate(input: {
   template: string;
   sceneType: RuntimePromptSceneType;
-  promptBlocks: RuntimePromptBlockSnapshot[];
   contextBlocks: RuntimePromptContextBlockInput[];
   userVisibleMessage: string;
+  rendersStandaloneMessage: boolean;
 }): string {
-  const promptBlocks = renderPromptBlocksSlot(input.promptBlocks);
-  const rendered = input.template
+  const template = removeEmptyStandaloneSlotSection(
+    removeEmptyStandaloneSlotSection(input.template, "{promptBlocks}"),
+    input.rendersStandaloneMessage ? undefined : "{userMessage}",
+  );
+  return template
     .replaceAll("{sceneType}", input.sceneType)
-    .replaceAll("{promptBlocks}", promptBlocks)
+    .replaceAll("{promptBlocks}", "")
     .replaceAll("{contextBlocks}", renderContextBlocksSlot(input.contextBlocks))
-    .replaceAll("{userMessage}", input.userVisibleMessage)
+    .replaceAll("{userMessage}", input.rendersStandaloneMessage ? input.userVisibleMessage : "")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
-  if (input.template.includes("{promptBlocks}") || !promptBlocks.trim()) {
-    return rendered;
+}
+
+function removeEmptyStandaloneSlotSection(template: string, token: string | undefined): string {
+  if (!token) {
+    return template;
   }
-  return [promptBlocks, rendered].join("\n\n").trim();
+  const lines = template.split(/\r?\n/);
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    if (lines[index]?.trim() !== token) {
+      continue;
+    }
+    lines.splice(index, 1);
+    const labelIndex = index - 1;
+    if (labelIndex >= 0 && /^[^{}\n]+:\s*$/.test(lines[labelIndex] || "")) {
+      lines.splice(labelIndex, 1);
+    }
+  }
+  return lines.join("\n");
+}
+
+function isChannelTopicScene(sceneType: RuntimePromptSceneType): boolean {
+  return sceneType === "channel_thread" || sceneType === "chat_topic_room";
 }

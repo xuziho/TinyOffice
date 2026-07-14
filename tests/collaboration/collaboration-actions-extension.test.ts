@@ -261,7 +261,7 @@ test("tinyoffice_capability_list exposes product categories for capability disco
   ), true);
 });
 
-test("handoff_topic_turn describes the one-call Handoff candidates contract", async () => {
+test("handoff_topic_turn describes the required single-transfer Handoff candidates contract", async () => {
   const tools = new Map<string, RegisteredTool & { label?: string; description?: string }>();
   collaborationActionsExtension({
     registerTool(definition) {
@@ -271,10 +271,11 @@ test("handoff_topic_turn describes the one-call Handoff candidates contract", as
 
   const handoff = tools.get("handoff_topic_turn");
   assert(handoff);
-  assert.match(handoff.description || "", /must be called exactly once during each channel-topic turn/i);
-  assert.doesNotMatch(handoff.description || "", /After writing the visible assistant reply/i);
+  assert.match(handoff.description || "", /required channel-topic state action/i);
+  assert.match(handoff.description || "", /exactly once before ending the current channel-topic turn/i);
+  assert.match(handoff.description || "", /choose the user's participant id/i);
+  assert.doesNotMatch(handoff.description || "", /after (writing )?the visible/i);
   assert.doesNotMatch(handoff.description || "", /human|operator/i);
-  assert.doesNotMatch(handoff.description || "", /return|hand back/i);
   const properties = handoff.parameters?.properties as Record<string, { description?: string }> | undefined;
   assert.match(properties?.toId?.description || "", /Handoff candidates/);
   assert.match(properties?.toId?.description || "", /exactly one/i);

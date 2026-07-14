@@ -98,7 +98,6 @@ export function buildUserPrompt(input: {
       normalizePromptTemplateLineEndings(input.runtimePromptTemplate) === DEFAULT_RUNTIME_PROMPT_TEMPLATE
       ? undefined
       : input.runtimePromptTemplate,
-    promptBlocks: input.promptBlocks,
     contextBlocks: input.contextBlocks || [],
   }).userPrompt;
 }

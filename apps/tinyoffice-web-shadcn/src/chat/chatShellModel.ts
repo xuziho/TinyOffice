@@ -13,7 +13,7 @@ import type {
   TinyOfficeCurrentSession,
 } from "tinyoffice/frontend-api-contracts";
 import type { MentionCandidate } from "./mentionComposerModel";
-import type { ChatRunState } from "./chatRunState";
+import { activeChatRunForRoom, type ChatRunRecord, type ChatRunState } from "./chatRunState";
 
 export type ChatShellSurface =
   | { kind: "container-directory"; containerId: string }
@@ -58,6 +58,11 @@ export type ChatRelatedTask = {
   updatedAt: string;
 };
 
+export type ChatParticipantStatus = {
+  kind: "replying" | "stopping";
+  label: "Replying…" | "Stopping…";
+};
+
 export type ChatShellModel = {
   companyId?: string;
   viewerLabel: string;
@@ -83,7 +88,7 @@ export type ChatShellModel = {
       subtitle?: string;
       rows: ChatShellContextRow[];
     };
-    participants: Array<{ id: string; avatarSeed: string; displayName: string; role?: string; hasRuntimeProfile?: boolean }>;
+    participants: Array<{ id: string; avatarSeed: string; displayName: string; role?: string; hasRuntimeProfile?: boolean; chatStatus?: ChatParticipantStatus }>;
     evidence: ChatShellEvidence;
     runtimeLinks: ChatRuntimeLinkDto[];
     relatedTasks: ChatRelatedTask[];
@@ -161,7 +166,14 @@ export function buildChatShellModel(input: {
         directMessageCount: directMessages.length,
         messageCount: input.messages?.messages.length ?? 0,
       }),
-      participants: participantsFor(surface, selectedContainer, selectedDirectoryMember, input.directory),
+      participants: participantsFor({
+        surface,
+        container: selectedContainer,
+        selectedDirectoryMember,
+        directory: input.directory,
+        selectedRoomId,
+        chatRunState: input.chatRunState,
+      }),
       evidence: evidenceFromLinks(runtimeLinks),
       runtimeLinks,
       relatedTasks: relatedTasksFor({
@@ -434,31 +446,46 @@ function selectedDirectoryMemberFor(
   return undefined;
 }
 
-function participantsFor(
-  surface: ChatShellSurface,
-  container: ChatContainerDto | undefined,
-  selectedDirectoryMember: CompanyDirectoryMemberEntryDto | undefined,
-  directory: CompanyDirectoryDto | undefined,
-): ChatShellModel["context"]["participants"] {
-  if ((surface.kind === "dm-directory" || container?.kind === "member_dm") && selectedDirectoryMember) {
+function participantsFor(input: {
+  surface: ChatShellSurface;
+  container?: ChatContainerDto;
+  selectedDirectoryMember?: CompanyDirectoryMemberEntryDto;
+  directory?: CompanyDirectoryDto;
+  selectedRoomId?: string;
+  chatRunState?: ChatRunState;
+}): ChatShellModel["context"]["participants"] {
+  if ((input.surface.kind === "dm-directory" || input.container?.kind === "member_dm") && input.selectedDirectoryMember) {
     return [];
   }
-  if (surface.kind === "entry-room" && container?.kind === "member_dm") {
+  if (input.surface.kind === "entry-room" && input.container?.kind === "member_dm") {
     return [];
   }
-  if (container?.members?.length) {
-    return container.members.map((member) => {
-      const directoryMember = directoryMemberForChannelMember(member, directory);
+  if (input.container?.members?.length) {
+    const activeRun = input.chatRunState
+      ? activeChatRunForRoom(input.chatRunState, input.selectedRoomId)
+      : undefined;
+    return input.container.members.map((member) => {
+      const directoryMember = directoryMemberForChannelMember(member, input.directory);
+      const chatStatus = activeRun?.targetMemberId === member.memberId
+        ? participantStatusForRun(activeRun.status)
+        : undefined;
       return {
         id: member.memberId,
         avatarSeed: member.avatarSeed ?? directoryMember?.avatarSeed ?? member.memberId,
         displayName: member.displayName,
         role: member.role ?? directoryMember?.role,
         hasRuntimeProfile: Boolean(member.hasRuntimeProfile && directoryMember?.hasRuntimeProfile),
+        ...(chatStatus ? { chatStatus } : {}),
       };
     });
   }
   return [];
+}
+
+function participantStatusForRun(status: ChatRunRecord["status"]): ChatParticipantStatus {
+  return status === "cancel_requested"
+    ? { kind: "stopping", label: "Stopping…" }
+    : { kind: "replying", label: "Replying…" };
 }
 
 function imageAttachmentsEnabledFor(input: {

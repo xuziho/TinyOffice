@@ -41,6 +41,7 @@ export const PUBLIC_TINYOFFICE_REALTIME_EVENT_KEY_SETS = {
     "targetMemberId",
     "status",
     "runId",
+    "chainId",
     "sessionKey",
     "sessionRecordId",
     "runtimeProviderId",
@@ -51,6 +52,7 @@ export const PUBLIC_TINYOFFICE_REALTIME_EVENT_KEY_SETS = {
     "conversationId",
     "roomId",
     "runId",
+    "chainId",
     "sourceMessageId",
     "targetMemberId",
     "sessionKey",
@@ -61,6 +63,7 @@ export const PUBLIC_TINYOFFICE_REALTIME_EVENT_KEY_SETS = {
     "conversationId",
     "roomId",
     "runId",
+    "chainId",
     "sourceMessageId",
     "targetMemberId",
     "sessionKey",
@@ -71,6 +74,7 @@ export const PUBLIC_TINYOFFICE_REALTIME_EVENT_KEY_SETS = {
     "conversationId",
     "roomId",
     "runId",
+    "chainId",
     "sourceMessageId",
     "targetMemberId",
     "sessionKey",
@@ -165,6 +169,7 @@ export type ChatRuntimeStatusChangedEvent = {
   targetMemberId: string;
   status: ChatRuntimeStatus;
   runId: string;
+  chainId?: string;
   sessionKey?: string;
   sessionRecordId?: string;
   runtimeProviderId?: string;
@@ -178,6 +183,7 @@ export type ChatProcessTraceAppendedEvent = {
   conversationId: string;
   roomId: string;
   runId: string;
+  chainId?: string;
   sourceMessageId: string;
   targetMemberId: string;
   sessionKey?: string;
@@ -191,6 +197,7 @@ export type ChatReplyDeltaEvent = {
   conversationId: string;
   roomId: string;
   runId: string;
+  chainId?: string;
   sourceMessageId: string;
   targetMemberId: string;
   sessionKey?: string;
@@ -204,6 +211,7 @@ export type ChatReplySnapshotEvent = {
   conversationId: string;
   roomId: string;
   runId: string;
+  chainId?: string;
   sourceMessageId: string;
   targetMemberId: string;
   sessionKey?: string;
@@ -348,6 +356,7 @@ export function assertTinyOfficeRealtimeEvent(value: unknown): asserts value is 
       requireNonEmptyString(event.sourceMessageId, "sourceMessageId");
       requireNonEmptyString(event.targetMemberId, "targetMemberId");
       requireNonEmptyString(event.runId, "runId");
+      requireOptionalString(event.chainId, "chainId");
       if (!CHAT_RUNTIME_STATUSES.includes(event.status as ChatRuntimeStatus)) {
         throw new Error(`unsupported Chat runtime status: ${String(event.status)}`);
       }
@@ -362,6 +371,7 @@ export function assertTinyOfficeRealtimeEvent(value: unknown): asserts value is 
       requireNonEmptyString(event.conversationId, "conversationId");
       requireNonEmptyString(event.roomId, "roomId");
       requireNonEmptyString(event.runId, "runId");
+      requireOptionalString(event.chainId, "chainId");
       requireNonEmptyString(event.sourceMessageId, "sourceMessageId");
       requireNonEmptyString(event.targetMemberId, "targetMemberId");
       requireOptionalString(event.sessionKey, "sessionKey");
@@ -373,6 +383,7 @@ export function assertTinyOfficeRealtimeEvent(value: unknown): asserts value is 
       requireNonEmptyString(event.conversationId, "conversationId");
       requireNonEmptyString(event.roomId, "roomId");
       requireNonEmptyString(event.runId, "runId");
+      requireOptionalString(event.chainId, "chainId");
       requireNonEmptyString(event.sourceMessageId, "sourceMessageId");
       requireNonEmptyString(event.targetMemberId, "targetMemberId");
       requireOptionalString(event.sessionKey, "sessionKey");
@@ -384,6 +395,7 @@ export function assertTinyOfficeRealtimeEvent(value: unknown): asserts value is 
       requireNonEmptyString(event.conversationId, "conversationId");
       requireNonEmptyString(event.roomId, "roomId");
       requireNonEmptyString(event.runId, "runId");
+      requireOptionalString(event.chainId, "chainId");
       requireNonEmptyString(event.sourceMessageId, "sourceMessageId");
       requireNonEmptyString(event.targetMemberId, "targetMemberId");
       requireOptionalString(event.sessionKey, "sessionKey");

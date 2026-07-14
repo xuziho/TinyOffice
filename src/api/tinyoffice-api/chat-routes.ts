@@ -132,6 +132,18 @@ export function registerChatRoutes(app: Hono, options: TinyOfficeApiOptions): vo
     }));
   });
 
+  app.get("/api/companies/:companyId/chat/rooms/:roomId/active-run", async (c) => {
+    const companyId = ensureChatEntryCompanyScope({ companyId: requireParam(c, "companyId") });
+    const service = await resolveChatRunControlService(options, companyId);
+    if (!service.getActiveChatRun) {
+      throw new Error("active Chat run lookup is not configured");
+    }
+    return jsonResponse(c, await service.getActiveChatRun(companyId, {
+      roomId: requireParam(c, "roomId"),
+      actor: chatParticipantIdentity(viewerIdentityFromRequest(options, c, companyId)),
+    }));
+  });
+
   app.post("/api/companies/:companyId/chat/runs/:runId/retry", async (c) => {
     const companyId = ensureChatEntryCompanyScope({ companyId: requireParam(c, "companyId") });
     const body = await readJsonBody(c);
@@ -253,6 +265,10 @@ export function registerChatRoutes(app: Hono, options: TinyOfficeApiOptions): vo
       identity: body.actor,
       label: "actor",
       notFoundLabel: "chat room",
+    });
+    await options.chatDispatchSink?.assertCanDispatch?.(companyId, {
+      roomId,
+      actor: chatParticipantIdentity(body.actor),
     });
     const sent = await messageService.sendMessage(companyId, roomId, body.actor, body.body, body.options);
     publishChatMessageCreated(options.realtimePublisher, sent);
@@ -516,7 +532,8 @@ async function resolveChatRunControlService(options: TinyOfficeApiOptions, compa
   }
   if (options.chatDispatchSink?.cancelChatRun) {
     const cancelChatRun = options.chatDispatchSink.cancelChatRun.bind(options.chatDispatchSink);
-    return { cancelChatRun };
+    const getActiveChatRun = options.chatDispatchSink.getActiveChatRun?.bind(options.chatDispatchSink);
+    return { cancelChatRun, ...(getActiveChatRun ? { getActiveChatRun } : {}) };
   }
   throw new Error("chat run control service is not configured");
 }

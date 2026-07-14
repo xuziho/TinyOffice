@@ -126,7 +126,6 @@ export function buildPromptInputPackage(input: {
     input.systemPromptAppend,
     ...promptBlocks.map((block) => block.content),
     ...employeeInstructions.map((file) => file.content),
-    ...(input.contextBlocks || []).map((block) => block.text),
   ].join("\n\n");
   const fullInput = [
     input.systemPromptAppend,

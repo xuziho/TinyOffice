@@ -56,6 +56,8 @@ const runtimeTables = [
   "office_tool_audit_logs",
   "operating_events",
   "handoff_replay_ledger",
+  "chat_topic_chain_runs",
+  "chat_topic_chains",
 ];
 
 let inProcessLockTail = Promise.resolve();

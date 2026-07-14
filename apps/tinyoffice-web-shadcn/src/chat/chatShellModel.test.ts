@@ -420,6 +420,7 @@ test("overlays active Chat reply state onto direct message contacts", () => {
           conversationId: "room-general-1",
           roomId: "room-general-1",
           runId: "run-1",
+          chainId: "run-1",
           sourceMessageId: "message-1",
           targetMemberId: "employee-hr",
           status: "thinking",
@@ -434,6 +435,79 @@ test("overlays active Chat reply state onto direct message contacts", () => {
   assert.equal(model.directMessages[0]?.runtimeStatus?.label, "Replying");
   assert.equal(model.directMessages[0]?.runtimeStatus?.reason, "Responding in Chat.");
   assert.equal(model.directMessages[0]?.subtitle, "Replying...");
+});
+
+test("marks only the current Topic holder as replying in Channel participants", () => {
+  const model = buildChatShellModel({
+    session,
+    projection,
+    directory,
+    selectedSurface: { kind: "entry-room", entryId: "entry-general-1" },
+    chatRunState: {
+      runs: {
+        "run-current-topic": {
+          companyId: "ziho-co",
+          conversationId: "room-general-1",
+          roomId: "room-general-1",
+          runId: "run-current-topic",
+          chainId: "chain-current-topic",
+          sourceMessageId: "message-1",
+          targetMemberId: "lena-analytics",
+          status: "streaming",
+          streamedContent: "Reviewing the queue",
+          sequence: 4,
+        },
+        "run-other-room": {
+          companyId: "ziho-co",
+          conversationId: "room-other",
+          roomId: "room-other",
+          runId: "run-other-room",
+          chainId: "chain-other-room",
+          sourceMessageId: "message-other",
+          targetMemberId: "xuziho",
+          status: "thinking",
+          streamedContent: "",
+          sequence: 9,
+        },
+      },
+    },
+  });
+
+  assert.deepEqual(model.context.participants.find((participant) => participant.id === "lena-analytics")?.chatStatus, {
+    kind: "replying",
+    label: "Replying…",
+  });
+  assert.equal(model.context.participants.find((participant) => participant.id === "xuziho")?.chatStatus, undefined);
+});
+
+test("shows Stopping only for a cancel-requested current Topic holder", () => {
+  const model = buildChatShellModel({
+    session,
+    projection,
+    directory,
+    selectedSurface: { kind: "entry-room", entryId: "entry-general-1" },
+    chatRunState: {
+      runs: {
+        "run-current-topic": {
+          companyId: "ziho-co",
+          conversationId: "room-general-1",
+          roomId: "room-general-1",
+          runId: "run-current-topic",
+          chainId: "chain-current-topic",
+          sourceMessageId: "message-1",
+          targetMemberId: "lena-analytics",
+          status: "cancel_requested",
+          streamedContent: "",
+          sequence: 5,
+        },
+      },
+    },
+  });
+
+  assert.deepEqual(model.context.participants.find((participant) => participant.id === "lena-analytics")?.chatStatus, {
+    kind: "stopping",
+    label: "Stopping…",
+  });
 });
 
 test("resolves runtime member display names without falling back to ids", () => {

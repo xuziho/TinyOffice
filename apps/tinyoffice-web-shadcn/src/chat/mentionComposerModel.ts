@@ -64,6 +64,15 @@ export function visibleMentionOptions(
     .slice(0, 8);
 }
 
+export function isAllMentionOptionVisible(draft: string): boolean {
+  const query = activeMentionQuery(draft);
+  return query !== undefined && (query.trim() === "" || "all".includes(normalize(query)));
+}
+
+export function applyAllMentionSelection(draft: string): string {
+  return applyMentionSelection(draft, { displayName: "all" });
+}
+
 export function selectedMentionIds(
   draft: string,
   candidates: MentionCandidate[],

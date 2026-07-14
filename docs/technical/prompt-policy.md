@@ -17,10 +17,10 @@ Runtime model input is assembled in this order:
 
 1. Base System Prompt: employee identity, TinyOffice work boundary, core behavior, and Access boundary.
 2. Employee context from PI resource paths, such as employee-local `AGENTS.md` / `CLAUDE.md`.
-3. Prompt Policy block for the current runtime scene.
-4. Runtime Prompt Template slots: scene type, Prompt Policy blocks, Runtime Context blocks, and Current Message.
+3. Prompt Policy block for the current runtime scene, appended once to the system prompt.
+4. Runtime Prompt Template slots: scene type, Runtime Context blocks, and scene-appropriate current input.
 
-Scene Prompt Blocks contain the editable collaboration and completion instructions for their scene. Runtime code still controls tool availability and validates required state actions. Prompt Policy blocks are rendered into each runtime prompt before context and the current message, even if a custom Runtime Prompt Template omits `{promptBlocks}`. The current message is placed last to reduce prompt-cache churn.
+Scene Prompt Blocks contain the editable collaboration and completion instructions for their scene. Runtime code still controls tool availability and validates required state actions. Prompt Policy blocks are loaded once through the system-prompt path and are retained separately in prompt evidence; they are not copied into each runtime user prompt. Stable system text, employee instructions, scene policy, skills, and tool definitions precede changing runtime context. DM, Intake, and WorkRun place the current message last. Channel/Topic instead marks the trigger inside the Topic message window, strips the now-empty standalone-message label from saved templates, and omits a provisional Topic title when it equals the trigger body.
 
 ## Runtime Binding
 
@@ -35,7 +35,7 @@ Prompt Policy template editing is separate from scene binding. The ordinary Prom
 
 Model visible output expresses only the user-facing result of the current turn. Required state actions are handled by scene-specific tools and validated by runtime code.
 
-- Channel: model writes the visible assistant reply as normal assistant text and calls `handoff_topic_turn` exactly once during the same turn with `toId`. Runtime uses the persisted reply and current turn-bound Topic to record Handoff.
+- Channel: model writes the visible assistant reply as normal assistant text and must call `handoff_topic_turn` exactly once. Runtime uses the persisted reply and current turn-bound Topic to record the Handoff. Selecting the user's participant id returns the ball to the user. If the primary model call omits the tool call, runtime makes one same-session repair call with only `handoff_topic_turn` active, preserves the original visible reply, and validates the repaired action against the same candidates.
 - WorkRun: model calls `finish_work_turn` with `status`, `summary`, `evidence`, `blockerMessage`, and related result fields. Runtime uses the session-bound WorkRun id.
 - Intake: model calls `finish_intake_turn` with the intake outcome.
 - DM: model writes visible assistant text directly. Sensitive-resource requests come from the Access layer, not broad final-output approvals.

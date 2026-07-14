@@ -12,7 +12,7 @@ Scene loading is a runtime contract, not a normal operator workflow. Runtime map
 - See read-only `Loaded by` metadata when a scene block is part of the runtime scene contract.
 - Provide Sessions with block id, content, and hash evidence for the actual runtime prompt.
 
-Runtime values are represented as slots such as `{employeeId}`, `{displayName}`, `{role}`, `{sceneType}`, `{promptBlocks}`, `{contextBlocks}`, and `{userMessage}`. Prompt Policy does not manage employee-specific `AGENTS.md`, one-turn runtime context values, Access rules for sensitive resources, tool availability, or loaded skills.
+Runtime values are represented as slots such as `{employeeId}`, `{displayName}`, `{role}`, `{sceneType}`, `{contextBlocks}`, and `{userMessage}`. Prompt Policy does not manage employee-specific `AGENTS.md`, one-turn runtime context values, Access rules for sensitive resources, tool availability, or loaded skills. Existing saved templates that still contain `{promptBlocks}` render that retired user-prompt slot as empty; scene blocks are loaded once through the system-prompt path.
 
 ## Current Structure
 
@@ -20,12 +20,14 @@ Runtime values are represented as slots such as `{employeeId}`, `{displayName}`,
 | --- | --- |
 | System Prompt | Member runtime identity, TinyOffice work boundary, core behavior, and Access boundary. |
 | Employee context | Employee-local `AGENTS.md`, `CLAUDE.md`, and related context loaded by PI resource paths. |
-| Runtime Prompt Template | Slot-based wrapper for scene, Prompt Policy blocks, context blocks, and current user message. |
-| Scene Prompt | Runtime-selected Prompt Blocks for DM, Channel, Intake, or WorkRun. Scene prompts also contain the editable collaboration and completion instructions for that scene. |
+| Runtime Prompt Template | Slot-based wrapper for scene, context blocks, and the scene-appropriate current input. |
+| Scene Prompt | Runtime-selected Prompt Blocks for DM, Channel, Intake, or WorkRun. Scene prompts contain the editable collaboration and completion instructions and are loaded once through the system-prompt path. |
 | Runtime Context | Explicit runtime-provided context blocks. Topic turns include handoff candidates, Topic summary, and bounded recent raw messages. WorkRun turns include the WorkRun package. DM turns do not inject requester, shell paths, raw room history, or reachable participants as prompt context. |
-| Current Message | Current visible user message; placed late to reduce prompt-cache churn. |
+| Current Message | DM, Intake, and WorkRun place the current message late. Channel/Topic marks the trigger inside its Topic message window, removes any empty standalone-message template label, and does not repeat the same body through either a standalone message slot or a provisional Topic title. |
 
-TinyOffice-owned Chat writes visible replies from normal assistant messages. Prompt Policy may edit scene-level collaboration instructions, but runtime still owns tool availability and code validation. Channel/Topic turns must call `handoff_topic_turn` exactly once, Intake turns must use `finish_intake_turn`, and WorkRun turns must use `finish_work_turn`; these tools are state actions, not visible message sources. Topic Runtime Context must give the model a `Handoff candidates` list that excludes the current turn owner and includes enough role/responsibility context to choose the next owner without presenting human-vs-AI product categories as collaboration rules. DM Runtime Context must stay empty unless an explicit future product contract adds a named context block.
+TinyOffice-owned Chat writes visible replies from normal assistant messages. Prompt Policy may edit scene-level collaboration instructions, but runtime still owns tool availability and code validation. Every Channel/Topic turn must call `handoff_topic_turn` exactly once. Returning the ball to the user is an explicit Handoff to that user's participant id. Intake turns must use `finish_intake_turn`, and WorkRun turns must use `finish_work_turn`; these tools are state actions, not visible message sources. Topic Runtime Context must give the model a `Handoff candidates` list that excludes the current turn holder and includes enough role/responsibility context to choose the next holder without presenting human-vs-AI product categories as collaboration rules. DM Runtime Context must stay empty unless an explicit future product contract adds a named context block.
+
+If a Channel employee produces its visible reply but omits the required Handoff call, runtime performs one same-session state-action repair with only `handoff_topic_turn` available. The repair does not create another visible reply, does not choose a target on the model's behalf, and is not a limit on how many employee-to-employee transfers a Topic may make.
 
 Prompt Policy is where shared company-level prompt template text belongs. Employee-specific responsibilities and personal guidance belong in Employee Config through employee-local instruction files. Access policy is where sensitive resource and dangerous command decisions belong.
 

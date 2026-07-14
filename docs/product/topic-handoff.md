@@ -29,7 +29,11 @@ Historical source anchors may exist for older rows, but the product key for Topi
 | Handoff | A formal ownership transfer from one participant to another. |
 | Seen cursor | A per-employee cursor for room context, using `roomId` and `messageId`. |
 
-Channel topics use a single-ball handoff model. The participant taking the current turn writes the visible reply and calls `handoff_topic_turn` exactly once during the same turn with the participant id that should own the next step. The model chooses that participant from `Handoff candidates`, a current Conversation participant list that excludes the actor taking the turn. Runtime starts the next turn only after the current reply is persisted.
+Channel topics use a single-ball handoff model. A user message always gives the ball to exactly one runtime-capable Channel participant: the first structured mention, or one deterministic stable-random eligible participant when there is no structured mention. A literal `@all` is ordinary message text and follows the no-mention route.
+
+The participant taking the current turn writes the visible reply and must call `handoff_topic_turn` exactly once with the participant id that should own the next step. Choosing the user's participant id ends the runtime chain and returns the ball to the user. Runtime starts the next executable employee turn only after the current reply is persisted, and one Topic never has two active holders.
+
+There is no maximum Handoff count. The user controls safety through the Topic Stop action, which remains available across Handoffs, atomically prevents another transfer, and aborts the current holder. Completion, failure, or cancellation returns control to the user.
 
 The model must receive enough candidate context to choose responsibly: display name, stable id, and product role or responsibility. A bare id list is not sufficient product context, and prompt context must not turn candidates into human-vs-AI product categories.
 

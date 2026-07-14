@@ -1021,4 +1021,42 @@ ON CONFLICT (company_id, attachment_id, message_id) DO NOTHING;
     id: "pg_012_single_owner_authentication_20260714",
     sql: buildOwnerAuthenticationSchemaSql(),
   },
+  {
+    id: "pg_013_chat_topic_single_ball_chain_20260714",
+    sql: `
+CREATE TABLE IF NOT EXISTS chat_topic_chains (
+  company_id text NOT NULL REFERENCES companies(company_id) ON DELETE CASCADE,
+  chain_id text NOT NULL,
+  room_id text NOT NULL,
+  source_message_id text NOT NULL,
+  started_by_member_id text NOT NULL,
+  current_run_id text NOT NULL,
+  current_holder_member_id text NOT NULL,
+  status text NOT NULL CHECK (status IN ('active', 'cancel_requested', 'completed', 'canceled', 'failed')),
+  revision integer NOT NULL DEFAULT 1 CHECK (revision > 0),
+  cancel_requested_at timestamptz,
+  completed_at timestamptz,
+  created_at timestamptz NOT NULL,
+  updated_at timestamptz NOT NULL,
+  PRIMARY KEY (company_id, chain_id),
+  FOREIGN KEY (company_id, room_id) REFERENCES conversations(company_id, conversation_id) ON DELETE CASCADE,
+  FOREIGN KEY (company_id, source_message_id) REFERENCES conversation_messages(company_id, message_id) ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_topic_chains_one_active_room
+ON chat_topic_chains(company_id, room_id)
+WHERE status IN ('active', 'cancel_requested');
+
+CREATE TABLE IF NOT EXISTS chat_topic_chain_runs (
+  company_id text NOT NULL,
+  chain_id text NOT NULL,
+  run_id text NOT NULL,
+  holder_member_id text NOT NULL,
+  created_at timestamptz NOT NULL,
+  PRIMARY KEY (company_id, run_id),
+  FOREIGN KEY (company_id, chain_id) REFERENCES chat_topic_chains(company_id, chain_id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_chat_topic_chain_runs_chain
+ON chat_topic_chain_runs(company_id, chain_id, created_at);
+`,
+  },
 ];

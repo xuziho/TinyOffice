@@ -53,10 +53,10 @@ export function resolveChatTurnStateAction(input: {
   }
   const handoffCalls = successfulToolArgumentCalls(input.events, "handoff_topic_turn");
   if (handoffCalls.length === 0) {
-    return { ok: false, error: "handoff_topic_turn was not called." };
+    return { ok: false, error: "handoff_topic_turn must be called exactly once in every Channel Topic turn." };
   }
   if (handoffCalls.length > 1) {
-    return { ok: false, error: "handoff_topic_turn must be called exactly once." };
+    return { ok: false, error: "handoff_topic_turn must be called exactly once in every Channel Topic turn." };
   }
   const args = handoffCalls[0] as Record<string, unknown>;
   const toId = stringFrom(args.toId);

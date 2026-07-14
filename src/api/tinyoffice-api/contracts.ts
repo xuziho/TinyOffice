@@ -206,7 +206,21 @@ export type ChatRunCancelResult = {
   canceledCount: number;
 };
 
+export type ActiveChatRunResult = {
+  companyId: string;
+  roomId: string;
+  chainId: string;
+  runId: string;
+  sourceMessageId: string;
+  targetMemberId: string;
+  status: "active" | "cancel_requested";
+} | null;
+
 export interface ChatRunControlApiService {
+  getActiveChatRun?(companyId: string, input: {
+    roomId: string;
+    actor: ChatParticipantIdentitySelector;
+  }): Promise<ActiveChatRunResult>;
   cancelChatRun(companyId: string, input: {
     runId: string;
     actor: ChatParticipantIdentitySelector;

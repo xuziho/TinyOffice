@@ -1,11 +1,13 @@
 import type { ChatRuntimeStatus, TinyOfficeRealtimeEvent } from "tinyoffice/realtime-contracts";
 import { chatUserFacingErrorMessage } from "./chatErrorMessages";
+import type { ActiveChatRunResponse } from "@/api/chatClient";
 
 export type ChatRunRecord = {
   companyId: string;
   conversationId: string;
   roomId: string;
   runId: string;
+  chainId: string;
   sourceMessageId: string;
   replyMessageId?: string;
   targetMemberId: string;
@@ -43,6 +45,31 @@ export function emptyChatRunState(): ChatRunState {
   return { runs: {} };
 }
 
+export function reconcileActiveChatRun(
+  state: ChatRunState,
+  roomId: string,
+  activeRun: ActiveChatRunResponse,
+): ChatRunState {
+  const runs = Object.fromEntries(Object.entries(state.runs).filter(([, run]) =>
+    run.roomId !== roomId || terminalStatuses.has(run.status) || run.runId === activeRun?.runId
+  ));
+  const reconciled = { runs };
+  if (!activeRun) {
+    return reconciled;
+  }
+  return upsertRun(reconciled, activeRun.runId, {
+    companyId: activeRun.companyId,
+    conversationId: activeRun.roomId,
+    roomId: activeRun.roomId,
+    runId: activeRun.runId,
+    chainId: activeRun.chainId,
+    sourceMessageId: activeRun.sourceMessageId,
+    targetMemberId: activeRun.targetMemberId,
+    status: activeRun.status === "cancel_requested" ? "cancel_requested" : "thinking",
+    sequence: 0,
+  });
+}
+
 export function applyChatRunRealtimeEvent(state: ChatRunState, event: TinyOfficeRealtimeEvent): ChatRunState {
   if (event.type === "chat.runtime_status.changed") {
     return upsertRun(state, event.runId, {
@@ -50,6 +77,7 @@ export function applyChatRunRealtimeEvent(state: ChatRunState, event: TinyOffice
       conversationId: event.conversationId,
       roomId: event.roomId,
       runId: event.runId,
+      chainId: event.chainId ?? event.runId,
       sourceMessageId: event.sourceMessageId,
       replyMessageId: event.replyMessageId,
       targetMemberId: event.targetMemberId,
@@ -66,6 +94,7 @@ export function applyChatRunRealtimeEvent(state: ChatRunState, event: TinyOffice
       conversationId: event.conversationId,
       roomId: event.roomId,
       runId: event.runId,
+      chainId: event.chainId ?? existing?.chainId ?? event.runId,
       sourceMessageId: event.sourceMessageId,
       targetMemberId: event.targetMemberId,
       status: "streaming",
@@ -80,6 +109,7 @@ export function applyChatRunRealtimeEvent(state: ChatRunState, event: TinyOffice
       conversationId: event.conversationId,
       roomId: event.roomId,
       runId: event.runId,
+      chainId: event.chainId ?? event.runId,
       sourceMessageId: event.sourceMessageId,
       targetMemberId: event.targetMemberId,
       status: "streaming",
@@ -95,6 +125,7 @@ export function applyChatRunRealtimeEvent(state: ChatRunState, event: TinyOffice
       conversationId: event.conversationId,
       roomId: event.roomId,
       runId: event.runId,
+      chainId: event.chainId ?? existing?.chainId ?? event.runId,
       sourceMessageId: event.sourceMessageId,
       replyMessageId: event.replyMessageId,
       targetMemberId: event.targetMemberId,
@@ -177,6 +208,7 @@ function upsertRun(
         conversationId: requiredRunValue(patch.conversationId ?? existing?.conversationId, "conversationId"),
         roomId: requiredRunValue(patch.roomId ?? existing?.roomId, "roomId"),
         runId,
+        chainId: patch.chainId ?? existing?.chainId ?? runId,
         sourceMessageId: requiredRunValue(patch.sourceMessageId ?? existing?.sourceMessageId, "sourceMessageId"),
         ...(patch.replyMessageId ?? existing?.replyMessageId
           ? { replyMessageId: patch.replyMessageId ?? existing?.replyMessageId }

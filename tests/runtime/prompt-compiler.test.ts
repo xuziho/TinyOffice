@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { compileRuntimePrompt } from "../../src/runtime/prompting/prompt-compiler.js";
 
-test("compileRuntimePrompt separates the user message from channel thread context", () => {
+test("compileRuntimePrompt uses the channel context as the complete turn input", () => {
   const prompt = compileRuntimePrompt({
     sceneType: "channel_thread",
     sessionKey: "mira-hr|channel_thread|post-42",
@@ -13,17 +13,17 @@ test("compileRuntimePrompt separates the user message from channel thread contex
         role: "channel_thread_context",
         source: "tinyoffice.channel_topic_context",
         label: "TinyOffice Channel/Topic context",
-        text: "Channel: hiring-room\nTopic: post-42\nParticipants: Mira, Alex",
+        text: "Channel: hiring-room\nTopic: post-42\nParticipants: Mira, Alex\n- [trigger] Xu: Can you summarize the hiring thread?",
       },
     ],
   });
 
   assert.equal(prompt.userVisibleMessage, "Can you summarize the hiring thread?");
-  assert.equal(prompt.sections.find((section) => section.semanticRole === "user_visible_message")?.text, "Can you summarize the hiring thread?");
-  assert.equal(prompt.sections.find((section) => section.semanticRole === "channel_thread_context")?.text, "Channel: hiring-room\nTopic: post-42\nParticipants: Mira, Alex");
+  assert.equal(prompt.sections.find((section) => section.semanticRole === "user_visible_message"), undefined);
+  assert.match(prompt.sections.find((section) => section.semanticRole === "channel_thread_context")?.text || "", /\[trigger\].*Can you summarize/);
   assert.match(prompt.userPrompt, /Runtime Context:/);
-  assert.match(prompt.userPrompt, /User Message:/);
-  assert.ok(prompt.userPrompt.indexOf("Runtime Context:") < prompt.userPrompt.indexOf("User Message:"));
+  assert.doesNotMatch(prompt.userPrompt, /User Message:/);
+  assert.equal(prompt.userPrompt.match(/Can you summarize the hiring thread\?/g)?.length, 1);
 });
 
 test("compileRuntimePrompt records prompt package and tool policy as auditable sections", () => {
@@ -49,8 +49,8 @@ test("compileRuntimePrompt records prompt package and tool policy as auditable s
   assert.equal(prompt.sections.find((section) => section.semanticRole === "system_prompt")?.text, "You are employee mira-hr.");
   assert.equal(prompt.sections.find((section) => section.semanticRole === "runtime_prompt_package")?.data?.promptBlockPaths?.[0], "intake-event");
   assert.equal(prompt.sections.find((section) => section.semanticRole === "tool_policy")?.data?.activeToolNames?.[0], "handoff");
-  assert.match(prompt.userPrompt, /Prompt Policy: intake-event:/);
-  assert.match(prompt.userPrompt, /Treat intake events as structured external requests\./);
+  assert.doesNotMatch(prompt.userPrompt, /Prompt Policy: intake-event:/);
+  assert.doesNotMatch(prompt.userPrompt, /Treat intake events as structured external requests\./);
   assert.deepEqual(prompt.audit.sectionRoles, [
     "system_prompt",
     "runtime_prompt_package",
@@ -125,7 +125,7 @@ test("compileRuntimePrompt does not render a separate completion policy prompt b
   assert.equal("completionPolicyKind" in prompt.audit, false);
 });
 
-test("compileRuntimePrompt renders prompt blocks even when a custom runtime template omits the slot", () => {
+test("compileRuntimePrompt keeps prompt blocks out of the runtime user prompt", () => {
   const prompt = compileRuntimePrompt({
     sceneType: "channel_thread",
     sessionKey: "mira-hr|channel_thread|post-42",
@@ -143,9 +143,10 @@ test("compileRuntimePrompt renders prompt blocks even when a custom runtime temp
     }],
   });
 
-  assert.ok(prompt.userPrompt.indexOf("Prompt Policy: channel-scene:") === 0);
-  assert.match(prompt.userPrompt, /call `handoff_topic_turn` exactly once/);
-  assert.ok(prompt.userPrompt.indexOf("Prompt Policy: channel-scene:") < prompt.userPrompt.indexOf("Message slot:"));
+  assert.doesNotMatch(prompt.userPrompt, /Prompt Policy: channel-scene:/);
+  assert.doesNotMatch(prompt.userPrompt, /call `handoff_topic_turn` exactly once/);
+  assert.doesNotMatch(prompt.userPrompt, /Message slot:/);
+  assert.deepEqual(prompt.promptBlocks.map((block) => block.path), ["channel-scene"]);
 });
 
 test("compileRuntimePrompt renders configurable runtime prompt templates without completion policy slots", () => {
@@ -175,8 +176,35 @@ test("compileRuntimePrompt renders configurable runtime prompt templates without
       "Context slot:",
       "TinyOffice Channel/Topic context:",
       "Thread summary: hiring discussion",
-      "Message slot:",
-      "Please summarize this.",
     ].join("\n"),
   );
+});
+
+test("compileRuntimePrompt removes retired prompt-block and channel-message labels from saved templates", () => {
+  const prompt = compileRuntimePrompt({
+    sceneType: "chat_topic_room",
+    sessionKey: "mira-hr|chat_topic_room|topic-42",
+    userVisibleMessage: "Please continue this topic.",
+    runtimePromptTemplate: [
+      "Runtime Context:",
+      "Scene: {sceneType}",
+      "Prompt Blocks:",
+      "{promptBlocks}",
+      "",
+      "{contextBlocks}",
+      "",
+      "User Message:",
+      "{userMessage}",
+    ].join("\n"),
+    contextBlocks: [{
+      role: "channel_thread_context",
+      source: "tinyoffice.channel_topic_context",
+      label: "Topic context",
+      text: "Latest raw messages:\n- [trigger] Xu: Please continue this topic.",
+    }],
+  });
+
+  assert.doesNotMatch(prompt.userPrompt, /Prompt Blocks:|User Message:/);
+  assert.doesNotMatch(prompt.userPrompt, /\n{3,}/);
+  assert.equal(prompt.userPrompt.match(/Please continue this topic\./g)?.length, 1);
 });

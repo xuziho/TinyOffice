@@ -1507,6 +1507,18 @@ async function withServer(
       },
     }),
     chatRunControlService: {
+      async getActiveChatRun(companyId, input) {
+        calls.push(`chat-active:${companyId}:${input.roomId}:${input.actor.memberId || input.actor.employeeId}`);
+        return {
+          companyId,
+          roomId: input.roomId,
+          chainId: "chain-1",
+          runId: "run-1",
+          sourceMessageId: "message-1",
+          targetMemberId: "nora-automation",
+          status: "active" as const,
+        };
+      },
       async cancelChatRun(companyId, input) {
         calls.push(`chat-cancel:${companyId}:${input.runId}:${input.actor.memberId || input.actor.employeeId}`);
         return {
@@ -2153,6 +2165,7 @@ test("Hono TinyOffice API covers shadcn frontend client routes", async () => {
         headers: jsonHeaders,
         body: JSON.stringify({ companyId: "acme", actorMemberId: "xuziho", reason: "Route parity check." }),
       }],
+      ["/api/companies/acme/chat/rooms/conversation-1/active-run", undefined],
     ];
 
     for (const [path, init] of requests) {
@@ -3307,6 +3320,24 @@ test("Hono TinyOffice Chat run route cancels an active run through the run-contr
   });
 });
 
+test("Hono TinyOffice Chat room route restores the durable active Topic run", async () => {
+  await withServer(async (baseUrl, calls) => {
+    const response = await fetch(`${baseUrl}/api/companies/acme/chat/rooms/conversation-1/active-run`);
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(await json(response), {
+      companyId: "acme",
+      roomId: "conversation-1",
+      chainId: "chain-1",
+      runId: "run-1",
+      sourceMessageId: "message-1",
+      targetMemberId: "nora-automation",
+      status: "active",
+    });
+    assert.deepEqual(calls, ["chat-active:acme:conversation-1:xuziho"]);
+  });
+});
+
 test("TinyOffice API resolves the Owner from its authenticated session", async () => {
   await withServer(async (baseUrl) => {
     const session = await fetch(`${baseUrl}/api/tinyoffice/session/current`);
@@ -3328,6 +3359,20 @@ test("TinyOffice API resolves the Owner from its authenticated session", async (
       needsInitialization: false,
     });
   });
+});
+
+test("TinyOffice API binds the resolved current member session for every authenticated route", async () => {
+  const unresolvedOwner = createTestAuthProvider({
+    userId: "xuziho",
+    displayName: "Xu Ziho",
+    source: "test-session",
+  });
+  await withServer(async (baseUrl) => {
+    const chat = await fetch(`${baseUrl}/api/companies/acme/chat`);
+    assert.equal(chat.status, 200);
+    const page = await json(chat);
+    assert.ok(Array.isArray(page.entries));
+  }, unresolvedOwner);
 });
 
 test("TinyOffice API switches the current Company through Owner session truth", async () => {

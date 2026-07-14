@@ -15,6 +15,7 @@ import {
   openConfiguredPostgresConnection,
 } from "../../src/runtime/company-config/postgres-runtime-connection.js";
 import { DEFAULT_COMPANY_ID } from "../../src/runtime/company-config/postgres-schema.js";
+import { registerTinyOfficeRealtimePublisher } from "../../src/collaboration/contracts/tinyoffice-realtime-publisher-registry.js";
 import { RuntimeSessionRepository } from "../../src/runtime/storage/runtime-session-repository.js";
 import { loadTasksViewModel } from "../../src/work/tasks-loader.js";
 import { WorkRepository } from "../../src/work/work-repository.js";
@@ -477,35 +478,54 @@ test("tinyoffice_capability_call reads registered capabilities through runtime s
   assert.match(runtimeResult.content[0]?.text ?? "", /"availableModels"/);
   assert.match(runtimeResult.content[0]?.text ?? "", /"thinkingLevels"/);
 
-  const recruitResult = await withEnv(
-    {
-      PI_EMPLOYEE_ID: "nora-automation",
-      TINYOFFICE_COMPANY_ID: DEFAULT_COMPANY_ID,
-      TASK_REPO_ROOT: sandboxRoot,
-      PI_CONVERSATION_CONTEXT_JSON: JSON.stringify({
-        conversationId: "conversation-api-check",
-        reachableMemberIds: ["nora-automation"],
-      }),
+  const realtimeEvents: Array<{ type: string; companyId: string }> = [];
+  const unregisterRealtimePublisher = registerTinyOfficeRealtimePublisher({
+    publish(event) {
+      realtimeEvents.push(event);
+      return {
+        schema: "tinyoffice-realtime-event",
+        version: 1,
+        eventId: `event-${realtimeEvents.length}`,
+        occurredAt: new Date().toISOString(),
+        sequence: realtimeEvents.length,
+        ...event,
+      };
     },
-    async () =>
-      apiRequestTool.execute("tool-api-3", {
-        capabilityId: "employee.recruit",
-        confirmation: { accepted: true },
-        input: {
-          companyId: DEFAULT_COMPANY_ID,
-          employeeId: "mina-content-test",
-          displayName: "Mina Content",
-          role: "content-ops",
-          summary: "Runs website content generation, publishing prep, and monitoring.",
-          runtime: {
-            version: 1,
-            modelProvider: "openai",
-            modelId: "gpt-5-codex",
-            thinkingLevel: "medium",
+  });
+  let recruitResult: Awaited<ReturnType<RegisteredTool["execute"]>>;
+  try {
+    recruitResult = await withEnv(
+      {
+        PI_EMPLOYEE_ID: "nora-automation",
+        TINYOFFICE_COMPANY_ID: DEFAULT_COMPANY_ID,
+        TASK_REPO_ROOT: sandboxRoot,
+        PI_CONVERSATION_CONTEXT_JSON: JSON.stringify({
+          conversationId: "conversation-api-check",
+          reachableMemberIds: ["nora-automation"],
+        }),
+      },
+      async () =>
+        apiRequestTool.execute("tool-api-3", {
+          capabilityId: "employee.recruit",
+          confirmation: { accepted: true },
+          input: {
+            companyId: DEFAULT_COMPANY_ID,
+            employeeId: "mina-content-test",
+            displayName: "Mina Content",
+            role: "Content Ops",
+            summary: "Runs website content generation, publishing prep, and monitoring.",
+            runtime: {
+              version: 1,
+              modelProvider: "openai",
+              modelId: "gpt-5-codex",
+              thinkingLevel: "medium",
+            },
           },
-        },
-      }),
-  );
+        }),
+    );
+  } finally {
+    unregisterRealtimePublisher();
+  }
   const recruitBody = recruitResult.details.result as {
     employee?: { employeeId?: string };
     localAssets?: { workspacePath?: string };
@@ -513,6 +533,7 @@ test("tinyoffice_capability_call reads registered capabilities through runtime s
   assert.equal(recruitBody.employee?.employeeId, "mina-content-test");
   assert.ok(recruitBody.localAssets?.workspacePath);
   assert.match(recruitResult.content[0]?.text ?? "", /"employeeId": "mina-content-test"/);
+  assert.deepEqual(realtimeEvents, [{ type: "company.directory.changed", companyId: DEFAULT_COMPANY_ID }]);
 });
 
 test("tinyoffice_capability_call describes member profiles without exposing employee config internals", async () => {

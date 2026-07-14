@@ -14,6 +14,8 @@ Member is the product-facing company subject in TinyOffice. Bosses, operators, r
 
 A company member identity and its runtime capability have separate lifecycles. A runtime-capable member can be `active` or `inactive`; deactivation preserves the member identity, runtime configuration, Chat history, Task ownership, Sessions, and audit evidence, while preventing new AI execution. Reactivation restores execution without rebuilding that history. Permanent member deletion is not part of the normal Employee lifecycle.
 
+Company roles are governance-owned but user-facing titles. Newly recruited employees should receive a concise, natural role of one to three words, such as `Content Ops` or `SEO Specialist`; ids, kebab-case labels, and responsibility sentences belong in other fields. Detailed responsibilities remain in the member summary and employee guidance. Existing stored roles are not rewritten automatically.
+
 A member becomes runtime-capable only by having a complete `member_runtime_profiles` row. That profile has an explicit `active` or `inactive` lifecycle status. Missing runtime profile, missing model configuration, and an inactive profile are distinct conditions and must fail explicitly; none may silently fall back to another employee or runtime.
 
 Mattermost Team/User/profile bindings, `mattermost_login_id`, `mattermostAccount`, and Mattermost account mapping tables are retired from current identity storage and product contracts.

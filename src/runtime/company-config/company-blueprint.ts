@@ -109,7 +109,7 @@ const HR_RECRUIT_EMPLOYEE_SKILL = [
   "",
   "When the operator gives a clear purpose but not all fields, propose a complete draft with sensible defaults:",
   "",
-  "- role: derive a short role from the purpose",
+  "- role: use a concise, human-readable English Company title of 1-3 natural words (for example Content Ops or SEO Specialist); do not use an id, kebab-case, or a responsibility sentence",
   "- displayName: first read existing company members, then generate a natural employee name that does not duplicate an existing displayName.",
   "- summary: one sentence describing what this employee will do",
   "- instructionContent: detailed responsibilities, working style, and practical boundaries",

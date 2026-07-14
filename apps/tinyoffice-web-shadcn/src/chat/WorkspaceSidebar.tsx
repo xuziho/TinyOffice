@@ -20,7 +20,12 @@ import { EmployeeAvatar } from "@/components/product/EmployeeAvatar";
 import { HashIcon, PlusIcon } from "lucide-react";
 import { useEffect, useMemo, useState, type CSSProperties, type ReactElement } from "react";
 import type { CompanyDirectoryMemberEntryDto } from "tinyoffice/frontend-api-contracts";
-import type { ChatShellModel, ChatShellNavigationItem, ChatShellSurface } from "./chatShellModel";
+import {
+  isDirectMessageNavigationItemSelected,
+  type ChatShellModel,
+  type ChatShellNavigationItem,
+  type ChatShellSurface,
+} from "./chatShellModel";
 
 export function WorkspaceSidebar({
   model,
@@ -61,7 +66,11 @@ export function WorkspaceSidebar({
             items={model.directMessages}
             emptyText="No AI employee DMs"
             icon="dm"
-            isSelected={(item) => model.selectedContainer?.containerId === item.containerId}
+            isSelected={(item) => isDirectMessageNavigationItemSelected({
+              surface: model.surface,
+              selectedContainerId: model.selectedContainer?.containerId,
+              item,
+            })}
             onSelect={(item) => onSelectSurface({ kind: "dm-directory", memberId: item.id, containerId: item.containerId })}
           />
         </SidebarContent>

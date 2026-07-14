@@ -9,6 +9,7 @@ import {
   type TinyOfficeRealtimeEventPayload,
   type TinyOfficeRealtimePublisher,
 } from "../../collaboration/contracts/tinyoffice-realtime-contract.js";
+import { registerTinyOfficeRealtimePublisher } from "../../collaboration/contracts/tinyoffice-realtime-publisher-registry.js";
 
 export const TINYOFFICE_REALTIME_SOCKET_IO_PATH = "/api/realtime/socket.io";
 export const TINYOFFICE_REALTIME_SOCKET_EVENT = "tinyoffice.realtime";
@@ -41,7 +42,7 @@ export function attachTinyOfficeRealtimeGateway(
     socket.data.tinyofficeRealtime = identityFromSocket(socket);
   });
 
-  return {
+  const gateway: TinyOfficeRealtimeGateway = {
     publish(payload) {
       sequence += 1;
       const event = createTinyOfficeRealtimeEvent(payload, { sequence });
@@ -49,6 +50,9 @@ export function attachTinyOfficeRealtimeGateway(
       return event;
     },
   };
+  const unregister = registerTinyOfficeRealtimePublisher(gateway);
+  server.once("close", unregister);
+  return gateway;
 }
 
 function broadcast(io: SocketIoServer, event: TinyOfficeRealtimeEvent): void {

@@ -215,6 +215,8 @@ test("HR recruitment skill uses capability ids without host environment details"
   assert.match(hrRecruitSkill, /"capabilityId": "company\.member\.directory\.list"/);
   assert.match(hrRecruitSkill, /"capabilityId": "runtime\.models\.list"/);
   assert.match(hrRecruitSkill, /"capabilityId": "employee\.recruit"/);
+  assert.match(hrRecruitSkill, /human-readable English Company title of 1-3 natural words/);
+  assert.match(hrRecruitSkill, /do not use an id, kebab-case, or a responsibility sentence/);
   assert.doesNotMatch(hrRecruitSkill, /tinyoffice_api_request/);
   assert.doesNotMatch(hrRecruitSkill, /"path": "\/api\//);
 });

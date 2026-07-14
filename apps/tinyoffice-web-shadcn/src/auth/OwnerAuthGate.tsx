@@ -1,23 +1,26 @@
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { KeyRound, LoaderCircle, ShieldCheck } from "lucide-react";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { authClient } from "./authClient";
 
 type AuthStatus = {
   schema: "tinyoffice-auth-status";
-  version: 1;
+  version: 2;
+  accessMode: "local" | "remote";
   authenticated: boolean;
   bootstrapRequired: boolean;
   ownerConfigured: boolean;
+  passkeyConfigured: boolean;
 };
 
 export function OwnerAuthGate({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>();
-  const [bootstrapToken, setBootstrapToken] = useState(() => new URLSearchParams(window.location.search).get("bootstrap") ?? "");
+  const [bootstrapToken] = useState(() => new URLSearchParams(window.location.search).get("bootstrap") ?? "");
+  const [localAccessTicket] = useState(() => new URLSearchParams(window.location.search).get("localAccess") ?? "");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const localExchangeStarted = useRef(false);
 
   const refresh = useCallback(async () => {
     const response = await fetch("/api/tinyoffice/auth/status", { credentials: "include" });
@@ -28,6 +31,28 @@ export function OwnerAuthGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     void refresh().catch((cause) => setError(cause instanceof Error ? cause.message : String(cause)));
   }, [refresh]);
+
+  useEffect(() => {
+    if (status?.accessMode !== "local" || status.authenticated || !localAccessTicket || localExchangeStarted.current) return;
+    localExchangeStarted.current = true;
+    setPending(true);
+    setError("");
+    void fetch("/api/auth/tinyoffice/local-owner-access", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticket: localAccessTicket }),
+    }).then(async (response) => {
+      if (!response.ok) {
+        const payload = await response.json().catch(() => undefined) as { message?: string } | undefined;
+        throw new Error(payload?.message || "Local Owner access could not be established.");
+      }
+      clearAccessQuery();
+      await refresh();
+    }).catch((cause) => {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    }).finally(() => setPending(false));
+  }, [localAccessTicket, refresh, status]);
 
   async function signIn(): Promise<void> {
     setPending(true);
@@ -44,8 +69,8 @@ export function OwnerAuthGate({ children }: { children: ReactNode }) {
   }
 
   async function createOwner(): Promise<void> {
-    if (!bootstrapToken.trim()) {
-      setError("Paste the one-time Owner setup token printed by TinyOffice.");
+    if (!bootstrapToken) {
+      setError("Open the private one-time Owner setup link printed by TinyOffice.");
       return;
     }
     setPending(true);
@@ -53,10 +78,10 @@ export function OwnerAuthGate({ children }: { children: ReactNode }) {
     try {
       const registration = await authClient.passkey.addPasskey({
         name: "Primary Owner passkey",
-        context: bootstrapToken.trim(),
+        context: bootstrapToken,
       });
       if (registration?.error) throw new Error(registration.error.message || "Passkey registration failed.");
-      window.history.replaceState({}, "", `${window.location.pathname}${window.location.hash}`);
+      clearAccessQuery();
       await signIn();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -72,13 +97,18 @@ export function OwnerAuthGate({ children }: { children: ReactNode }) {
         <img src="/brand/tinyoffice-mark.svg" alt="TinyOffice" className="mb-5 size-14" />
         <div className="mb-5 flex items-start gap-3">
           <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--tiny-cyan)]"><ShieldCheck className="size-5" /></span>
-          <div><h1 className="text-xl font-semibold">Owner access</h1><p className="mt-1 text-sm text-muted-foreground">This office has one human Owner. Your device passkey unlocks it.</p></div>
+          <div><h1 className="text-xl font-semibold">Owner access</h1><p className="mt-1 text-sm text-muted-foreground">This office has one human Owner. TinyOffice keeps one secure Owner session.</p></div>
         </div>
         {!status && !error ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><LoaderCircle className="size-4 animate-spin" />Checking your office…</div> : null}
-        {status?.bootstrapRequired ? (
+        {status?.accessMode === "local" ? (
           <div className="grid gap-3">
-            <label className="grid gap-1.5 text-sm font-medium">One-time setup token<Input value={bootstrapToken} onChange={(event) => setBootstrapToken(event.target.value)} autoComplete="off" /></label>
-            <Button onClick={() => void createOwner()} disabled={pending}><KeyRound />{pending ? "Creating Owner…" : "Create Owner passkey"}</Button>
+            {pending ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><LoaderCircle className="size-4 animate-spin" />Opening your local office…</div> : null}
+            {!pending && !localAccessTicket ? <p className="text-sm text-muted-foreground">Open the private local access link printed in the TinyOffice terminal. If that link was already used, restart TinyOffice to generate a new one.</p> : null}
+          </div>
+        ) : status?.bootstrapRequired ? (
+          <div className="grid gap-3">
+            <p className="text-sm text-muted-foreground">{bootstrapToken ? "Create the first Owner passkey on this device." : "Open the private one-time setup link printed by TinyOffice. The setup token is not entered manually."}</p>
+            {bootstrapToken ? <Button onClick={() => void createOwner()} disabled={pending}><KeyRound />{pending ? "Creating Owner…" : "Create Owner passkey"}</Button> : null}
           </div>
         ) : status?.ownerConfigured ? (
           <Button className="w-full" onClick={() => void signIn()} disabled={pending}><KeyRound />{pending ? "Unlocking…" : "Unlock with passkey"}</Button>
@@ -87,4 +117,8 @@ export function OwnerAuthGate({ children }: { children: ReactNode }) {
       </section>
     </main>
   );
+}
+
+function clearAccessQuery(): void {
+  window.history.replaceState({}, "", `${window.location.pathname}${window.location.hash}`);
 }

@@ -46,6 +46,9 @@ console.log(`Company worker scope: ${runtime.companyId ?? "selected by Owner ses
 if (runtime.bootstrapToken) {
   console.log("\nTinyOffice needs its first Owner passkey.");
   console.log(`Open once: ${publicOrigin}/?bootstrap=${encodeURIComponent(runtime.bootstrapToken)}\n`);
+} else if (runtime.localAccessTicket) {
+  console.log("\nTinyOffice local Owner access is ready.");
+  console.log(`Open once: ${publicOrigin}/?localAccess=${encodeURIComponent(runtime.localAccessTicket)}\n`);
 } else {
   console.log(`Open: ${publicOrigin}/`);
 }

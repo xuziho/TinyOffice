@@ -128,6 +128,7 @@ export interface TinyOfficeServerHandle {
   server: http.Server;
   companyId?: string;
   bootstrapToken?: string;
+  localAccessTicket?: string;
 }
 
 type RuntimeMessageService = MessageService & { close?(): void };
@@ -1510,5 +1511,6 @@ export async function createTinyOfficeServer(
     server,
     ...(companyId ? { companyId } : {}),
     ...(ownerAuth.bootstrapToken ? { bootstrapToken: ownerAuth.bootstrapToken } : {}),
+    ...(ownerAuth.localAccessTicket ? { localAccessTicket: ownerAuth.localAccessTicket } : {}),
   };
 }

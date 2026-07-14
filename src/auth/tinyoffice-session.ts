@@ -37,10 +37,12 @@ export interface TinyOfficeSessionResponse {
 
 export interface TinyOfficeAuthStatus {
   schema: "tinyoffice-auth-status";
-  version: 1;
+  version: 2;
+  accessMode: "local" | "remote";
   authenticated: boolean;
   bootstrapRequired: boolean;
   ownerConfigured: boolean;
+  passkeyConfigured: boolean;
 }
 
 export interface TinyOfficeAuthProvider {
@@ -121,10 +123,12 @@ export function createTestAuthProvider(session: TinyOfficeCurrentUserSession): T
     async status() {
       return {
         schema: "tinyoffice-auth-status",
-        version: 1,
+        version: 2,
+        accessMode: "local",
         authenticated: true,
         bootstrapRequired: false,
         ownerConfigured: true,
+        passkeyConfigured: false,
       };
     },
   };

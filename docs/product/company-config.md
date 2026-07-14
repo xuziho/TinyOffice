@@ -51,7 +51,7 @@ Local development may create a Company named `tinyoffice`, but it is ordinary ru
 
 The formal product identity boundary is [Member Identity Model](member-identity-model.md). In short: `employeeId` remains a current runtime selector and storage field for runtime-capable members, while `memberId` / Member is the product-facing subject.
 
-TinyOffice authenticates exactly one human Owner through a passkey and a PostgreSQL-backed server session. The session may resolve the Owner without a Company during first use, or the Owner plus the active Company member after Company creation. Request headers, URL parameters, and request bodies are not authentication inputs and cannot impersonate another member. Company-scoped routes derive the actor from the verified Owner session, then enforce Company membership and role rules. The full decision and deployment boundary are recorded in [Owner Authentication](owner-authentication.md).
+TinyOffice authenticates exactly one human Owner through a PostgreSQL-backed server session. Localhost exchanges a private one-time launcher ticket for that session; remote deployments require a Passkey. The session may resolve the Owner without a Company during first use, or the Owner plus the active Company member after Company creation. Request headers, arbitrary URL parameters, and request bodies are not authentication inputs and cannot impersonate another member. Company-scoped routes derive the actor from the verified Owner session, then enforce Company membership and role rules. The full decision and deployment boundary are recorded in [Owner Authentication](owner-authentication.md).
 
 ## Access
 

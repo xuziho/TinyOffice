@@ -12,7 +12,7 @@ TinyOffice 是一个早期阶段、支持自托管的公司运营基础系统，
 
 <!-- 为项目作者保留的创作者说明；在正式公开发布说明前由作者本人填写。 -->
 
-> TinyOffice 是面向单一 Owner 的早期公开 Alpha 版本。产品已内置通行密钥认证；面向互联网部署时，仍需自行配置 HTTPS、备份、主机更新和网络加固。
+> TinyOffice 是面向单一 Owner 的早期公开 Alpha 版本。本机使用一次性私有启动链接，远程访问使用通行密钥认证；面向互联网部署时，仍需自行配置 HTTPS、备份、主机更新和网络加固。
 
 ## 仓库内容
 
@@ -43,7 +43,7 @@ npm start
 
 `setup` 会同时安装根目录运行时依赖和独立 shadcn 前端依赖。执行前请确认 `node --version` 为 Node.js 22.19 或更高版本。
 
-TinyOffice Web 位于 `http://localhost:5175`，运行时 API 位于 `http://127.0.0.1:8095`。全新数据库首次启动时，终端会打印一个一次性的 Owner 设置链接；完成 Windows 通行密钥确认后，浏览器会继续进入 Company 创建流程。仓库不会附带隐藏用户或默认 Company。详细边界参阅 [Owner 认证](docs/product/owner-authentication.md)和[首次用户引导验收手册](docs/developer/runbooks/first-user-onboarding.md)。
+TinyOffice Web 位于 `http://localhost:5175`，运行时 API 位于 `http://127.0.0.1:8095`。本机启动时，终端会打印一个私有的一次性访问链接；打开后会直接建立标准的数据库 Owner 会话，不需要输入密码，也不会弹出 Windows Hello。将 `TINYOFFICE_PUBLIC_ORIGIN` 配置为 HTTPS 域名后，远程访问则必须完成通行密钥初始化和登录。浏览器随后会继续进入 Company 创建流程；仓库不会附带隐藏用户或默认 Company。详细边界参阅 [Owner 认证](docs/product/owner-authentication.md)和[首次用户引导验收手册](docs/developer/runbooks/first-user-onboarding.md)。
 
 常用检查：
 

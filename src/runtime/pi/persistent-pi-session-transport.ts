@@ -152,8 +152,8 @@ export class DefaultPiSessionTransport implements PiSessionTransport {
       additionalSkillPaths: skillPaths,
       systemPromptOverride: () => input.systemPromptAppend,
       appendSystemPromptOverride: () => [
-        ...formatCompanyPromptBlocks(promptBlocks),
         ...formatEmployeeInstructionAppend(employeeInstructionFiles),
+        ...formatCompanyPromptBlocks(promptBlocks),
       ],
     });
     await loader.reload();

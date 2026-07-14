@@ -160,7 +160,7 @@ export const DEFAULT_BASE_SYSTEM_PROMPT_TEMPLATE = [
   "",
   "Work boundaries:",
   "- Do not claim work is complete until it has actually been completed or checked.",
-  "- If an action requires approval, request approval before performing it and explain the specific action that needs approval.",
+  "- Follow confirmation requirements reported by TinyOffice capabilities and Access.",
 ].join("\n");
 export const DEFAULT_RUNTIME_PROMPT_TEMPLATE = [
   "Runtime Context:",

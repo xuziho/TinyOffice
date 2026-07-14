@@ -245,18 +245,34 @@ test("tinyoffice_capability_list exposes product categories for capability disco
   const list = tools.get("tinyoffice_capability_list");
   assert.ok(list);
 
-  const result = await list.execute("tool-capability-list", {});
+  const result = await withEnv(
+    {
+      PI_EMPLOYEE_ID: "nora-automation",
+      TINYOFFICE_COMPANY_ID: DEFAULT_COMPANY_ID,
+      PI_CONVERSATION_CONTEXT_JSON: JSON.stringify({
+        sessionKey: "nora-automation|work_run_execution|work-run-capability-list",
+        workRunId: "work-run-capability-list",
+        actorMemberId: "nora-automation",
+        reachableMemberIds: ["nora-automation"],
+      }),
+    },
+    async () => list.execute("tool-capability-list", {}),
+  );
   const capabilities = result.details.capabilities as Array<{
     id?: string;
     category?: string;
+    allowedScenes?: string[];
   }>;
 
+  assert.equal(result.details.scene, "work_run");
+  assert.equal(capabilities.every((entry) => entry.allowedScenes?.includes("work_run")), true);
   assert.equal(capabilities.some((entry) =>
     entry.id === "company.member.directory.list" &&
     entry.category === "member"
   ), true);
+  assert.equal(capabilities.some((entry) => entry.id === "skill.list"), false);
   assert.equal(capabilities.some((entry) =>
-    entry.id === "work.create" &&
+    entry.id === "work.list" &&
     entry.category === "work"
   ), true);
 });
@@ -305,10 +321,54 @@ test("finish_work_turn describes each WorkRun final status and required evidence
   assert.match(properties?.status?.description || "", /failed.*not canceled/i);
   assert.match(properties?.status?.description || "", /canceled.*not.*self-cancel/i);
   assert.match(properties?.evidence?.description || "", /required when status is complete/i);
-  assert.match(properties?.blockerMessage?.description || "", /required when status is blocked/i);
+  assert.match(properties?.blockerMessage?.description || "", /required only when status is blocked/i);
+  assert.equal(finishWorkTurn.parameters?.required?.includes("evidence"), false);
+  assert.equal(finishWorkTurn.parameters?.required?.includes("blockerMessage"), false);
   assert.equal(properties?.handoffToMemberId, undefined);
   assert.equal(properties?.handoffReason, undefined);
   assert.doesNotMatch(JSON.stringify(finishWorkTurn.parameters), /handoff/);
+});
+
+test("finish_intake_turn exposes only supported outcomes and keeps intake provenance runtime-owned", () => {
+  const tools = new Map<string, RegisteredTool>();
+  collaborationActionsExtension({
+    registerTool(definition) {
+      tools.set(definition.name, definition as RegisteredTool);
+    },
+  });
+
+  const finishIntakeTurn = tools.get("finish_intake_turn");
+  assert(finishIntakeTurn);
+  assert.match(finishIntakeTurn.description || "", /creates work or records an operating event/i);
+  assert.doesNotMatch(finishIntakeTurn.description || "", /approval/i);
+
+  const operatingEvent = finishIntakeTurn.parameters?.properties?.operatingEvent as {
+    properties?: Record<string, unknown>;
+  } | undefined;
+  assert.equal(operatingEvent?.properties?.sourceIntakeEventId, undefined);
+  assert.equal(operatingEvent?.properties?.sourceKind, undefined);
+  assert.equal(operatingEvent?.properties?.sourceId, undefined);
+});
+
+test("collaboration tool schemas use optional fields instead of empty-string placeholders", () => {
+  const tools = new Map<string, RegisteredTool>();
+  collaborationActionsExtension({
+    registerTool(definition) {
+      tools.set(definition.name, definition as RegisteredTool);
+    },
+  });
+
+  const recallMemory = tools.get("recall_memory");
+  assert(recallMemory);
+  assert.deepEqual(recallMemory.parameters?.required || [], []);
+  assert.equal(recallMemory.parameters?.properties?.limit?.type, "number");
+
+  const capabilityCall = tools.get("tinyoffice_capability_call");
+  assert(capabilityCall);
+  const confirmation = capabilityCall.parameters?.properties?.confirmation as {
+    properties?: Record<string, { type?: string }>;
+  } | undefined;
+  assert.equal(confirmation?.properties?.accepted?.type, "boolean");
 });
 
 test("collaboration PI tool gateway can resolve companyId from ambient context", () => {
@@ -1493,8 +1553,6 @@ test("finish_intake_turn records operating events for no-work intake decisions",
           title: "Duplicate monitor report ignored",
           message: "The report was reviewed and does not need a task.",
           severity: "info",
-          sourceKind: "",
-          sourceId: "",
         },
       }),
   );

@@ -15,7 +15,7 @@ This page records the implementation boundary for Prompt Policy. Product behavio
 
 Runtime model input is assembled in this order:
 
-1. Base System Prompt: employee identity, TinyOffice work boundary, core behavior, and Access boundary.
+1. Base System Prompt: employee identity, TinyOffice work boundary, core behavior, and the requirement to follow confirmation decisions reported by capabilities and Access.
 2. Employee context from PI resource paths, such as employee-local `AGENTS.md` / `CLAUDE.md`.
 3. Prompt Policy block for the current runtime scene, appended once to the system prompt.
 4. Runtime Prompt Template slots: scene type, Runtime Context blocks, and scene-appropriate current input.
@@ -39,6 +39,12 @@ Model visible output expresses only the user-facing result of the current turn. 
 - WorkRun: model calls `finish_work_turn` with `status`, `summary`, `evidence`, `blockerMessage`, and related result fields. Runtime uses the session-bound WorkRun id.
 - Intake: model calls `finish_intake_turn` with the intake outcome.
 - DM: model writes visible assistant text directly. Sensitive-resource requests come from the Access layer, not broad final-output approvals.
+
+Capability discovery derives the active capability scene from runtime-bound context. The model does not choose a `scene` argument. Intake source ids and source kinds are likewise bound by runtime instead of being accepted from model output.
+
+System AI title and Topic-summary providers use an in-memory session for every request, disable context-file loading, and split the capability instruction into the system prompt while keeping the changing request in the user prompt. They never continue a recent PI session.
+
+Provider compaction uses a domain-neutral employee-continuity contract. It preserves goals, decisions, open work, blockers, artifacts, and evidence; it does not impose coding-agent headings or infer that absent structured fields mean no work exists.
 
 ## Storage And Reset
 

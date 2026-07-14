@@ -323,7 +323,7 @@ function assertCapabilityConfirmation(entry: CapabilityEntry, confirmation: unkn
     return;
   }
   const candidate = confirmationObject(confirmation);
-  if (candidate.accepted !== true && candidate.accepted !== "true") {
+  if (candidate.accepted !== true) {
     throw new Error(`tinyoffice_capability_call ${entry.id} requires operator confirmation.`);
   }
   if (

@@ -2,7 +2,7 @@ import type { AgentToolResult, ExtensionAPI } from "@earendil-works/pi-coding-ag
 import { Type } from "typebox";
 
 import { OperatingLogService } from "../../operating-log/operating-log-service.js";
-import { capabilityRegistry } from "../../runtime/capabilities/capability-registry.js";
+import { capabilityRegistry, type CapabilityScene } from "../../runtime/capabilities/capability-registry.js";
 import { executeTinyOfficeCapabilityCallTool } from "../../runtime/capabilities/capability-tool.js";
 import { recallRuntimeMemories } from "../../runtime/memory/runtime-memory-service.js";
 import { WorkService } from "../../work/work-service.js";
@@ -29,21 +29,21 @@ const FinishWorkTurnParams = Type.Object({
   summary: Type.String({
     description: "Short result summary in the current user-visible language.",
   }),
-  evidence: Type.Array(Type.String(), {
+  evidence: Optional(Type.Array(Type.String(), {
     description: "Evidence items. Required when status is complete; include concrete proof that acceptanceCriteria was satisfied.",
-  }),
-  blockerMessage: Type.String({
-    description: "Blocker explanation. Required when status is blocked. Use an empty string when status is not blocked.",
-  }),
+  })),
+  blockerMessage: Optional(Type.String({
+    description: "Blocker explanation. Required only when status is blocked.",
+  })),
 });
 
 const IntakeWorkParams = Type.Object({
   title: Type.String({
     description: "Short WorkTask title in the current preferred user-visible language.",
   }),
-  description: Type.String({
-    description: "Useful background for the background work. Use an empty string if not needed.",
-  }),
+  description: Optional(Type.String({
+    description: "Useful background for the background work.",
+  })),
   ownerMemberId: Type.String({
     description: "Member id responsible for the planned work.",
   }),
@@ -54,16 +54,16 @@ const IntakeWorkParams = Type.Object({
     description: "Choose immediate, scheduled_once, or recurring.",
     enum: ["immediate", "scheduled_once", "recurring"],
   }),
-  scheduledFor: Type.String({
-    description: "ISO timestamp for scheduled_once or recurring. Use an empty string for immediate work.",
-  }),
+  scheduledFor: Optional(Type.String({
+    description: "ISO timestamp for scheduled_once or recurring.",
+  })),
   intervalMs: Optional({
     type: "number",
     description: "Positive recurrence interval in milliseconds. Required for recurring work.",
   }),
-  timezone: Type.String({
-    description: "Timezone for interpreting the schedule, such as Asia/Shanghai. Use an empty string if absent.",
-  }),
+  timezone: Optional(Type.String({
+    description: "Timezone for interpreting the schedule, such as Asia/Shanghai.",
+  })),
 });
 
 const IntakeOperatingEventParams = Type.Object({
@@ -76,15 +76,6 @@ const IntakeOperatingEventParams = Type.Object({
   severity: Type.String({
     description: "One of info, success, warning, or error.",
     enum: ["info", "success", "warning", "error"],
-  }),
-  sourceIntakeEventId: Type.String({
-    description: "Source intake event id when this event records an inbox decision. Use an empty string if absent.",
-  }),
-  sourceKind: Type.String({
-    description: "Optional source object kind. Use an empty string if absent.",
-  }),
-  sourceId: Type.String({
-    description: "Optional source object id. Use an empty string if absent.",
   }),
 });
 
@@ -111,26 +102,13 @@ interface FinishIntakeTurnDetails {
 }
 
 const RecallMemoryParams = Type.Object({
-  employeeId: Type.String({
-    description: "Optional employee id to search. Use an empty string to search without an employee filter.",
-  }),
-  workRunId: Type.String({
-    description: "Optional WorkRun id to search work-run-scoped memory. Use an empty string if absent.",
-  }),
-  category: Type.String({
-    description: "Optional memory category to search, such as a scene type. Use an empty string if absent.",
-  }),
-  limit: Type.String({
-    description: "Maximum memories to return, from 1 to 50. Use an empty string for the default.",
-  }),
+  employeeId: Optional(Type.String({ description: "Employee id to search." })),
+  workRunId: Optional(Type.String({ description: "WorkRun id for work-run-scoped memory." })),
+  category: Optional(Type.String({ description: "Memory category to search, such as a scene type." })),
+  limit: Optional({ type: "number", description: "Maximum memories to return, from 1 to 50." }),
 });
 
-const TinyOfficeCapabilityListParams = Type.Object({
-  scene: Optional(Type.String({
-    description: "Optional runtime scene filter: chat_dm, chat_channel, or work_run.",
-    enum: ["chat_dm", "chat_channel", "work_run"],
-  })),
-});
+const TinyOfficeCapabilityListParams = Type.Object({});
 
 const TinyOfficeCapabilityDescribeParams = Type.Object({
   capabilityId: Type.String({
@@ -147,9 +125,10 @@ const TinyOfficeCapabilityCallParams = Type.Object({
     additionalProperties: true,
   })),
   confirmation: Optional(Type.Object({
-    accepted: Optional(Type.String({
+    accepted: Optional({
+      type: "boolean",
       description: "Set true only after the operator confirms a capability that requires confirmation.",
-    })),
+    }),
     typedText: Optional(Type.String({
       description: "Typed confirmation text for typed confirmation capabilities, such as RESTORE.",
     })),
@@ -204,6 +183,26 @@ function requiredRuntimeContextSourceId(context: CollaborationPiToolExecutionCon
   return sourceId;
 }
 
+function capabilitySceneFromContext(context: CollaborationPiToolExecutionContext): CapabilityScene {
+  if (context.workRunId || context.sessionKey?.includes("|work_run_execution|")) {
+    return "work_run";
+  }
+  if (context.channelTopicId || context.sessionKey?.includes("|channel_thread|")) {
+    return "chat_channel";
+  }
+  if (
+    context.conversationId ||
+    context.threadId ||
+    context.roomId ||
+    context.messageId ||
+    context.chatEntryId ||
+    context.sessionKey?.includes("|dm_thread|")
+  ) {
+    return "chat_dm";
+  }
+  throw new Error("TinyOffice capability scene is missing from runtime context.");
+}
+
 function runtimeContextSourceMetadata(context: CollaborationPiToolExecutionContext): Record<string, string> | undefined {
   const metadata = {
     ...(context.conversationId ? { conversationId: context.conversationId } : {}),
@@ -235,13 +234,12 @@ export default function collaborationActionsExtension(pi: ExtensionAPI) {
   pi.registerTool({
     name: "tinyoffice_capability_list",
     label: "TinyOffice Capability List",
-    description: "List registered TinyOffice capabilities available to employee runtimes. Call this before writing ordinary files whenever the operator asks to create or change a persistent reusable method, workflow, template, or ability for future work, especially when it should be available to the whole Company or another Employee. Natural-language requests do not need to name a Capability or Skill.",
+    description: "List registered TinyOffice capabilities available in the current runtime scene.",
     parameters: TinyOfficeCapabilityListParams,
-    async execute(_toolCallId: string, params: unknown) {
-      const typed = params as { scene?: unknown };
-      const scene = optionalString(typed.scene);
+    async execute(_toolCallId: string) {
+      const scene = capabilitySceneFromContext(gateway.buildContext());
       const capabilities = capabilityRegistry.capabilities
-        .filter((entry) => !scene || entry.allowedScenes.includes(scene as never))
+        .filter((entry) => (entry.allowedScenes as CapabilityScene[]).includes(scene))
         .map((entry) => ({
           id: entry.id,
           category: entry.category,
@@ -258,12 +256,14 @@ export default function collaborationActionsExtension(pi: ExtensionAPI) {
             text: JSON.stringify({
               schema: "tinyoffice-capability-list",
               version: 1,
+              scene,
               capabilities,
             }, null, 2),
           },
         ],
         details: {
           status: "allowed",
+          scene,
           capabilities,
         },
       };
@@ -397,7 +397,7 @@ export default function collaborationActionsExtension(pi: ExtensionAPI) {
     name: "finish_intake_turn",
     label: "Finish Intake Turn",
     description:
-      "Submit the final structured result for this external intake event. The result creates work, records an operating event, or requests approval.",
+      "Submit the final structured result for this external intake event. The result creates work or records an operating event.",
     parameters: FinishIntakeTurnParams,
     async execute(_toolCallId: string, params: unknown): Promise<AgentToolResult<FinishIntakeTurnDetails>> {
       const typed = params as {
@@ -460,8 +460,8 @@ export default function collaborationActionsExtension(pi: ExtensionAPI) {
           message: requiredString(operatingEvent.message, "operatingEvent.message"),
           severity: optionalString(operatingEvent.severity) as "info" | "success" | "warning" | "error" | undefined,
           sourceIntakeEventId: context.threadId,
-          sourceKind: optionalString(operatingEvent.sourceKind) || "intake_event",
-          sourceId: optionalString(operatingEvent.sourceId) || sourceId,
+          sourceKind: "intake_event",
+          sourceId,
         });
 
         return {

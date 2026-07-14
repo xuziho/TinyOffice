@@ -19,6 +19,7 @@ import type { SystemAiProviderConfigRecord } from "./provider-config.js";
 export interface PiChatTopicSummaryPromptInput {
   modelProvider: string;
   modelId: string;
+  systemPrompt: string;
   prompt: string;
   tools: string[];
 }
@@ -65,8 +66,6 @@ function buildPrompt(request: SystemAiChatTopicSummaryGenerationRequest): string
     ].join("\n")
   );
   return [
-    TOPIC_SUMMARY_SYSTEM_PROMPT,
-    "",
     "Existing topic summary:",
     request.existingSummary || "(none)",
     "",
@@ -89,8 +88,9 @@ async function runPiPrompt(input: PiChatTopicSummaryPromptInput & { repoRoot?: s
   const resourceLoader = new DefaultResourceLoader({
     cwd,
     agentDir,
+    noContextFiles: true,
     noSkills: true,
-    systemPromptOverride: () => TOPIC_SUMMARY_SYSTEM_PROMPT,
+    systemPromptOverride: () => input.systemPrompt,
   });
   await resourceLoader.reload();
   const settingsManager = SettingsManager.inMemory({
@@ -104,7 +104,7 @@ async function runPiPrompt(input: PiChatTopicSummaryPromptInput & { repoRoot?: s
     model,
     resourceLoader,
     settingsManager,
-    sessionManager: SessionManager.continueRecent(cwd, path.join(cwd, ".scratch", "system-ai-topic-summary-sessions")),
+    sessionManager: SessionManager.inMemory(cwd),
     tools: input.tools,
   });
   let reply = "";
@@ -151,6 +151,7 @@ export class PiChatTopicSummaryGenerationProvider implements SystemAiChatTopicSu
     const output = await this.runPrompt({
       modelProvider: model.provider,
       modelId: model.id,
+      systemPrompt: TOPIC_SUMMARY_SYSTEM_PROMPT,
       prompt: buildPrompt(request),
       tools: [],
     });

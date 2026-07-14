@@ -7,6 +7,7 @@ test("PI chat title provider uses the configured PI model and a no-tools title p
   const calls: Array<{
     modelProvider: string;
     modelId: string;
+    systemPrompt: string;
     prompt: string;
     tools: string[];
   }> = [];
@@ -39,9 +40,10 @@ test("PI chat title provider uses the configured PI model and a no-tools title p
   assert.equal(calls[0]?.modelProvider, "openai-codex");
   assert.equal(calls[0]?.modelId, "gpt-5.4-mini");
   assert.deepEqual(calls[0]?.tools, []);
-  assert.match(calls[0]?.prompt || "", /Only output the title/);
-  assert.match(calls[0]?.prompt || "", /Do not explain/);
-  assert.match(calls[0]?.prompt || "", /Prefer the same language as the user's message/);
+  assert.match(calls[0]?.systemPrompt || "", /Only output the title/);
+  assert.match(calls[0]?.systemPrompt || "", /Do not explain/);
+  assert.match(calls[0]?.systemPrompt || "", /Prefer the same language as the user's message/);
+  assert.doesNotMatch(calls[0]?.prompt || "", /Only output the title/);
   assert.match(calls[0]?.prompt || "", /Please create someone to help with website analytics work/);
 });
 

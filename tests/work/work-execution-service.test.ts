@@ -177,7 +177,7 @@ test("WorkRun execution prompt splits summary from structured context", async ()
   assert.doesNotMatch(contextBlock.text, /historicalSourceEvidence|rootPostId/);
   assert.match(contextBlock.text, /Recent WorkRun events:/);
   assert.match(contextBlock.text, /created/);
-  assert.match(contextBlock.text, /finish_work_turn/);
+  assert.doesNotMatch(contextBlock.text, /finish_work_turn|Execution instructions/);
   assert.doesNotMatch(prompt, /intent=start/);
 });
 

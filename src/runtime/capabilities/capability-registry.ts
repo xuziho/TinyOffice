@@ -391,7 +391,7 @@ export const capabilityRegistry = {
       id: "chat.channel.create",
       category: "chat",
       title: "Create Chat channel",
-      description: "Creates a Chat channel with selected company members. The runtime context supplies the channel owner.",
+      description: "Creates a Chat channel with selected company members. The runtime context supplies the creating member identity.",
       effect: "create",
       allowedScenes: ["chat_dm", "chat_channel"],
       confirmationPolicy: {

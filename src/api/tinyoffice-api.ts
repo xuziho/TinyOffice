@@ -1,7 +1,9 @@
 import { Hono } from "hono";
 
+import { bindAuthenticatedRequest, TinyOfficeAuthenticationError } from "../auth/tinyoffice-session.js";
 import { jsonError } from "./http.js";
 import { registerAccessRoutes } from "./tinyoffice-api/access-routes.js";
+import { registerAuthenticationRoutes } from "./tinyoffice-api/authentication-routes.js";
 import { registerAttachmentRoutes } from "./tinyoffice-api/attachment-routes.js";
 import { registerChatRoutes } from "./tinyoffice-api/chat-routes.js";
 import { registerCapabilitiesRoutes } from "./tinyoffice-api/capabilities-routes.js";
@@ -56,6 +58,16 @@ export function createTinyOfficeApi(options: TinyOfficeApiOptions): Hono {
   const app = new Hono();
 
   app.onError((error, c) => jsonError(c, error));
+
+  registerAuthenticationRoutes(app, options);
+  app.use("/api/*", async (c, next) => {
+    const session = await options.auth.resolveCurrentUser(c.req.raw);
+    if (!session) {
+      throw new TinyOfficeAuthenticationError();
+    }
+    bindAuthenticatedRequest(c.req.raw, session);
+    await next();
+  });
 
   registerSessionRoutes(app, options);
   registerProfileRoutes(app, options);

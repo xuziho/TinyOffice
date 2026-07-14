@@ -42,6 +42,8 @@
     "dogfood:verify": "powershell -ExecutionPolicy Bypass -File scripts/dogfood/verify-dogfood.ps1",
     "runtime:postgres:ensure": "powershell -ExecutionPolicy Bypass -File scripts/runtime/ensure-tinyoffice-postgres.ps1",
     "runtime:postgres:init-schema": "node --import tsx scripts/runtime/init-tinyoffice-postgres-schema.ts",
+    "start": "node --import tsx scripts/runtime/run-tinyoffice.ts",
+    "auth:reset-owner": "node --import tsx scripts/runtime/reset-owner-auth.ts",
     "runtime:postgres:reset": "powershell -ExecutionPolicy Bypass -File scripts/runtime/reset-tinyoffice-postgres.ps1",
     "smoke:lock:acquire": "powershell -ExecutionPolicy Bypass -File scripts/runtime/acquire-smoke-lock.ps1",
     "smoke:lock:release": "powershell -ExecutionPolicy Bypass -File scripts/runtime/release-smoke-lock.ps1",
@@ -58,7 +60,9 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@better-auth/passkey": "1.6.23",
     "@earendil-works/pi-coding-agent": "0.80.6",
+    "better-auth": "1.6.23",
     "hono": "^4.12.27",
     "pg": "^8.21.0",
     "socket.io": "^4.8.3",

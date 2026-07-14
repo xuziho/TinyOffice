@@ -17,22 +17,22 @@ For focused frontend/runtime smoke:
 ```powershell
 npm run smoke:no-carrier-chat
 npm run smoke:standalone-frontend-browser
-node --import tsx scripts/runtime/run-real-chat-preview.ts
+npm start
 ```
 
 ## Product Runtime Preview
 
-`scripts/runtime/run-real-chat-preview.ts` starts the local TinyOffice Chat runtime API and standalone frontend against PostgreSQL-backed runtime data.
+`scripts/runtime/run-tinyoffice.ts` starts the local TinyOffice Chat runtime API and standalone frontend against PostgreSQL-backed runtime data.
 
 The runtime uses one shared PostgreSQL pool per database URL. Repository close returns clients to that pool; it must not create and retire a new pool on every three-second control-plane scan. During lifecycle smoke, verify that runtime connections remain bounded by the configured pool maximum instead of growing on every tick.
 
 Expected local entry:
 
 ```text
-http://127.0.0.1:5175/?companyId=tinyoffice&memberId=xuziho&memberDisplayName=Xu%20Ziho&memberRole=boss
+http://localhost:5175/
 ```
 
-The URL identity parameters are development-preview and smoke-test inputs only. Product implementation must not add new behavior that depends on `companyId`, `memberId`, `viewerMemberId`, `employeeId`, or `viewerEmployeeId` URL parameters as login identity. Production identity must come from TinyOffice backend login/session state.
+URL and request identity parameters are not login inputs. Product implementation must not add behavior that depends on `companyId`, `memberId`, `viewerMemberId`, `employeeId`, or `viewerEmployeeId` as the current human identity. The Owner always comes from the verified backend session; tests use an internal injected provider.
 
 ## Local Issue Reports
 
@@ -48,7 +48,7 @@ Record:
 ## Current Source Of Truth
 
 - Product frontend: `apps/tinyoffice-web-shadcn`
-- Product APIs/runtime: `src/`, `scripts/runtime/run-real-chat-preview.ts`
+- Product APIs/runtime: `src/`, `scripts/runtime/run-tinyoffice.ts`
 - Product facts: PostgreSQL-backed repositories and TinyOffice-owned DTOs
 - Product docs: `docs/`
 

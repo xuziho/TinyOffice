@@ -7,13 +7,13 @@ import test from "node:test";
 
 import { DEFAULT_COMPANY_ID } from "../../src/runtime/company-config/postgres-schema.js";
 import {
-  createPreviewProcessTracePublisher,
-} from "../../src/runtime/realtime/tinyoffice-chat-preview-server.js";
+  createRuntimeProcessTracePublisher,
+} from "../../src/runtime/realtime/tinyoffice-server.js";
 import { listProcessTraceEvents } from "../../src/runtime/realtime/process-trace-store.js";
 import { defaultRuntimePostgresTestDatabaseUrl, resetRuntimePostgresTables } from "./postgres-test-utils.js";
 
-test("TinyOffice Chat preview server mounts current member-aware Chat and company directory APIs", async () => {
-  const source = await readFile("src/runtime/realtime/tinyoffice-chat-preview-server.ts", "utf8");
+test("TinyOffice runtime server mounts authenticated Chat and company directory APIs", async () => {
+  const source = await readFile("src/runtime/realtime/tinyoffice-server.ts", "utf8");
   const gatewaySource = await readFile("src/runtime/realtime/tinyoffice-realtime-gateway.ts", "utf8");
 
   assert.match(source, /createTinyOfficeApi/);
@@ -23,8 +23,8 @@ test("TinyOffice Chat preview server mounts current member-aware Chat and compan
   assert.match(gatewaySource, /\/api\/realtime\/socket\.io/);
   assert.doesNotMatch(gatewaySource, /Sec-WebSocket-Accept|new WebSocket|\/api\/realtime\/ws/);
   assert.match(source, /createPostgresCompanyDirectoryApiSource/);
-  assert.match(source, /createPreviewProcessTracePublisher/);
-  assert.match(source, /processTrace:\s*createPreviewProcessTracePublisher/);
+  assert.match(source, /createRuntimeProcessTracePublisher/);
+  assert.match(source, /processTrace:\s*createRuntimeProcessTracePublisher/);
   assert.match(source, /processTraceId:\s*input\.processTraceId/);
   assert.doesNotMatch(source, /handleConversationApiRequest/);
   assert.doesNotMatch(source, /handleChatProjectionApiRequest/);
@@ -37,28 +37,28 @@ test("TinyOffice Chat preview server mounts current member-aware Chat and compan
   );
 });
 
-test("real Chat preview requires an explicit preview user identity", async () => {
-  const source = await readFile("scripts/runtime/run-real-chat-preview.ts", "utf8");
+test("TinyOffice runtime uses formal Owner authentication without identity variables", async () => {
+  const source = await readFile("scripts/runtime/run-tinyoffice.ts", "utf8");
 
-  assert.match(source, /previewUserId/);
-  assert.match(source, /TINYOFFICE_PREVIEW_USER_ID/);
-  assert.doesNotMatch(source, /TINYOFFICE_PREVIEW_MEMBER_ID/);
+  assert.match(source, /publicOrigin/);
+  assert.match(source, /bootstrapToken/);
+  assert.doesNotMatch(source, /previewUserId|previewUserDisplayName/);
   assert.doesNotMatch(source, /nora-automation/);
   assert.doesNotMatch(source, /xuziho/);
   assert.doesNotMatch(source, /actorEmployeeId/);
 });
 
-test("real Chat preview wires admin reload controls to the same PI Runtime Provider used for replies", async () => {
-  const source = await readFile("scripts/runtime/run-real-chat-preview.ts", "utf8");
+test("TinyOffice runtime wires admin reload controls to the same PI Runtime Provider used for replies", async () => {
+  const source = await readFile("scripts/runtime/run-tinyoffice.ts", "utf8");
 
   assert.match(source, /defaultRuntimeProvider/);
   assert.match(source, /runtimeProvider:\s*defaultRuntimeProvider/);
 });
 
-test("real Chat preview closes runtime and session state around Company deletion", async () => {
-  const source = await readFile("src/runtime/realtime/tinyoffice-chat-preview-server.ts", "utf8");
+test("TinyOffice runtime closes runtime and session state around Company deletion", async () => {
+  const source = await readFile("src/runtime/realtime/tinyoffice-server.ts", "utf8");
 
-  assert.doesNotMatch(source, /Cannot delete the active preview Company/);
+  assert.doesNotMatch(source, /Cannot delete the active runtime Company/);
   assert.doesNotMatch(source, /scopedCompanyId === companyId/);
   assert.match(source, /deletionGuard/);
   assert.match(source, /session\.companyId === companyId/);
@@ -69,23 +69,23 @@ test("real Chat preview closes runtime and session state around Company deletion
   assert.doesNotMatch(source, /WHERE member\.id = \$1\s*ORDER BY member\.company_id ASC/);
 });
 
-test("real Chat preview starts a Work control-plane loop for queued WorkRuns", async () => {
-  const source = await readFile("src/runtime/realtime/tinyoffice-chat-preview-server.ts", "utf8");
+test("TinyOffice runtime starts a Work control-plane loop for queued WorkRuns", async () => {
+  const source = await readFile("src/runtime/realtime/tinyoffice-server.ts", "utf8");
 
   assert.match(source, /CompanyControlPlane/);
-  assert.match(source, /startPreviewWorkControlPlaneLoop/);
+  assert.match(source, /startRuntimeWorkControlPlaneLoop/);
   assert.match(source, /runOnce\(/);
   assert.match(source, /stopWorkControlPlaneLoop/);
 });
 
-test("real Chat preview process trace publisher persists stable trace ids", async () => {
+test("real Chat runtime process trace publisher persists stable trace ids", async () => {
   const previousDatabaseUrl = process.env.TINYOFFICE_DATABASE_URL;
   process.env.TINYOFFICE_DATABASE_URL =
     process.env.TINYOFFICE_TEST_DATABASE_URL?.trim() || defaultRuntimePostgresTestDatabaseUrl;
   await resetRuntimePostgresTables();
-  const repoRoot = await mkdtemp(path.join(tmpdir(), "tinyoffice-preview-process-trace-"));
+  const repoRoot = await mkdtemp(path.join(tmpdir(), "tinyoffice-runtime-process-trace-"));
   try {
-    const publisher = createPreviewProcessTracePublisher(repoRoot, DEFAULT_COMPANY_ID);
+    const publisher = createRuntimeProcessTracePublisher(repoRoot, DEFAULT_COMPANY_ID);
 
     await publisher.publishProcessTraceEvent({
       id: "tinyoffice-chat-process:nora-automation|chat_direct_room|conversation-preview:message-preview:delta",

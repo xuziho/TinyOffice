@@ -55,6 +55,7 @@ nav:
       - Tasks: product/tasks.md
   - "03 Members":
       - Member Identity Model: product/member-identity-model.md
+      - Owner Authentication: product/owner-authentication.md
       - Employee Config: product/employee-config.md
       - Employee Status: product/employee-status.md
       - Employees and Sessions: product/employees-and-sessions.md

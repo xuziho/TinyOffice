@@ -7,13 +7,11 @@ import { executeTasksRunAction, executeWorkTaskLifecycleAction, getTasksViewMode
 const currentSession: TinyOfficeCurrentSession = {
   schema: "tinyoffice-current-session" as const,
   version: 1,
-  authMode: "development-preview" as const,
   user: { id: "xuziho", displayName: "Xu" },
   currentCompanyId: "ziho-co",
   companyId: "ziho-co",
   member: { memberId: "xuziho", displayName: "Xu", role: "boss" },
   needsInitialization: false,
-  source: "development-preview" as const,
 };
 
 test("getTasksViewModel reads the company-scoped Tasks API with filters", async () => {

@@ -10,7 +10,7 @@ This page records the current TinyOffice-owned realtime intake boundary. Product
 | `src/collaboration/` | Conversation, message, participant, room, and Chat projection storage/API contracts. |
 | `src/collaboration/contracts/tinyoffice-realtime-contract.ts` | WebSocket event envelope for Chat and runtime status updates. |
 | `src/runtime/realtime/process-trace-store.ts` | Persists process trace evidence for runtime work. |
-| `scripts/runtime/run-real-chat-preview.ts` | Starts the local real Chat preview against PostgreSQL-backed runtime data. |
+| `scripts/runtime/run-tinyoffice.ts` | Starts the local real Chat preview against PostgreSQL-backed runtime data. |
 
 ## Data Flow
 
@@ -25,5 +25,5 @@ This page records the current TinyOffice-owned realtime intake boundary. Product
 ```powershell
 npm run smoke:no-carrier-chat
 npm run smoke:standalone-frontend-browser
-node --import tsx scripts/runtime/run-real-chat-preview.ts
+npm start
 ```

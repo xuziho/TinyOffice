@@ -74,7 +74,7 @@ Persisted Channel membership remains historical collaboration evidence when a me
 The backend enforces this boundary, not only the frontend:
 
 - Production API requests use the current TinyOffice member session as the viewer or actor.
-- Development preview may pass `viewerMemberId` / `actorMemberId` or employee selectors explicitly, but it is not a production identity fallback.
+- Chat derives the human viewer and actor from the authenticated Owner session. Browser selectors cannot override that identity.
 - Chat projection removes entries whose `openTarget.roomId` is not visible to the current viewer.
 - Direct room reads, message reads, sends, and read-state updates check that the current viewer or actor is a participant before reading messages or mutating the room.
 - Runtime context assembly checks that the triggering actor and target runtime employee are allowed room participants before preparing model input.

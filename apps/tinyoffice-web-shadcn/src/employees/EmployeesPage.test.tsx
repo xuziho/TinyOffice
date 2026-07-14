@@ -11,12 +11,10 @@ import type { EmployeesAdminState, TinyOfficeCurrentSession } from "tinyoffice/f
 const currentSession: TinyOfficeCurrentSession = {
   schema: "tinyoffice-current-session",
   version: 1,
-  authMode: "development-preview",
   user: { id: "user-xu", displayName: "Xu Ziho" },
   currentCompanyId: "ziho-e-com",
   member: { memberId: "xuziho", displayName: "Xu Ziho", role: "boss" },
   needsInitialization: false,
-  source: "development-preview",
 };
 
 function employeesState(): EmployeesAdminState {

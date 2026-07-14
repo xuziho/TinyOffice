@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Hono } from "hono";
 
-const TINYOFFICE_API_PREFIX = /^\/api\/(?:tinyoffice\/(?:profile|backups(?:\/|$)|updates(?:\/|$)|session\/current)|runtime\/models|companies(?:$|\/[^/]+(?:$|\/(?:access|branding|capabilities|chat|directory|doctor|employees|intake|member-directory|member-runtime|prompt-policy|sessions|skills|system-ai|tasks|work)(?:\/|$))))/;
+const TINYOFFICE_API_PREFIX = /^\/api\/(?:auth(?:\/|$)|tinyoffice\/(?:auth\/status|profile|backups(?:\/|$)|updates(?:\/|$)|session\/current)|runtime\/models|companies(?:$|\/[^/]+(?:$|\/(?:access|branding|capabilities|chat|directory|doctor|employees|intake|member-directory|member-runtime|prompt-policy|sessions|skills|system-ai|tasks|work)(?:\/|$))))/;
 
 export function isTinyOfficeApiRequest(url: string | undefined): boolean {
   const requestUrl = new URL(url || "/", "http://127.0.0.1");

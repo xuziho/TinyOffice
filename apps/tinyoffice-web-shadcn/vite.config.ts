@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      host: "127.0.0.1",
+      host: "localhost",
       port: 5175,
       strictPort: true,
       proxy: {

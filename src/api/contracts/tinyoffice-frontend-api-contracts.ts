@@ -1,7 +1,6 @@
 export type TinyOfficeCurrentSession = {
   schema: "tinyoffice-current-session";
   version: 1;
-  authMode: "production" | "development-preview";
   user: {
     id: string;
     displayName?: string;
@@ -14,7 +13,6 @@ export type TinyOfficeCurrentSession = {
     role?: string;
   };
   needsInitialization: boolean;
-  source: "server-session" | "development-preview";
 };
 
 export type TinyOfficeMemberViewerIdentity = {

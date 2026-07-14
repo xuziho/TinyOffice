@@ -32,7 +32,7 @@ apps/tinyoffice-web-shadcn
 
 | API family | Current category | Current consumer / product path | Decision note |
 | --- | --- | --- | --- |
-| Current session: `GET /api/tinyoffice/session/current`, `PUT /api/tinyoffice/session/current-company` | keep: product surface | App startup and Company switcher. | Development-preview session boundary; production login remains separate future work. |
+| Owner auth: `/api/auth/*`, `GET /api/tinyoffice/auth/status`; current Company: `GET /api/tinyoffice/session/current`, `PUT /api/tinyoffice/session/current-company` | keep: product surface | Passkey gate, app startup, and Company switcher. | One verified Owner session; no browser-selectable identity path. |
 | Company lifecycle and branding: `GET/POST /api/companies`, `DELETE /api/companies/:companyId`, `/branding` | keep: product surface | Manage / Organization and Company switcher. | Organization owns creation, selection, identity, logo, and deletion. Ongoing subsystem settings do not live here. |
 | System AI: `PATCH /api/companies/:companyId/system-ai` | keep: developer configuration | Developer Tools / System AI. | Company-scoped model selection for Chat titles and Topic summaries. |
 | External Intake: `POST /api/companies/:companyId/intake/events`; capability `intake.integration.describe` | keep: product surface | Human-facing `/integrations` discovery module; AI-facing capability contract. | Users describe the automation to AI. AI discovers and implements the technical contract. No Intake queue, source registry, or automation control plane. |

@@ -104,6 +104,7 @@ import {
 } from "../provider/natural-language-responder-runtime.js";
 import { INTAKE_EVENT_ACTIVE_TOOL_NAMES } from "../provider/runtime-tool-contracts.js";
 import type { TinyOfficeCurrentUserSession } from "../../auth/tinyoffice-session.js";
+import { createTinyOfficeOwnerAuth } from "../../auth/better-auth-owner.js";
 import type { ChatAttachmentApiService } from "../../api/tinyoffice-api/contracts.js";
 import { createTinyOfficeChatRuntimeDispatchSink } from "../chat/tinyoffice-chat-runtime-dispatch.js";
 import type { TinyOfficeChatRuntimeProcessTracePublisher } from "../chat/tinyoffice-chat-runtime-dispatch.js";
@@ -113,41 +114,42 @@ import {
   TINYOFFICE_REALTIME_SOCKET_IO_PATH,
 } from "./tinyoffice-realtime-gateway.js";
 
-export interface TinyOfficeChatPreviewServerConfig {
+export interface TinyOfficeServerConfig {
   repoRoot: string;
   companyId?: string;
-  previewUserId: string;
-  previewUserDisplayName?: string;
+  databaseUrl: string;
+  publicOrigin: string;
+  authSecret?: string;
   runtimeProvider?: NaturalLanguageResponseInput["runtimeProvider"];
   workControlPlaneIntervalMs?: number;
 }
 
-export interface TinyOfficeChatPreviewServerHandle {
+export interface TinyOfficeServerHandle {
   server: http.Server;
   companyId?: string;
-  previewUserId: string;
+  bootstrapToken?: string;
 }
 
-type PreviewMessageService = MessageService & { close?(): void };
-type PreviewAttachmentService = ChatAttachmentApiService & {
+type RuntimeMessageService = MessageService & { close?(): void };
+type RuntimeAttachmentService = ChatAttachmentApiService & {
   listPublicAttachments(companyId: string, attachmentIds: string[]): Promise<PublicChatAttachment[]>;
   close?(): void;
 };
-type PreviewChannelService = ChannelService & { close?(): void };
-type PreviewTitleGenerationService = SystemAiChatTitleGenerationService & { close?(): void };
-type PreviewTopicSummaryGenerationService = SystemAiChatTopicSummaryGenerationService & { close?(): void };
-type PreviewWorkControlPlaneLoop = {
+type RuntimeChannelService = ChannelService & { close?(): void };
+type RuntimeTitleGenerationService = SystemAiChatTitleGenerationService & { close?(): void };
+type RuntimeTopicSummaryGenerationService = SystemAiChatTopicSummaryGenerationService & { close?(): void };
+type RuntimeWorkControlPlaneLoop = {
   stopWorkControlPlaneLoop(): void;
 };
 
-function previewWorkRunSessionAborter(runtimeProvider: NaturalLanguageResponseInput["runtimeProvider"]) {
+function runtimeWorkRunSessionAborter(runtimeProvider: NaturalLanguageResponseInput["runtimeProvider"]) {
   return (predicate: (input: { companyId: string; employeeId: string; sessionKey: string }) => boolean) =>
     runtimeProvider
       ? runtimeProvider.abortWhere(predicate)
       : abortNaturalLanguageEmployeeSessions(predicate);
 }
 
-async function ingestPreviewIntakeEvent(input: {
+async function ingestRuntimeIntakeEvent(input: {
   repoRoot: string;
   companyId: string;
   rawInput: unknown;
@@ -177,12 +179,12 @@ async function ingestPreviewIntakeEvent(input: {
   }
 
   if (receipt.status === "processed") {
-    void dispatchPreviewIntakeEvent({
+    void dispatchRuntimeIntakeEvent({
       ...input,
       receipt,
       employeeHomesById,
-    }).catch((error) => appendPreviewChatTrace(input.repoRoot, {
-      phase: "tinyoffice_chat_preview.intake_dispatch.failed",
+    }).catch((error) => appendRuntimeChatTrace(input.repoRoot, {
+      phase: "tinyoffice_chat_runtime.intake_dispatch.failed",
       companyId: input.companyId,
       intakeEventId: receipt.eventId,
       error: error instanceof Error ? error.stack || error.message : String(error),
@@ -192,7 +194,7 @@ async function ingestPreviewIntakeEvent(input: {
   return receipt;
 }
 
-async function dispatchPreviewIntakeEvent(input: {
+async function dispatchRuntimeIntakeEvent(input: {
   repoRoot: string;
   companyId: string;
   rawInput: unknown;
@@ -210,7 +212,7 @@ async function dispatchPreviewIntakeEvent(input: {
     throw new Error(`Processed intake event target is not available: ${targetMemberId}`);
   }
   const sessionKey = `${employee.employeeId}|intake_event|${input.receipt.eventId}`;
-  const processTrace = createPreviewProcessTracePublisher(input.repoRoot, input.companyId, input.realtimePublisher);
+  const processTrace = createRuntimeProcessTracePublisher(input.repoRoot, input.companyId, input.realtimePublisher);
   const eventPayload = JSON.stringify(input.rawInput, null, 2);
   const contextText = [
     `Intake event id: ${input.receipt.eventId}`,
@@ -283,7 +285,7 @@ interface CurrentUserMemberRow {
   account_display_name: string | null;
 }
 
-async function resolvePreviewCurrentUserSession(
+async function resolveRuntimeCurrentUserSession(
   repoRoot: string,
   session: TinyOfficeCurrentUserSession,
   selectedCompanyId?: string,
@@ -307,7 +309,7 @@ async function resolvePreviewCurrentUserSession(
   };
 }
 
-async function switchPreviewCurrentUserCompany(
+async function switchRuntimeCurrentUserCompany(
   repoRoot: string,
   session: TinyOfficeCurrentUserSession,
   companyId: unknown,
@@ -368,7 +370,7 @@ function json(res: http.ServerResponse, status: number, value: unknown): void {
   res.end(JSON.stringify(value));
 }
 
-async function createAttachmentService(repoRoot: string, companyId: string): Promise<PreviewAttachmentService> {
+async function createAttachmentService(repoRoot: string, companyId: string): Promise<RuntimeAttachmentService> {
   const postgres = await openConfiguredPostgresConnection(repoRoot, { companyId });
   if (!postgres) {
     throw new Error("Chat attachment service requires PostgreSQL runtime configuration.");
@@ -451,8 +453,8 @@ async function createAttachmentService(repoRoot: string, companyId: string): Pro
 async function createMessageService(
   repoRoot: string,
   companyId: string,
-  attachmentService: PreviewAttachmentService,
-): Promise<PreviewMessageService> {
+  attachmentService: RuntimeAttachmentService,
+): Promise<RuntimeMessageService> {
   const repository = await PostgresMessageRepository.open(repoRoot, { companyId });
   const service = new MessageService({
     repository,
@@ -461,7 +463,7 @@ async function createMessageService(
         return attachmentService.listPublicAttachments(scopedCompanyId, attachmentIds);
       },
     },
-  }) as PreviewMessageService;
+  }) as RuntimeMessageService;
   let closed = false;
   service.close = () => {
     if (closed) {
@@ -473,7 +475,7 @@ async function createMessageService(
   return service;
 }
 
-async function createChannelService(repoRoot: string, companyId: string): Promise<PreviewChannelService> {
+async function createChannelService(repoRoot: string, companyId: string): Promise<RuntimeChannelService> {
   const repository = await PostgresChannelRepository.open(repoRoot, { companyId });
   const service = new ChannelService(repository, {
     memberEligibilityResolver: async ({ memberIds }) => {
@@ -486,7 +488,7 @@ async function createChannelService(repoRoot: string, companyId: string): Promis
       const companyRole = memberDirectory?.members.find((member) => member.id === actor.memberId)?.role;
       return companyRole === "boss";
     },
-  }) as PreviewChannelService;
+  }) as RuntimeChannelService;
   let closed = false;
   service.close = () => {
     if (closed) {
@@ -501,9 +503,9 @@ async function createChannelService(repoRoot: string, companyId: string): Promis
 async function createTitleGenerationService(input: {
   repoRoot: string;
   companyId: string;
-  messageService: PreviewMessageService;
+  messageService: RuntimeMessageService;
   realtimePublisher: ReturnType<typeof attachTinyOfficeRealtimeGateway>;
-}): Promise<PreviewTitleGenerationService> {
+}): Promise<RuntimeTitleGenerationService> {
   const postgres = await openConfiguredPostgresConnection(input.repoRoot, { companyId: input.companyId });
   if (!postgres) {
     throw new Error("System AI title generation requires PostgreSQL runtime configuration.");
@@ -516,7 +518,7 @@ async function createTitleGenerationService(input: {
     auditRepository: new PostgresSystemAiAuditRepository(postgres.client),
     store: input.messageService,
     observer: new ChatTitleGenerationRealtimeObserver(input.realtimePublisher),
-  }) as PreviewTitleGenerationService;
+  }) as RuntimeTitleGenerationService;
   let closed = false;
   service.close = () => {
     if (closed) {
@@ -532,8 +534,8 @@ async function createTitleGenerationService(input: {
 async function createTopicSummaryGenerationService(input: {
   repoRoot: string;
   companyId: string;
-  messageService: PreviewMessageService;
-}): Promise<PreviewTopicSummaryGenerationService> {
+  messageService: RuntimeMessageService;
+}): Promise<RuntimeTopicSummaryGenerationService> {
   const postgres = await openConfiguredPostgresConnection(input.repoRoot, { companyId: input.companyId });
   if (!postgres) {
     throw new Error("System AI topic summary generation requires PostgreSQL runtime configuration.");
@@ -545,7 +547,7 @@ async function createTopicSummaryGenerationService(input: {
     }),
     auditRepository: new PostgresSystemAiAuditRepository(postgres.client),
     store: input.messageService,
-  }) as PreviewTopicSummaryGenerationService;
+  }) as RuntimeTopicSummaryGenerationService;
   let closed = false;
   service.close = () => {
     if (closed) {
@@ -558,11 +560,11 @@ async function createTopicSummaryGenerationService(input: {
   return service;
 }
 
-async function appendPreviewChatTrace(repoRoot: string, entry: Record<string, unknown>): Promise<void> {
+async function appendRuntimeChatTrace(repoRoot: string, entry: Record<string, unknown>): Promise<void> {
   const traceDir = path.join(repoRoot, ".scratch");
   await mkdir(traceDir, { recursive: true });
   await appendFile(
-    path.join(traceDir, "tinyoffice-chat-preview-dispatch.jsonl"),
+    path.join(traceDir, "tinyoffice-chat-runtime-dispatch.jsonl"),
     `${JSON.stringify({
       timestamp: new Date().toISOString(),
       ...entry,
@@ -571,7 +573,7 @@ async function appendPreviewChatTrace(repoRoot: string, entry: Record<string, un
   );
 }
 
-export function createPreviewProcessTracePublisher(
+export function createRuntimeProcessTracePublisher(
   repoRoot: string,
   companyId: string,
   realtimePublisher?: ReturnType<typeof attachTinyOfficeRealtimeGateway>,
@@ -602,13 +604,13 @@ export function createPreviewProcessTracePublisher(
   };
 }
 
-export function startPreviewWorkControlPlaneLoop(input: {
+export function startRuntimeWorkControlPlaneLoop(input: {
   repoRoot: string;
   intervalMs?: number;
   realtimePublisher?: ReturnType<typeof attachTinyOfficeRealtimeGateway>;
   runtimeProvider?: NaturalLanguageResponseInput["runtimeProvider"];
-  serviceForCompany(companyId: string): Promise<PreviewMessageService>;
-}): PreviewWorkControlPlaneLoop {
+  serviceForCompany(companyId: string): Promise<RuntimeMessageService>;
+}): RuntimeWorkControlPlaneLoop {
   let stopped = false;
   let running = false;
 
@@ -628,8 +630,8 @@ export function startPreviewWorkControlPlaneLoop(input: {
         const workService = new WorkService({
           repoRoot: input.repoRoot,
           companyId: company.companyId,
-          observer: createPreviewWorkServiceObserver(input.realtimePublisher),
-          onWorkRunTerminal: createPreviewWorkRunTerminalHandler(input.repoRoot, company.companyId),
+          observer: createRuntimeWorkServiceObserver(input.realtimePublisher),
+          onWorkRunTerminal: createRuntimeWorkRunTerminalHandler(input.repoRoot, company.companyId),
         });
         const recoveryRequests = await WorkBlockedRecoveryRequestRepository.open(input.repoRoot, {
           companyId: company.companyId,
@@ -670,9 +672,9 @@ export function startPreviewWorkControlPlaneLoop(input: {
         });
         try {
           await controlPlane.runOnce({
-            createdBy: "tinyoffice-preview-control-plane",
+            createdBy: "tinyoffice-runtime-control-plane",
             async onProcessEvent(event) {
-              await createPreviewProcessTracePublisher(input.repoRoot, company.companyId, input.realtimePublisher)
+              await createRuntimeProcessTracePublisher(input.repoRoot, company.companyId, input.realtimePublisher)
                 .publishProcessTraceEvent(event);
             },
           });
@@ -681,8 +683,8 @@ export function startPreviewWorkControlPlaneLoop(input: {
         }
       }
     } catch (error) {
-      await appendPreviewChatTrace(input.repoRoot, {
-        phase: "tinyoffice_chat_preview.work_control_plane.failed",
+      await appendRuntimeChatTrace(input.repoRoot, {
+        phase: "tinyoffice_chat_runtime.work_control_plane.failed",
         error: error instanceof Error ? error.stack || error.message : String(error),
       });
     } finally {
@@ -703,7 +705,7 @@ export function startPreviewWorkControlPlaneLoop(input: {
   };
 }
 
-function createPreviewWorkServiceObserver(
+function createRuntimeWorkServiceObserver(
   realtimePublisher: ReturnType<typeof attachTinyOfficeRealtimeGateway> | undefined,
 ): WorkServiceObserver | undefined {
   if (!realtimePublisher) {
@@ -732,7 +734,7 @@ function createPreviewWorkServiceObserver(
   };
 }
 
-function createPreviewWorkRunTerminalHandler(repoRoot: string, companyId: string) {
+function createRuntimeWorkRunTerminalHandler(repoRoot: string, companyId: string) {
   return async (run: { id: string }) => {
     const governance = await createDbCompanyGovernanceServices(repoRoot, {
       env: process.env,
@@ -750,10 +752,10 @@ function createPreviewWorkRunTerminalHandler(repoRoot: string, companyId: string
   };
 }
 
-function createPreviewChatDispatchSink(input: {
+function createRuntimeChatDispatchSink(input: {
   repoRoot: string;
-  serviceForCompany(companyId: string): Promise<PreviewMessageService>;
-  topicSummaryGenerationServiceForCompany(companyId: string): Promise<PreviewTopicSummaryGenerationService>;
+  serviceForCompany(companyId: string): Promise<RuntimeMessageService>;
+  topicSummaryGenerationServiceForCompany(companyId: string): Promise<RuntimeTopicSummaryGenerationService>;
   realtimePublisher: ReturnType<typeof attachTinyOfficeRealtimeGateway>;
   runtimeProvider?: NaturalLanguageResponseInput["runtimeProvider"];
 }): ChatDispatchApiSink {
@@ -771,8 +773,8 @@ function createPreviewChatDispatchSink(input: {
           const workService = new WorkService({
             repoRoot: input.repoRoot,
             companyId: event.companyId,
-            observer: createPreviewWorkServiceObserver(input.realtimePublisher),
-            onWorkRunTerminal: createPreviewWorkRunTerminalHandler(input.repoRoot, event.companyId),
+            observer: createRuntimeWorkServiceObserver(input.realtimePublisher),
+            onWorkRunTerminal: createRuntimeWorkRunTerminalHandler(input.repoRoot, event.companyId),
           });
           const employeeHomes = await loadEmployeeHomes({
             repoRoot: input.repoRoot,
@@ -803,7 +805,7 @@ function createPreviewChatDispatchSink(input: {
               return directory.members.find((member) => member.id === memberId)?.displayName;
             },
             onProcessEvent: async (processEvent) => {
-              await createPreviewProcessTracePublisher(input.repoRoot, event.companyId, input.realtimePublisher)
+              await createRuntimeProcessTracePublisher(input.repoRoot, event.companyId, input.realtimePublisher)
                 .publishProcessTraceEvent(processEvent);
             },
             onMessageCreated: (result) => publishChatMessageCreated(input.realtimePublisher, result),
@@ -824,12 +826,12 @@ function createPreviewChatDispatchSink(input: {
         companyId,
         employeeHomesById: new Map(employeeHomes.map((home) => [home.employeeId, home])),
         employeeIds: employeeHomes.map((home) => home.employeeId),
-        processTrace: createPreviewProcessTracePublisher(input.repoRoot, companyId, input.realtimePublisher),
+        processTrace: createRuntimeProcessTracePublisher(input.repoRoot, companyId, input.realtimePublisher),
       };
     },
-    trace: (entry) => appendPreviewChatTrace(input.repoRoot, {
+    trace: (entry) => appendRuntimeChatTrace(input.repoRoot, {
       ...entry,
-      phase: String(entry.phase).replace(/^tinyoffice_chat_runtime_/, "tinyoffice_chat_preview."),
+      phase: String(entry.phase).replace(/^tinyoffice_chat_runtime_/, "tinyoffice_chat_runtime."),
     }),
     topicSummaryGenerationService: {
       requestTopicSummaryGeneration(request) {
@@ -838,8 +840,8 @@ function createPreviewChatDispatchSink(input: {
             service.requestTopicSummaryGeneration(request);
             return service.drain();
           })
-          .catch((error) => appendPreviewChatTrace(input.repoRoot, {
-            phase: "tinyoffice_chat_preview.topic_summary_generation.failed",
+          .catch((error) => appendRuntimeChatTrace(input.repoRoot, {
+            phase: "tinyoffice_chat_runtime.topic_summary_generation.failed",
             companyId: request.companyId,
             roomId: request.roomId,
             topicId: request.topicId,
@@ -851,22 +853,23 @@ function createPreviewChatDispatchSink(input: {
   });
 }
 
-export async function createTinyOfficeChatPreviewServer(
-  config: TinyOfficeChatPreviewServerConfig,
-): Promise<TinyOfficeChatPreviewServerHandle> {
+export async function createTinyOfficeServer(
+  config: TinyOfficeServerConfig,
+): Promise<TinyOfficeServerHandle> {
   const companyId = config.companyId?.trim() || undefined;
-  const previewUserId = config.previewUserId.trim();
-  if (!previewUserId) {
-    throw new Error("TinyOffice preview user id is required.");
-  }
-  const previewUserDisplayName = config.previewUserDisplayName?.trim() || undefined;
+  const ownerAuth = await createTinyOfficeOwnerAuth({
+    repoRoot: config.repoRoot,
+    databaseUrl: config.databaseUrl,
+    publicOrigin: config.publicOrigin,
+    ...(config.authSecret ? { secret: config.authSecret } : {}),
+  });
 
-  const services = new Map<string, Promise<PreviewMessageService>>();
-  const attachmentServices = new Map<string, Promise<PreviewAttachmentService>>();
-  const channelServices = new Map<string, Promise<PreviewChannelService>>();
-  const titleGenerationServices = new Map<string, Promise<PreviewTitleGenerationService>>();
-  const topicSummaryGenerationServices = new Map<string, Promise<PreviewTopicSummaryGenerationService>>();
-  const attachmentServiceForCompany = async (scopedCompanyId: string): Promise<PreviewAttachmentService> => {
+  const services = new Map<string, Promise<RuntimeMessageService>>();
+  const attachmentServices = new Map<string, Promise<RuntimeAttachmentService>>();
+  const channelServices = new Map<string, Promise<RuntimeChannelService>>();
+  const titleGenerationServices = new Map<string, Promise<RuntimeTitleGenerationService>>();
+  const topicSummaryGenerationServices = new Map<string, Promise<RuntimeTopicSummaryGenerationService>>();
+  const attachmentServiceForCompany = async (scopedCompanyId: string): Promise<RuntimeAttachmentService> => {
     const existing = attachmentServices.get(scopedCompanyId);
     if (existing) {
       return existing;
@@ -875,7 +878,7 @@ export async function createTinyOfficeChatPreviewServer(
     attachmentServices.set(scopedCompanyId, created);
     return created;
   };
-  const serviceForCompany = async (scopedCompanyId: string): Promise<PreviewMessageService> => {
+  const serviceForCompany = async (scopedCompanyId: string): Promise<RuntimeMessageService> => {
     const existing = services.get(scopedCompanyId);
     if (existing) {
       return existing;
@@ -888,7 +891,7 @@ export async function createTinyOfficeChatPreviewServer(
     services.set(scopedCompanyId, created);
     return created;
   };
-  const channelServiceForCompany = async (scopedCompanyId: string): Promise<PreviewChannelService> => {
+  const channelServiceForCompany = async (scopedCompanyId: string): Promise<RuntimeChannelService> => {
     const existing = channelServices.get(scopedCompanyId);
     if (existing) {
       return existing;
@@ -897,7 +900,7 @@ export async function createTinyOfficeChatPreviewServer(
     channelServices.set(scopedCompanyId, created);
     return created;
   };
-  const titleGenerationServiceForCompany = async (scopedCompanyId: string): Promise<PreviewTitleGenerationService> => {
+  const titleGenerationServiceForCompany = async (scopedCompanyId: string): Promise<RuntimeTitleGenerationService> => {
     const existing = titleGenerationServices.get(scopedCompanyId);
     if (existing) {
       return existing;
@@ -913,7 +916,7 @@ export async function createTinyOfficeChatPreviewServer(
   };
   const topicSummaryGenerationServiceForCompany = async (
     scopedCompanyId: string,
-  ): Promise<PreviewTopicSummaryGenerationService> => {
+  ): Promise<RuntimeTopicSummaryGenerationService> => {
     const existing = topicSummaryGenerationServices.get(scopedCompanyId);
     if (existing) {
       return existing;
@@ -966,14 +969,14 @@ export async function createTinyOfficeChatPreviewServer(
 
   const server = http.createServer();
   const realtimePublisher = attachTinyOfficeRealtimeGateway(server);
-  const chatDispatchSink = createPreviewChatDispatchSink({
+  const chatDispatchSink = createRuntimeChatDispatchSink({
     repoRoot: config.repoRoot,
     serviceForCompany,
     topicSummaryGenerationServiceForCompany,
     realtimePublisher,
     runtimeProvider: config.runtimeProvider,
   });
-  const workControlPlaneLoop = startPreviewWorkControlPlaneLoop({
+  const workControlPlaneLoop = startRuntimeWorkControlPlaneLoop({
     repoRoot: config.repoRoot,
     intervalMs: config.workControlPlaneIntervalMs,
     realtimePublisher,
@@ -1021,7 +1024,7 @@ export async function createTinyOfficeChatPreviewServer(
         });
       },
       async switchCurrentCompany(session, input) {
-        const selected = await switchPreviewCurrentUserCompany(config.repoRoot, session, input.companyId);
+        const selected = await switchRuntimeCurrentUserCompany(config.repoRoot, session, input.companyId);
         await saveUserPreferredCompanyId({
           repoRoot: config.repoRoot,
           userId: session.userId,
@@ -1032,7 +1035,7 @@ export async function createTinyOfficeChatPreviewServer(
       },
       async resolveCurrentUserSession(session) {
         const preferredCompanyId = await loadUserPreferredCompanyId({ repoRoot: config.repoRoot, userId: session.userId });
-        return resolvePreviewCurrentUserSession(config.repoRoot, session, preferredCompanyId);
+        return resolveRuntimeCurrentUserSession(config.repoRoot, session, preferredCompanyId);
       },
     },
     tasksViewModelService: {
@@ -1057,10 +1060,10 @@ export async function createTinyOfficeChatPreviewServer(
         workService: new WorkService({
           repoRoot: config.repoRoot,
           companyId: scopedCompanyId,
-          observer: createPreviewWorkServiceObserver(realtimePublisher),
-          onWorkRunTerminal: createPreviewWorkRunTerminalHandler(config.repoRoot, scopedCompanyId),
+          observer: createRuntimeWorkServiceObserver(realtimePublisher),
+          onWorkRunTerminal: createRuntimeWorkRunTerminalHandler(config.repoRoot, scopedCompanyId),
         }),
-        abortWorkRunSessions: previewWorkRunSessionAborter(config.runtimeProvider),
+        abortWorkRunSessions: runtimeWorkRunSessionAborter(config.runtimeProvider),
         cancelBlockedRecovery(workRunId) {
           return cancelOpenWorkBlockedRecoveryRequests({
             repoRoot: config.repoRoot,
@@ -1074,14 +1077,14 @@ export async function createTinyOfficeChatPreviewServer(
       const workService = new WorkService({
         repoRoot: config.repoRoot,
         companyId: scopedCompanyId,
-        observer: createPreviewWorkServiceObserver(realtimePublisher),
-        onWorkRunTerminal: createPreviewWorkRunTerminalHandler(config.repoRoot, scopedCompanyId),
+        observer: createRuntimeWorkServiceObserver(realtimePublisher),
+        onWorkRunTerminal: createRuntimeWorkRunTerminalHandler(config.repoRoot, scopedCompanyId),
       });
       const cancellationService = new WorkCancellationService({
         repoRoot: config.repoRoot,
         companyId: scopedCompanyId,
         workService,
-        abortSessions: previewWorkRunSessionAborter(config.runtimeProvider),
+        abortSessions: runtimeWorkRunSessionAborter(config.runtimeProvider),
         cancelBlockedRecovery(workRunIds) {
           return cancelOpenWorkBlockedRecoveryRequests({
             repoRoot: config.repoRoot,
@@ -1114,7 +1117,7 @@ export async function createTinyOfficeChatPreviewServer(
     intakeEventService(_scopedCompanyId) {
       return Promise.resolve({
         ingestIntakeEvent(companyId, input) {
-          return ingestPreviewIntakeEvent({
+          return ingestRuntimeIntakeEvent({
             repoRoot: config.repoRoot,
             companyId,
             rawInput: input,
@@ -1454,13 +1457,7 @@ export async function createTinyOfficeChatPreviewServer(
     },
     realtimePublisher,
     chatDispatchSink,
-    auth: {
-      mode: "development-preview",
-      developmentPreviewUser: {
-        userId: previewUserId,
-        ...(previewUserDisplayName ? { displayName: previewUserDisplayName } : {}),
-      },
-    },
+    auth: ownerAuth,
   });
   const closeWithoutServiceCleanup = server.close.bind(server);
   server.close = ((callback?: (err?: Error) => void): http.Server => {
@@ -1479,7 +1476,10 @@ export async function createTinyOfficeChatPreviewServer(
           }
         }
       })
-      .finally(() => closeWithoutServiceCleanup(callback));
+      .finally(async () => {
+        await ownerAuth.close();
+        closeWithoutServiceCleanup(callback);
+      });
     return server;
   }) as typeof server.close;
 
@@ -1492,10 +1492,9 @@ export async function createTinyOfficeChatPreviewServer(
     if (req.method === "GET" && req.url === "/health") {
       json(res, 200, {
         ok: true,
-        surface: "tinyoffice-chat-preview",
+        surface: "tinyoffice-runtime",
         ...(companyId ? { companyId } : {}),
-        previewUserId,
-        previewDataSeed: "disabled",
+        authentication: "single-owner",
       });
       return;
     }
@@ -1504,12 +1503,12 @@ export async function createTinyOfficeChatPreviewServer(
       return;
     }
 
-    json(res, 404, { error: "TinyOffice Chat preview route not found." });
+    json(res, 404, { error: "TinyOffice route not found." });
   });
 
   return {
     server,
     ...(companyId ? { companyId } : {}),
-    previewUserId,
+    ...(ownerAuth.bootstrapToken ? { bootstrapToken: ownerAuth.bootstrapToken } : {}),
   };
 }

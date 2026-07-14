@@ -13,5 +13,5 @@ Default verification:
 
 ```powershell
 npm run smoke:no-carrier-chat
-node --import tsx scripts/runtime/run-real-chat-preview.ts
+npm start
 ```

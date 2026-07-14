@@ -110,7 +110,7 @@ Health output does not imply a single global Company.
 ```powershell
 npm run smoke:no-carrier-chat
 npm run smoke:standalone-frontend-browser
-node --import tsx scripts/runtime/run-real-chat-preview.ts
+npm start
 ```
 
 Then verify runtime health when the local preview server is running:

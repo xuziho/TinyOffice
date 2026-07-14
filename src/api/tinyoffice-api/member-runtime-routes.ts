@@ -46,7 +46,7 @@ export function registerMemberRuntimeRoutes(app: Hono, options: TinyOfficeApiOpt
     if (!memberRuntimeService.setMemberRuntimeEnabled) {
       throw new Error("member runtime lifecycle is not configured");
     }
-    const actor = currentUserFromRequest(c.req.raw, options.auth);
+    const actor = currentUserFromRequest(c.req.raw);
     return jsonResponse(c, await memberRuntimeService.setMemberRuntimeEnabled(companyId, memberId, body.enabled, actor.userId));
   });
 

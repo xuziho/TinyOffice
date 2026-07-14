@@ -370,7 +370,7 @@ This Chat Entry slice does not implement:
 - automatic runtime replies, PI dispatch, or runtime session / Process Trace generation expansion
 - non-image attachment upload, object-store replacement, parsing/OCR/PDF extraction, scanning policy, per-mention mixed-model upload guidance, and broad file-governance UI
 - Channel/Topic context-mode switching controls
-- login/auth; URL identity parameters remain a development preview boundary
+- multi-user login, invitation, and delegation; single-Owner passkey authentication is the current product boundary
 
 The #499/System AI foundation can now populate `title`, `titleStatus`, and `titleSourceMessageId` through the backend-owned title-generation boundary, with explicit provider config and source-backed audit events. The preview runtime wires this boundary to the PI-backed `pi_model` provider and drains title generation asynchronously after create-entry, so the create-entry response is not blocked by title refinement.
 

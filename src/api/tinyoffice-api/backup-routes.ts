@@ -5,17 +5,17 @@ import * as api from "./context.js";
 
 export function registerBackupRoutes(app: Hono, options: TinyOfficeApiOptions): void {
   app.get("/api/tinyoffice/backups", async (c) => {
-    api.currentUserFromRequest(c.req.raw, options.auth);
+    api.currentUserFromRequest(c.req.raw);
     if (!options.backupService) throw new Error("TinyOffice backup service is not configured.");
     return api.jsonResponse(c, await options.backupService.list());
   });
   app.post("/api/tinyoffice/backups", async (c) => {
-    api.currentUserFromRequest(c.req.raw, options.auth);
+    api.currentUserFromRequest(c.req.raw);
     if (!options.backupService) throw new Error("TinyOffice backup service is not configured.");
     return api.jsonResponse(c, options.backupService.start(), 202);
   });
   app.get("/api/tinyoffice/backups/:backupId/download", async (c) => {
-    api.currentUserFromRequest(c.req.raw, options.auth);
+    api.currentUserFromRequest(c.req.raw);
     if (!options.backupService) throw new Error("TinyOffice backup service is not configured.");
     const backup = await options.backupService.download(c.req.param("backupId"));
     return c.body(await readFile(backup.path), 200, {

@@ -4,28 +4,26 @@ import type { TinyOfficeApiOptions } from "./context.js";
 import * as api from "./context.js";
 
 export function registerSessionRoutes(app: Hono, options: TinyOfficeApiOptions): void {
-  const { authMode, currentSessionResponse, currentUserFromRequest, jsonResponse, parseSwitchCurrentCompanyBody, readJsonBody, resolveCompanyLifecycleService } = api;
+  const { currentSessionResponse, currentUserFromRequest, jsonResponse, parseSwitchCurrentCompanyBody, readJsonBody, resolveCompanyLifecycleService } = api;
 
   app.get("/api/tinyoffice/session/current", async (c) => {
-    const mode = authMode(options);
-    const currentUser = currentUserFromRequest(c.req.raw, options.auth);
+    const currentUser = currentUserFromRequest(c.req.raw);
     const companyLifecycleService = options.companyLifecycleService
       ? resolveCompanyLifecycleService(options)
       : undefined;
     const resolvedSession = companyLifecycleService?.resolveCurrentUserSession
       ? await companyLifecycleService.resolveCurrentUserSession(currentUser)
       : currentUser;
-    return jsonResponse(c, currentSessionResponse(resolvedSession, mode));
+    return jsonResponse(c, currentSessionResponse(resolvedSession));
   });
 
   app.put("/api/tinyoffice/session/current-company", async (c) => {
-    const mode = authMode(options);
-    const currentUser = currentUserFromRequest(c.req.raw, options.auth);
+    const currentUser = currentUserFromRequest(c.req.raw);
     const companyLifecycleService = resolveCompanyLifecycleService(options);
     const switchedSession = await companyLifecycleService.switchCurrentCompany(
       currentUser,
       parseSwitchCurrentCompanyBody(await readJsonBody(c)),
     );
-    return jsonResponse(c, currentSessionResponse(switchedSession, mode));
+    return jsonResponse(c, currentSessionResponse(switchedSession));
   });
 }

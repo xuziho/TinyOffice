@@ -61,10 +61,13 @@ export function createTinyOfficeApi(options: TinyOfficeApiOptions): Hono {
 
   registerAuthenticationRoutes(app, options);
   app.use("/api/*", async (c, next) => {
-    const session = await options.auth.resolveCurrentUser(c.req.raw);
-    if (!session) {
+    const authenticatedUser = await options.auth.resolveCurrentUser(c.req.raw);
+    if (!authenticatedUser) {
       throw new TinyOfficeAuthenticationError();
     }
+    const session = options.companyLifecycleService?.resolveCurrentUserSession
+      ? await options.companyLifecycleService.resolveCurrentUserSession(authenticatedUser)
+      : authenticatedUser;
     bindAuthenticatedRequest(c.req.raw, session);
     await next();
   });

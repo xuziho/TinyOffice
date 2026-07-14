@@ -3330,6 +3330,37 @@ test("TinyOffice API resolves the Owner from its authenticated session", async (
   });
 });
 
+test("TinyOffice API binds the resolved Owner member session across authenticated routes", async () => {
+  await withServer(async (baseUrl, calls) => {
+    const session = await fetch(`${baseUrl}/api/tinyoffice/session/current`);
+    const projection = await fetch(`${baseUrl}/api/companies/acme/chat?viewerMemberId=xuziho`);
+
+    assert.equal(session.status, 200);
+    assert.deepEqual(await json(session), {
+      schema: "tinyoffice-current-session",
+      version: 1,
+      user: {
+        id: "xuziho",
+        displayName: "Xu Ziho",
+      },
+      currentCompanyId: "acme",
+      companyId: "acme",
+      member: {
+        memberId: "xuziho",
+        displayName: "Xu",
+        role: "boss",
+      },
+      needsInitialization: false,
+    });
+    assert.equal(projection.status, 200);
+    assert.deepEqual(calls, ["projection:xuziho", "chat-get:conversation-1"]);
+  }, createTestAuthProvider({
+    userId: "xuziho",
+    displayName: "Xu Ziho",
+    source: "test-session",
+  }));
+});
+
 test("TinyOffice API switches the current Company through Owner session truth", async () => {
   await withServer(async (baseUrl, calls) => {
     const switched = await fetch(`${baseUrl}/api/tinyoffice/session/current-company`, {
@@ -3418,9 +3449,14 @@ test("TinyOffice API rejects employee body identity as current product identity"
   });
 });
 
-test("TinyOffice Chat projection cannot be impersonated through URL identity", async () => {
+test("TinyOffice Chat projection cannot be impersonated through URL or header identity", async () => {
   await withServer(async (baseUrl, calls) => {
-    const response = await fetch(`${baseUrl}/api/companies/acme/chat?viewerMemberId=intruder`);
+    const response = await fetch(`${baseUrl}/api/companies/acme/chat?viewerMemberId=intruder`, {
+      headers: {
+        "x-tinyoffice-company-id": "globex",
+        "x-tinyoffice-member-id": "intruder",
+      },
+    });
 
     assert.equal(response.status, 200);
     const projection = await json(response) as {
@@ -3438,6 +3474,16 @@ test("TinyOffice Chat projection cannot be impersonated through URL identity", a
       container.containerId === TEST_CHANNEL_CONTAINER_ID
     )?.mentionCount, 0);
     assert.deepEqual(calls, ["projection:xuziho", "chat-get:conversation-1"]);
+  });
+});
+
+test("TinyOffice Chat rejects a Company that differs from the resolved member session", async () => {
+  await withServer(async (baseUrl, calls) => {
+    const response = await fetch(`${baseUrl}/api/companies/globex/chat?viewerMemberId=xuziho`);
+
+    assert.equal(response.status, 400);
+    assert.match(JSON.stringify(await json(response)), /current member session company mismatch/);
+    assert.deepEqual(calls, []);
   });
 });
 

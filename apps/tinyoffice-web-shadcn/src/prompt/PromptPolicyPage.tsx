@@ -25,6 +25,7 @@ import { chatQueryKeys } from "@/chat/chatQueryKeys";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RotateCcw, Save, ScrollText } from "lucide-react";
 import { useEffect, useState, type ReactElement, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import {
   editPromptDraft,
   emptyPromptDraft,
@@ -44,6 +45,7 @@ type PromptTarget =
   | { kind: "block"; key: string; block: PromptPolicyBlockViewModel };
 
 export function PromptPolicyPage({ currentSession }: { currentSession?: TinyOfficeCurrentSession }): ReactElement {
+  const { t } = useTranslation();
   const { requestTransition } = useUnsavedChangesNavigation();
   const queryClient = useQueryClient();
   const companyId = currentSession?.companyId ?? currentSession?.currentCompanyId ?? "";
@@ -125,7 +127,7 @@ export function PromptPolicyPage({ currentSession }: { currentSession?: TinyOffi
         <aside className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] border-r border-[var(--tiny-line-soft)] bg-[var(--tiny-sidebar)]">
           <ScrollArea className="min-h-0">
             <div className="grid gap-4 p-2">
-              <PromptGroup title="Foundation prompts">
+              <PromptGroup title={t("admin.foundationPrompts")}>
                 {(model?.templates ?? []).map((template) => (
                   <PromptListButton
                     key={template.id}
@@ -135,7 +137,7 @@ export function PromptPolicyPage({ currentSession }: { currentSession?: TinyOffi
                   />
                 ))}
               </PromptGroup>
-              <PromptGroup title="Scene blocks">
+              <PromptGroup title={t("admin.sceneBlocks")}>
                 {editableBlocks(model).map((block) => (
                   <PromptListButton
                     key={block.path}
@@ -145,7 +147,7 @@ export function PromptPolicyPage({ currentSession }: { currentSession?: TinyOffi
                   />
                 ))}
               </PromptGroup>
-              {promptPolicyQuery.isLoading ? <PanelNote>Loading Prompt Policy...</PanelNote> : null}
+              {promptPolicyQuery.isLoading ? <PanelNote>{t("admin.loadingPrompt")}</PanelNote> : null}
               {promptPolicyQuery.error ? <PanelNote>{errorText(promptPolicyQuery.error, "Failed to load Prompt Policy.")}</PanelNote> : null}
             </div>
           </ScrollArea>
@@ -166,12 +168,12 @@ export function PromptPolicyPage({ currentSession }: { currentSession?: TinyOffi
                     <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                       <Button type="button" size="sm" disabled={saveMutation.isPending || !dirty} onClick={() => saveMutation.mutate()}>
                         <Save className="mr-2 size-4" />
-                        Save changes
+                        {t("common.saveChanges")}
                       </Button>
                       <SaveStateBadge dirty={dirty} saving={saveMutation.isPending} />
                       <Button type="button" size="sm" variant="outline" disabled={resetMutation.isPending} onClick={() => setResetDialogOpen(true)}>
                         <RotateCcw className="mr-2 size-4" />
-                        Reset to default
+                        {t("common.resetToDefault")}
                       </Button>
                     </div>
                   </div>
@@ -194,7 +196,7 @@ export function PromptPolicyPage({ currentSession }: { currentSession?: TinyOffi
                 </section>
               </>
             ) : (
-              <PanelNote>Select a Prompt Policy entry to edit company prompt text.</PanelNote>
+              <PanelNote>{t("admin.selectPrompt")}</PanelNote>
             )}
           </main>
         </ScrollArea>
@@ -237,15 +239,15 @@ export function PromptPolicyPage({ currentSession }: { currentSession?: TinyOffi
       <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reset this prompt?</DialogTitle>
+            <DialogTitle>{t("admin.resetPrompt")}</DialogTitle>
             <DialogDescription>
               {target ? `${targetTitle(target)} will be restored to its TinyOffice default. Other Prompt Policy entries will not change.` : "Select a prompt before resetting."}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setResetDialogOpen(false)}>Keep current prompt</Button>
+            <Button type="button" variant="outline" onClick={() => setResetDialogOpen(false)}>{t("admin.keepPrompt")}</Button>
             <Button type="button" variant="destructive" disabled={!target || resetMutation.isPending} onClick={() => resetMutation.mutate()}>
-              <RotateCcw /> Reset prompt
+              <RotateCcw /> {t("admin.resetPromptAction")}
             </Button>
           </DialogFooter>
         </DialogContent>

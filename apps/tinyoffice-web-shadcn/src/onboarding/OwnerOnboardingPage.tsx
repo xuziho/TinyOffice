@@ -10,6 +10,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, CheckCircle2, UserRound } from "lucide-react";
 import { useEffect, useState, type ReactElement, type ReactNode } from "react";
 import type { OwnedCreateCompanyResult, TinyOfficeCurrentSession } from "tinyoffice/frontend-api-contracts";
+import { useTranslation } from "react-i18next";
 
 export function OwnerOnboardingPage({ session }: { session: TinyOfficeCurrentSession }): ReactElement {
   return (
@@ -20,6 +21,7 @@ export function OwnerOnboardingPage({ session }: { session: TinyOfficeCurrentSes
 }
 
 function OwnerOnboardingContent({ session }: { session: TinyOfficeCurrentSession }): ReactElement {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const profileQuery = useQuery({ queryKey: chatQueryKeys.myProfile(), queryFn: getMyProfile });
   const companiesQuery = useQuery({ queryKey: chatQueryKeys.companies(), queryFn: listCompanies });
@@ -34,7 +36,7 @@ function OwnerOnboardingContent({ session }: { session: TinyOfficeCurrentSession
   }, [profileQuery.data]);
 
   const saveProfile = useMutation({
-    mutationFn: () => saveMyProfile({ displayName, avatarSeed }),
+    mutationFn: () => saveMyProfile({ displayName, avatarSeed, uiLocale: profileQuery.data?.uiLocale ?? "system" }),
     onSuccess: async (profile) => {
       queryClient.setQueryData(["my-profile"], profile);
       await queryClient.invalidateQueries({ queryKey: chatQueryKeys.currentSession() });
@@ -50,17 +52,17 @@ function OwnerOnboardingContent({ session }: { session: TinyOfficeCurrentSession
 
   if (session.needsProfileInitialization) {
     return (
-      <OnboardingShell step="Step 1 of 2" title="Set up your profile" description="This is how you appear in conversations and across your Companies." icon={<UserRound />}>
+      <OnboardingShell step={t("onboarding.step1")} title={t("onboarding.profileTitle")} description={t("onboarding.profileDescription")} icon={<UserRound />}>
         <div className="grid gap-5">
-          {avatarSeed ? <AvatarSeedEditor memberId={session.user.id} displayName={displayName || "You"} avatarSeed={avatarSeed} disabled={saveProfile.isPending} onChange={setAvatarSeed} /> : null}
+          {avatarSeed ? <AvatarSeedEditor memberId={session.user.id} displayName={displayName || t("onboarding.you")} avatarSeed={avatarSeed} disabled={saveProfile.isPending} onChange={setAvatarSeed} /> : null}
           <label className="grid gap-2 text-sm">
-            <span className="font-medium">Display name</span>
+            <span className="font-medium">{t("onboarding.displayName")}</span>
             <Input value={displayName} maxLength={80} autoFocus onChange={(event) => setDisplayName(event.currentTarget.value)} />
-            <span className="text-xs text-muted-foreground">You can change this later in Settings.</span>
+            <span className="text-xs text-muted-foreground">{t("onboarding.changeLater")}</span>
           </label>
           {saveProfile.error ? <OnboardingError error={saveProfile.error} /> : null}
           <Button className="w-fit" disabled={!displayName.trim() || !avatarSeed || saveProfile.isPending} onClick={() => saveProfile.mutate()}>
-            {saveProfile.isPending ? "Saving…" : "Continue"}
+            {saveProfile.isPending ? t("onboarding.saving") : t("common.continue")}
           </Button>
         </div>
       </OnboardingShell>
@@ -69,19 +71,19 @@ function OwnerOnboardingContent({ session }: { session: TinyOfficeCurrentSession
 
   if (createdCompany) {
     return (
-      <OnboardingShell step="Ready" title={`${createdCompany.company.displayName} is ready`} description={`You are the Boss and ${createdCompany.hr.hrEmployeeDisplayName} is your first HR.`} icon={<CheckCircle2 />}>
-        <Button className="w-fit" onClick={() => void queryClient.invalidateQueries({ queryKey: chatQueryKeys.currentSession() })}>Enter your office</Button>
+      <OnboardingShell step={t("onboarding.ready")} title={t("onboarding.companyReady", { company: createdCompany.company.displayName })} description={t("onboarding.companyReadyDescription", { hr: createdCompany.hr.hrEmployeeDisplayName })} icon={<CheckCircle2 />}>
+        <Button className="w-fit" onClick={() => void queryClient.invalidateQueries({ queryKey: chatQueryKeys.currentSession() })}>{t("onboarding.enterOffice")}</Button>
       </OnboardingShell>
     );
   }
 
   return (
-    <OnboardingShell step="Step 2 of 2" title="Create your first Company" description="TinyOffice will create your Boss membership and the first HR runtime member." icon={<Building2 />}>
+    <OnboardingShell step={t("onboarding.step2")} title={t("onboarding.companyTitle")} description={t("onboarding.companyDescription")} icon={<Building2 />}>
       <CreateCompanyPanel
         viewModel={companiesQuery.data}
         busy={createFirstCompany.isPending}
-        title="Company setup"
-        submitLabel="Create office"
+        title={t("onboarding.companySetup")}
+        submitLabel={t("onboarding.createOffice")}
         onCreate={(input) => createFirstCompany.mutate(input)}
       />
       {createFirstCompany.error ? <OnboardingError error={createFirstCompany.error} /> : null}

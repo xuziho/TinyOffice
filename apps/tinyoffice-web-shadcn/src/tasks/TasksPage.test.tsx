@@ -186,9 +186,9 @@ test("renders Tasks as a background Task operations console", async () => {
   assert.doesNotMatch(html, /grid-cols-\[minmax\(0,1fr\)_minmax\(420px,26vw\)\]/);
   assert.doesNotMatch(html, /Select Task/);
   assert.doesNotMatch(html, /Back to task list/);
-  assert.match(html, /Search tasks\.\.\./);
+  assert.match(html, /Search Tasks/);
   assert.match(html, /More filters/);
-  assert.match(html, /aria-label="Sort tasks"/);
+  assert.match(html, /aria-label="Sort Tasks"/);
   assert.match(html, /Publish weekly social update/);
   assert.match(html, /href="\/tasks\?taskId=work-task-1"/);
   assert.match(html, /Needs attention/);
@@ -273,7 +273,7 @@ test("renders a selected Task as a full-width detail route with a back action", 
     </QueryClientProvider>,
   );
 
-  assert.match(html, /Back to task list/);
+  assert.match(html, /Back to Task list/);
   assert.match(html, /href="\/tasks"/);
   assert.match(html, /Current state/);
   assert.match(html, /Objective/);

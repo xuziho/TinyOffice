@@ -12,7 +12,7 @@ export function registerProfileRoutes(app: Hono, options: TinyOfficeApiOptions):
   app.patch("/api/tinyoffice/profile", async (c) => {
     if (!options.repoRoot) throw new Error("User profile requires repoRoot.");
     const user = api.currentUserFromRequest(c.req.raw);
-    const body = await api.readJsonBody(c) as { displayName?: unknown; avatarSeed?: unknown };
-    return api.jsonResponse(c, await saveUserProfile({ repoRoot: options.repoRoot, userId: user.userId, displayName: body.displayName, avatarSeed: body.avatarSeed }));
+    const body = await api.readJsonBody(c) as { displayName?: unknown; avatarSeed?: unknown; uiLocale?: unknown };
+    return api.jsonResponse(c, await saveUserProfile({ repoRoot: options.repoRoot, userId: user.userId, displayName: body.displayName, avatarSeed: body.avatarSeed, uiLocale: body.uiLocale }));
   });
 }

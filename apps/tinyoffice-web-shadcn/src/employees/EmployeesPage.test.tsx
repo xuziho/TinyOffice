@@ -153,7 +153,7 @@ test("does not render a private skill editor when the employee has no private sk
 
   assert.match(source, /const hasPrivateSkills = Boolean\(skillsQuery\.data\?\.skills\.length\);/);
   assert.match(source, /!skillsQuery\.isLoading && !hasPrivateSkills/);
-  assert.match(source, /return <PanelNote>No private skill file exists for this employee\.<\/PanelNote>;/);
+  assert.match(source, /return <PanelNote>\{t\("employeesPage\.noPrivateSkill"\)\}<\/PanelNote>;/);
 });
 
 test("hydrates delayed Skill content without creating a false unsaved state", async () => {
@@ -197,14 +197,14 @@ test("renders employee lifecycle as a segmented control and editor navigation as
   assert.match(source, /w-fit max-w-full overflow-x-auto/);
   assert.match(source, /const employeeTabTriggerClassName =/);
   assert.match(source, /hover:text-foreground/);
-  assert.match(source, /<TabsTrigger value="general"[^>]*>General<\/TabsTrigger>/);
+  assert.match(source, /<TabsTrigger value="general"[^>]*>\{t\("employeesPage\.general"\)\}<\/TabsTrigger>/);
   assert.doesNotMatch(source, /<TabsTrigger value="runtime"/);
   assert.doesNotMatch(source, /<TabsContent value="runtime"/);
-  assert.match(source, /<h2 className="text-sm font-semibold">Runtime<\/h2>/);
+  assert.match(source, /<h2 className="text-sm font-semibold">\{t\("employeesPage\.runtime"\)\}<\/h2>/);
   assert.match(source, /grid items-start gap-3 md:grid-cols-\[minmax\(0,2fr\)_minmax\(180px,1fr\)\]/);
   assert.doesNotMatch(source, /function RuntimeValue/);
   assert.doesNotMatch(source, />Enabled<\/Badge>/);
-  assert.match(source, /employee\.enabled === false \? <Badge variant="outline">Inactive<\/Badge> : null/);
+  assert.match(source, /employee\.enabled === false \? <Badge variant="outline">\{t\("common\.inactive"\)\}<\/Badge> : null/);
 });
 
 test("employee lifecycle changes invalidate active Chat discovery", async () => {

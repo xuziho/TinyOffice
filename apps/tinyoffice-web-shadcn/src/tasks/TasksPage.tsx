@@ -29,6 +29,9 @@ import { chatQueryKeys } from "@/chat/chatQueryKeys";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Archive, ArrowLeft, ArrowUpDown, Clock3, Filter, MessageCircle, PlugZap, RefreshCw, Search, Undo2, X } from "lucide-react";
 import { Fragment, useEffect, useMemo, useState, type MouseEvent, type ReactElement, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
+import { currentUiLocale } from "@/i18n";
+import type { TFunction } from "i18next";
 import type {
   TasksAction,
   TasksSortMode,
@@ -74,6 +77,7 @@ export function TasksPage({
   onOpenNavigationTarget?: (target: NavigationTarget) => void;
   onClearReturnContext?: () => void;
 }): ReactElement {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const companyId = currentSession?.companyId ?? currentSession?.currentCompanyId ?? "";
   const [view, setView] = useState<TaskListView>("current");
@@ -147,11 +151,11 @@ export function TasksPage({
     <div className="tiny-soft-retro-tasks grid h-svh w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
       <header className="tiny-task-header flex items-center justify-between gap-3 border-b">
         <div className="min-w-0">
-          <div className="tiny-room-title truncate">{selectedTask?.title ?? "Tasks"}</div>
+          <div className="tiny-room-title truncate">{selectedTask?.title ?? t("tasksPage.title")}</div>
           <div className="tiny-room-subtitle truncate">
             {selectedTask
               ? `${sourceLabel(selectedTask.sourceKind)} - ${taskOwnerLabel(selectedTask)}`
-              : "Task command center"}
+              : t("tasksPage.commandCenter")}
           </div>
         </div>
         {selectedTask ? (
@@ -186,7 +190,7 @@ export function TasksPage({
                   }}
                 >
                   <ArrowLeft className="mr-2 size-4" />
-                  Back to task list
+                  {t("tasksPage.backToList")}
                 </a>
               </Button>
             ) : null}
@@ -226,9 +230,9 @@ export function TasksPage({
         <ScrollArea className="min-h-0 min-w-0">
           <div className="grid w-full gap-4 bg-[var(--tiny-canvas)] px-6 py-5">
             {tasksQuery.isLoading ? (
-              <ProductState compact description="Loading Tasks..." />
+              <ProductState compact description={t("tasksPage.loading")} />
             ) : tasksQuery.error ? (
-              <ProductState compact tone="error" description={tasksQuery.error instanceof Error ? tasksQuery.error.message : "Failed to load Tasks."} />
+              <ProductState compact tone="error" description={tasksQuery.error instanceof Error ? tasksQuery.error.message : t("tasksPage.loadFailed")} />
             ) : selectedTask ? (
               <TaskDetail
                 task={selectedTask}
@@ -251,8 +255,8 @@ export function TasksPage({
               model && model.tasks.length === 0
                 ? <TasksFirstEmptyState />
                 : view === "scheduled" && !owner && !query && !timeFilter
-                  ? <TasksViewEmptyState title="No scheduled Tasks" description="Tasks appear here when confirmed work has a future one-time or recurring schedule." />
-                  : <TasksViewEmptyState title="No matching Tasks" description="Try clearing the search or filters for this view." />
+                  ? <TasksViewEmptyState title={t("tasksPage.noScheduled")} description={t("tasksPage.noScheduledDescription")} />
+                  : <TasksViewEmptyState title={t("tasksPage.noMatching")} description={t("tasksPage.noMatchingDescription")} />
             )}
           </div>
         </ScrollArea>
@@ -270,27 +274,29 @@ function taskOwnerLabel(task: Pick<TasksTaskListItem, "ownerDisplayName">): stri
 }
 
 function TasksFirstEmptyState(): ReactElement {
+  const { t } = useTranslation();
   return (
     <div className="tiny-task-empty grid justify-items-center gap-3 rounded-lg border border-dashed px-5 py-10 text-center">
-      <div className="text-sm font-medium">No Tasks yet</div>
+      <div className="text-sm font-medium">{t("tasksPage.noTasks")}</div>
       <p className="max-w-xl text-sm leading-6 text-muted-foreground">
-        Tasks are created after you confirm background work in Chat, or when an AI employee turns an external Intake event into work. There is no manual Task form.
+        {t("tasksPage.noTasksDescription")}
       </p>
       <div className="flex flex-wrap justify-center gap-2">
-        <Button asChild size="sm" className="tiny-task-primary-action"><a href="/chat"><MessageCircle />Open Chat</a></Button>
-        <Button asChild size="sm" variant="outline" className="tiny-task-quiet-action"><a href="/integrations"><PlugZap />View Integrations</a></Button>
+        <Button asChild size="sm" className="tiny-task-primary-action"><a href="/chat"><MessageCircle />{t("tasksPage.openChat")}</a></Button>
+        <Button asChild size="sm" variant="outline" className="tiny-task-quiet-action"><a href="/integrations"><PlugZap />{t("tasksPage.viewIntegrations")}</a></Button>
       </div>
     </div>
   );
 }
 
 function TaskAttentionZone({ tasks, onSelect }: { tasks: TasksTaskListItem[]; onSelect(selection: Selection): void }): ReactElement | null {
+  const { t } = useTranslation();
   if (!tasks.length) return null;
   return <section className="tiny-task-attention">
-    <div className="flex items-center gap-2 border-b border-[var(--tiny-line-faint)] px-4 py-2.5"><AlertTriangle className="size-4" /><strong className="text-sm">Needs attention</strong><span className="text-xs text-muted-foreground">{tasks.length} waiting</span></div>
+    <div className="flex items-center gap-2 border-b border-[var(--tiny-line-faint)] px-4 py-2.5"><AlertTriangle className="size-4" /><strong className="text-sm">{t("tasksPage.needsAttention")}</strong><span className="text-xs text-muted-foreground">{t("tasksPage.waiting", { count: tasks.length })}</span></div>
     {tasks.map((task) => <div key={task.id} className="grid gap-3 px-4 py-4 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center">
       <TaskOwnerAvatar task={task} className="size-11" /><div className="min-w-0"><div className="truncate text-base font-semibold">{task.title}</div><p className="line-clamp-2 text-sm leading-5 text-muted-foreground">{attentionHintForTask(task)}</p><div className="mt-2 text-xs text-muted-foreground">{taskOwnerLabel(task)} · {formatDateTime(task.updatedAt)}</div></div>
-      <Button type="button" size="sm" className="tiny-task-attention-action" onClick={() => onSelect({ kind: "task", id: task.id })}>Review task</Button>
+      <Button type="button" size="sm" className="tiny-task-attention-action" onClick={() => onSelect({ kind: "task", id: task.id })}>{t("tasksPage.reviewTask")}</Button>
     </div>)}
   </section>;
 }
@@ -300,7 +306,8 @@ function TasksViewEmptyState({ title, description }: { title: string; descriptio
 }
 
 function TaskViewTabs({ view, counts, onViewChange }: { view: TaskListView; counts: ReturnType<typeof taskViewCounts>; onViewChange(value: TaskListView): void }): ReactElement {
-  return <div className="tiny-task-filter-row"><span>VIEW</span><Tabs value={view} onValueChange={(value) => onViewChange(value as TaskListView)}><TabsList className="h-auto gap-1 bg-transparent p-0"><TabsTrigger value="current">Current {counts.current}</TabsTrigger><TabsTrigger value="scheduled">Scheduled {counts.scheduled}</TabsTrigger><TabsTrigger value="history">History {counts.history}</TabsTrigger></TabsList></Tabs></div>;
+  const { t } = useTranslation();
+  return <div className="tiny-task-filter-row"><span>{t("tasksPage.view")}</span><Tabs value={view} onValueChange={(value) => onViewChange(value as TaskListView)}><TabsList className="h-auto gap-1 bg-transparent p-0"><TabsTrigger value="current">{t("tasksPage.current", { count: counts.current })}</TabsTrigger><TabsTrigger value="scheduled">{t("tasksPage.scheduled", { count: counts.scheduled })}</TabsTrigger><TabsTrigger value="history">{t("tasksPage.history", { count: counts.history })}</TabsTrigger></TabsList></Tabs></div>;
 }
 
 function TasksToolbar({
@@ -324,37 +331,38 @@ function TasksToolbar({
   onSortChange(value: TasksSortMode): void;
   onTimeFilterChange(value: TaskTimeFilter): void;
 }): ReactElement {
+  const { t } = useTranslation();
   const ownerOptions = taskOwnerOptions(model?.tasks ?? []);
   return (
     <div className="tiny-task-controls flex flex-wrap items-center gap-2">
       <div className="relative min-w-[260px] flex-1 sm:max-w-sm">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input value={query} placeholder="Search tasks..." className="h-9 bg-[var(--tiny-surface)] pl-8" onChange={(event) => onQueryChange(event.currentTarget.value)} />
+        <Input value={query} placeholder={t("tasksPage.search")} className="h-9 bg-[var(--tiny-surface)] pl-8" onChange={(event) => onQueryChange(event.currentTarget.value)} />
       </div>
       <Select value={owner || "all"} onValueChange={(value) => onOwnerChange(value === "all" ? "" : value)}>
-        <SelectTrigger aria-label="Filter by owner" className="h-9 min-w-[138px] bg-[var(--tiny-surface)]"><SelectValue placeholder="Owner: All" /></SelectTrigger>
+        <SelectTrigger aria-label={t("tasksPage.filterOwner")} className="h-9 min-w-[138px] bg-[var(--tiny-surface)]"><SelectValue placeholder={t("tasksPage.ownerAll")} /></SelectTrigger>
         <SelectContent align="start">
-          <SelectItem value="all">Owner: All</SelectItem>
+          <SelectItem value="all">{t("tasksPage.ownerAll")}</SelectItem>
           {ownerOptions.map((option) => <SelectItem key={option.ownerMemberId} value={option.ownerMemberId}>{option.displayName} ({option.count})</SelectItem>)}
         </SelectContent>
       </Select>
       <Popover>
         <PopoverTrigger asChild>
-          <Button type="button" variant="outline" className="h-9 gap-2 bg-[var(--tiny-surface)]"><Filter className="size-4" />More filters{timeFilter ? " · 1" : ""}</Button>
+          <Button type="button" variant="outline" className="h-9 gap-2 bg-[var(--tiny-surface)]"><Filter className="size-4" />{t("tasksPage.moreFilters")}{timeFilter ? " · 1" : ""}</Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-64">
-          <div className="text-xs font-semibold uppercase text-muted-foreground">Updated</div>
+          <div className="text-xs font-semibold uppercase text-muted-foreground">{t("tasksPage.updated")}</div>
           <div className="flex flex-wrap gap-1">
-            {TASK_TIME_FILTERS.map((filter) => <TaskFilterChip key={filter.value || "any-time"} active={timeFilter === filter.value} onClick={() => onTimeFilterChange(filter.value)}>{filter.label}</TaskFilterChip>)}
+            {TASK_TIME_FILTERS.map((filter) => <TaskFilterChip key={filter.value || "any-time"} active={timeFilter === filter.value} onClick={() => onTimeFilterChange(filter.value)}>{localizedTimeFilter(filter.value, t)}</TaskFilterChip>)}
           </div>
         </PopoverContent>
       </Popover>
       <div className="ml-auto flex items-center gap-2">
         <ArrowUpDown className="size-4 text-muted-foreground" />
         <Select value={sort} onValueChange={(value) => onSortChange(value as TasksSortMode)}>
-          <SelectTrigger aria-label="Sort tasks" className="h-9 min-w-[132px] bg-[var(--tiny-surface)]"><SelectValue /></SelectTrigger>
+          <SelectTrigger aria-label={t("tasksPage.sort")} className="h-9 min-w-[132px] bg-[var(--tiny-surface)]"><SelectValue /></SelectTrigger>
           <SelectContent align="end">
-            {(model?.sortOptions ?? [{ id: "recent", label: "Recent" }]).map((option) => <SelectItem key={option.id} value={option.id}>Sort: {option.label}</SelectItem>)}
+            {(model?.sortOptions ?? [{ id: "recent", label: "Recent" }]).map((option) => <SelectItem key={option.id} value={option.id}>{t("tasksPage.sortPrefix", { label: t(`enums.${option.id}`, { defaultValue: option.label }) })}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -374,6 +382,12 @@ function TaskFilterChip({ active, children, onClick }: { active: boolean; childr
       {children}
     </Button>
   );
+}
+
+function localizedTimeFilter(value: TaskTimeFilter, t: TFunction): string {
+  if (!value) return t("tasksPage.anyTime");
+  if (value === "24h") return "24h";
+  return t("tasksPage.days", { count: Number.parseInt(value, 10) });
 }
 
 function taskViewCounts(tasks: TasksTaskListItem[]): { current: number; attention: number; scheduled: number; history: number } {
@@ -470,18 +484,19 @@ function TaskOperationsTable({
   selected: Selection;
   onSelect(selection: Selection): void;
 }): ReactElement {
-  const groups = taskRowGroups(rows, view);
+  const { t } = useTranslation();
+  const groups = taskRowGroups(rows, view, t);
   return (
     <div className="tiny-task-table overflow-hidden rounded-lg border border-[var(--tiny-line)] bg-[var(--tiny-surface)]">
-      <div className="tiny-task-table-title"><strong>All tasks</strong><span>{rows.length} visible</span></div>
+      <div className="tiny-task-table-title"><strong>{t("tasksPage.allTasks")}</strong><span>{t("tasksPage.visible", { count: rows.length })}</span></div>
       <Table className="table-fixed">
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead className="h-8 px-4 text-[10px] uppercase text-muted-foreground">Task</TableHead>
-            <TableHead className="h-8 w-[170px] px-3 text-[10px] uppercase text-muted-foreground">State</TableHead>
-            <TableHead className="h-8 w-[160px] px-3 text-[10px] uppercase text-muted-foreground">Owner</TableHead>
-            <TableHead className="h-8 w-[360px] px-3 text-[10px] uppercase text-muted-foreground">{view === "history" ? "Outcome" : "Next action"}</TableHead>
-            <TableHead className="h-8 w-[168px] px-4 text-right text-[10px] uppercase text-muted-foreground">Updated</TableHead>
+            <TableHead className="h-8 px-4 text-[10px] uppercase text-muted-foreground">{t("tasksPage.task")}</TableHead>
+            <TableHead className="h-8 w-[170px] px-3 text-[10px] uppercase text-muted-foreground">{t("tasksPage.state")}</TableHead>
+            <TableHead className="h-8 w-[160px] px-3 text-[10px] uppercase text-muted-foreground">{t("tasksPage.owner")}</TableHead>
+            <TableHead className="h-8 w-[360px] px-3 text-[10px] uppercase text-muted-foreground">{view === "history" ? t("common.outcome") : t("common.nextAction")}</TableHead>
+            <TableHead className="h-8 w-[168px] px-4 text-right text-[10px] uppercase text-muted-foreground">{t("tasksPage.updated")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -518,15 +533,16 @@ function TaskGroupRow({ label, count, tone }: { label: string; count: number; to
 }
 
 function TaskStateBadge({ task, view }: { task: TasksTaskListItem; view: TaskListView }): ReactElement {
-  const display = view === "scheduled" ? { label: "Scheduled" } : displayStatusForTask(task);
+  const { t } = useTranslation();
+  const display = view === "scheduled" ? { label: t("tasksPage.scheduledLabel") } : displayStatusForTask(task);
   return <Badge variant="outline" className={`tiny-task-status ${display.label.toLowerCase().replaceAll(" ", "-")}`}>{display.label}</Badge>;
 }
 
-function taskRowGroups(rows: TasksTaskListItem[], view: TaskListView): Array<{ id: string; label?: string; rows: TasksTaskListItem[] }> {
+function taskRowGroups(rows: TasksTaskListItem[], view: TaskListView, t: TFunction): Array<{ id: string; label?: string; rows: TasksTaskListItem[] }> {
   if (view !== "current") return [{ id: view, rows }];
   const attention = rows.filter(taskNeedsAttention);
   const upNext = rows.filter((task) => !taskNeedsAttention(task));
-  return [...(attention.length ? [{ id: "attention", label: "Needs attention", rows: attention }] : []), ...(upNext.length ? [{ id: "up-next", label: "Up next", rows: upNext }] : [])];
+  return [...(attention.length ? [{ id: "attention", label: t("tasksPage.needsAttention"), rows: attention }] : []), ...(upNext.length ? [{ id: "up-next", label: t("common.upNext"), rows: upNext }] : [])];
 }
 
 function nextActionForTask(task: TasksTaskListItem, view: TaskListView): string {
@@ -554,6 +570,7 @@ function TaskDetail({
   runActionError?: string;
   onOpenNavigationTarget?: (target: NavigationTarget) => void;
 }): ReactElement {
+  const { t } = useTranslation();
   const actions = workTaskActions(task.status);
   const [confirmingAction, setConfirmingAction] = useState<WorkTaskLifecycleAction | undefined>();
   const [confirmingRunAction, setConfirmingRunAction] = useState<TasksAction | undefined>();
@@ -562,7 +579,7 @@ function TaskDetail({
   return (
     <div className="tiny-task-detail grid min-w-0 gap-4 overflow-hidden p-4">
       <section className="tiny-task-current-state grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
-        <div className="min-w-0"><div className="text-xs font-bold uppercase tracking-wide">What happens next</div><p className="mt-1 break-words text-sm leading-6">{task.nextStep}</p><div className="mt-2 flex items-center gap-2"><TaskOwnerAvatar task={task} className="size-7" /><span className="text-xs font-medium">{taskOwnerLabel(task)}</span><span className="text-xs text-muted-foreground">· {formatDateTime(task.updatedAt)}</span></div></div>
+        <div className="min-w-0"><div className="text-xs font-bold uppercase tracking-wide">{t("tasksPage.whatNext")}</div><p className="mt-1 break-words text-sm leading-6">{task.nextStep}</p><div className="mt-2 flex items-center gap-2"><TaskOwnerAvatar task={task} className="size-7" /><span className="text-xs font-medium">{taskOwnerLabel(task)}</span><span className="text-xs text-muted-foreground">· {formatDateTime(task.updatedAt)}</span></div></div>
         <StatusBadge status={displayStatusForTask(task).label} />
       </section>
       {actions.length ? (
@@ -591,9 +608,9 @@ function TaskDetail({
       <Dialog open={confirmingAction === "cancel"} onOpenChange={(open) => setConfirmingAction(open ? "cancel" : undefined)}>
         <DialogContent className="tiny-task-dialog">
           <DialogHeader>
-            <DialogTitle>Cancel Task?</DialogTitle>
+            <DialogTitle>{t("tasksPage.cancelTask")}</DialogTitle>
             <DialogDescription>
-              This stops future execution for this Task. Existing execution history stays recorded.
+              {t("tasksPage.cancelTaskDescription")}
             </DialogDescription>
           </DialogHeader>
           <div className="rounded-md border border-[var(--tiny-line-soft)] bg-[var(--tiny-fill)] px-3 py-2 text-sm">
@@ -602,7 +619,7 @@ function TaskDetail({
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setConfirmingAction(undefined)}>
-              Keep Task
+              {t("tasksPage.keepTask")}
             </Button>
             <Button
               type="button"
@@ -616,7 +633,7 @@ function TaskDetail({
                 setConfirmingAction(undefined);
               }}
             >
-              Cancel Task
+              {t("tasksPage.cancelTask")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -624,14 +641,14 @@ function TaskDetail({
       <Dialog open={confirmingRunAction?.id === "cancel-run"} onOpenChange={(open) => !open && setConfirmingRunAction(undefined)}>
         <DialogContent className="tiny-task-dialog">
           <DialogHeader>
-            <DialogTitle>Cancel this execution?</DialogTitle>
+            <DialogTitle>{t("tasksPage.cancelExecution")}</DialogTitle>
             <DialogDescription>
-              This stops the selected WorkRun. The parent Task and its execution history remain available.
+              {t("tasksPage.cancelExecutionDescription")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setConfirmingRunAction(undefined)}>
-              Keep Running
+              {t("tasksPage.keepRunning")}
             </Button>
             <Button
               type="button"
@@ -644,23 +661,23 @@ function TaskDetail({
                 setConfirmingRunAction(undefined);
               }}
             >
-              Cancel Execution
+              {t("tasksPage.cancelExecutionAction")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       {actionError || runActionError ? <div className="tiny-task-error text-sm text-destructive">{actionError || runActionError}</div> : null}
-      <DetailSection title="Current state">
+      <DetailSection title={t("tasksPage.currentState")}>
         <FactRow label="Status" value={displayStatusForTask(task).label} />
         <FactRow label="Owner" value={taskOwnerLabel(task)} />
         <FactRow label="Latest update" value={formatDateTime(task.updatedAt)} />
       </DetailSection>
-      <DetailSection title="Objective">
+      <DetailSection title={t("tasksPage.objective")}>
         <FactRow label="Revision" value={`v${task.revision}`} />
         {task.description ? <FactRow label="Brief" value={task.description} /> : null}
         <FactRow label="Acceptance" value={task.acceptanceCriteria} />
       </DetailSection>
-      <DetailSection title="Revision history" summary={`${task.revisions.length} confirmed objective version${task.revisions.length === 1 ? "" : "s"}`}>
+      <DetailSection title={t("tasksPage.revisionHistory")} summary={`${task.revisions.length} confirmed objective version${task.revisions.length === 1 ? "" : "s"}`}>
         {task.revisions.map((revision) => (
           <FactRow
             key={revision.revision}
@@ -669,7 +686,7 @@ function TaskDetail({
           />
         ))}
       </DetailSection>
-      <DetailSection title="Source" summary={sourceLabel(task.sourceKind)}>
+      <DetailSection title={t("tasksPage.source")} summary={sourceLabel(task.sourceKind)}>
         <FactRow label="Source" value={sourceLabel(task.sourceKind)} />
         {task.sourceLink ? <FactRow label="Reference" value={task.sourceLink.label} /> : null}
         {sourceNavigationTarget ? (
@@ -689,7 +706,7 @@ function TaskDetail({
           </Button>
         ) : null}
       </DetailSection>
-      <DetailSection title="Schedule" summary={scheduleSummaryForTask(task)}>
+      <DetailSection title={t("tasksPage.schedule")} summary={scheduleSummaryForTask(task)}>
         {task.scheduleRecord ? (
           <FactRow
             label={scheduleLabelForKind(task.scheduleRecord.kind)}
@@ -697,7 +714,7 @@ function TaskDetail({
           />
         ) : <EmptyLine>No schedule is stored. A valid Task must already have an execution or a future schedule.</EmptyLine>}
       </DetailSection>
-      <DetailSection title="History" summary={runsSummaryForTask(task)}>
+      <DetailSection title={t("tasksPage.executionHistory")} summary={runsSummaryForTask(task)}>
         {task.executions.length ? task.executions.map((run) => (
           <div key={run.id} className="flex items-center gap-2">
             <div className="min-w-0 flex-1">
@@ -873,7 +890,7 @@ function formatDateTime(value: string | undefined): string {
   if (Number.isNaN(date.getTime())) {
     return value;
   }
-  return date.toLocaleString();
+  return date.toLocaleString(currentUiLocale());
 }
 
 

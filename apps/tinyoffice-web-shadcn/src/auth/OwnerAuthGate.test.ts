@@ -11,6 +11,6 @@ test("local Owner access exchanges the launcher ticket without a visible token f
 
 test("remote Owner setup keeps Passkey bootstrap separate from local access", () => {
   assert.match(source, /status\?\.accessMode === "local"/);
-  assert.match(source, /Create Owner passkey/);
-  assert.match(source, /The setup token is not entered manually/);
+  assert.match(source, /t\("auth\.createOwnerPasskey"\)/);
+  assert.match(source, /t\("auth\.openSetupLink"\)/);
 });

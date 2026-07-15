@@ -5,6 +5,7 @@ import './index.css'
 import { App } from './app/App.tsx'
 import { UnsavedChangesProvider } from './config/UnsavedChangesProvider.tsx'
 import { OwnerAuthGate } from './auth/OwnerAuthGate.tsx'
+import './i18n/index.ts'
 
 const queryClient = new QueryClient()
 

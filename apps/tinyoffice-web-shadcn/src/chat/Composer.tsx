@@ -6,6 +6,7 @@ import { EmployeeAvatar } from "@/components/product/EmployeeAvatar";
 import { discardChatImageAttachment, uploadChatImageAttachment } from "@/api/chatClient";
 import { AtSignIcon, ImageIcon, MessageSquarePlusIcon, PaperclipIcon, SendIcon, SquareIcon, XIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type ClipboardEvent, type FocusEvent, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import { shouldSubmitComposerKey } from "./composerKeyModel";
 import { canAcceptImageFile, pendingImageFromFile, type PendingImageAttachment } from "./imageAttachmentState";
 import {
@@ -42,8 +43,8 @@ export function RoomReplyComposer({
   onSendReply,
   mentionCandidates = [],
   allowAllMention = false,
-  submitLabel = "Send",
-  pendingLabel = "Sending...",
+  submitLabel,
+  pendingLabel,
   isRunActive = false,
   isCancelingRun = false,
   onCancelRun,
@@ -68,6 +69,9 @@ export function RoomReplyComposer({
   notice?: string;
   onClearNotice?(): void;
 }): ReactElement {
+  const { t } = useTranslation();
+  const effectiveSubmitLabel = submitLabel ?? t("chat.send");
+  const effectivePendingLabel = pendingLabel ?? t("chat.sending");
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string>();
@@ -206,12 +210,12 @@ export function RoomReplyComposer({
 
   function addImageFiles(files: Iterable<File>): void {
     if (!imageAttachmentsEnabled) {
-      setError("This employee cannot inspect images with the current model.");
+      setError(t("chat.imageModelUnsupported"));
       return;
     }
     for (const file of files) {
       if (!canAcceptImageFile(file)) {
-        setError("Only PNG, JPEG, and WebP images can be attached.");
+        setError(t("chat.imageTypeUnsupported"));
         continue;
       }
       const pending = pendingImageFromFile(file);
@@ -287,7 +291,7 @@ export function RoomReplyComposer({
     }
     event.preventDefault();
     if (!imageAttachmentsEnabled) {
-      setError("This employee cannot inspect images with the current model.");
+      setError(t("chat.imageModelUnsupported"));
       return;
     }
     addImageFiles(files);
@@ -342,7 +346,7 @@ export function RoomReplyComposer({
                     variant="secondary"
                     size="icon-xs"
                     className="absolute right-1 top-1 h-6 w-6"
-                    aria-label={`Remove ${image.fileName}`}
+                    aria-label={t("chat.removeAttachment", { name: image.fileName })}
                     onClick={() => removePendingImage(image.localId)}
                   >
                     <XIcon />
@@ -350,7 +354,7 @@ export function RoomReplyComposer({
                 </div>
                 <div className="min-w-0 truncate text-xs">{image.fileName}</div>
                 <div className={image.status === "failed" ? "truncate text-xs text-destructive" : "truncate text-xs text-muted-foreground"}>
-                  {image.status === "uploaded" ? "Ready" : image.status === "failed" ? image.error : "Uploading..."}
+                  {image.status === "uploaded" ? t("chat.ready") : image.status === "failed" ? image.error : t("chat.uploading")}
                 </div>
               </div>
             ))}
@@ -399,7 +403,7 @@ export function RoomReplyComposer({
                     >
                       <span className="flex size-7 items-center justify-center rounded-full bg-muted text-xs font-semibold">@</span>
                       <span className="min-w-0 flex-1 truncate">all</span>
-                      <span className="text-xs text-muted-foreground">Message everyone</span>
+                      <span className="text-xs text-muted-foreground">{t("chat.messageEveryone")}</span>
                     </CommandItem>
                   ) : null}
                   {mentionOptions.map((candidate) => (
@@ -428,8 +432,8 @@ export function RoomReplyComposer({
               variant="ghost"
               size="icon"
               className="tiny-tool-button"
-              aria-label="Attach image"
-              title="Attach image"
+              aria-label={t("chat.attachImage")}
+              title={t("chat.attachImage")}
               disabled={!imageAttachmentsEnabled || isSending || isRunActive}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => imageInputRef.current?.click()}
@@ -441,8 +445,8 @@ export function RoomReplyComposer({
               variant="ghost"
               size="icon"
               className="tiny-tool-button"
-              aria-label="Attach file"
-              title="File attachments are not available yet"
+              aria-label={t("chat.attachFile")}
+              title={t("chat.filesUnavailable")}
               disabled
               onMouseDown={(event) => event.preventDefault()}
             >
@@ -453,8 +457,8 @@ export function RoomReplyComposer({
               variant="ghost"
               size="icon"
               className="tiny-tool-button"
-              aria-label="Mention someone"
-              title="Mention someone"
+              aria-label={t("chat.mentionSomeone")}
+              title={t("chat.mentionSomeone")}
               disabled={!canMention || isSending}
               onMouseDown={(event) => event.preventDefault()}
               onClick={openMentionPicker}
@@ -472,7 +476,7 @@ export function RoomReplyComposer({
             } : undefined}
           >
             {isRunActive ? <SquareIcon /> : <SendIcon />}
-            <span className="sr-only">{isRunActive ? (isCancelingRun ? "Stopping..." : "Stop") : isSending ? pendingLabel : submitLabel}</span>
+            <span className="sr-only">{isRunActive ? (isCancelingRun ? t("chat.stopping") : t("chat.stop")) : isSending ? effectivePendingLabel : effectiveSubmitLabel}</span>
           </Button>
         </div>
       </form>

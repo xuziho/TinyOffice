@@ -35,6 +35,8 @@ import { chatQueryKeys } from "@/chat/chatQueryKeys";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, BriefcaseBusinessIcon, Info, Plus, Search, Trash2, Upload } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
+import { currentUiLocale } from "@/i18n";
 import type {
   CompaniesAdminViewModel,
   CompanyLifecycleRecordDto,
@@ -50,6 +52,7 @@ export function CompanyLifecyclePage({
 }: {
   currentSession?: TinyOfficeCurrentSession;
 }): ReactElement {
+  const { t } = useTranslation();
   const { requestTransition } = useUnsavedChangesNavigation();
   const queryClient = useQueryClient();
   const companiesQuery = useQuery({
@@ -72,7 +75,7 @@ export function CompanyLifecyclePage({
   const createMutation = useMutation({
     mutationFn: createCompany,
     onSuccess: async (result) => {
-      setMessage(`${result.company.displayName} created.`);
+      setMessage(t("companyPage.created", { name: result.company.displayName }));
       setSelectedCompanyId(result.company.companyId);
       setCreateDialogOpen(false);
       await refreshRuntimeState();
@@ -83,7 +86,7 @@ export function CompanyLifecyclePage({
   const deleteMutation = useMutation({
     mutationFn: deleteCompany,
     onSuccess: async () => {
-      setMessage("Company deleted.");
+      setMessage(t("companyPage.deleted"));
       setSelectedCompanyId(undefined);
       await refreshRuntimeState();
     },
@@ -94,7 +97,7 @@ export function CompanyLifecyclePage({
     mutationFn: updateCompanyProfile,
     onSuccess: async (result) => {
       queryClient.setQueryData(chatQueryKeys.companies(), result);
-      setMessage("Company profile updated.");
+      setMessage(t("companyPage.profileUpdated"));
       await refreshRuntimeState();
     },
     onError: (error) => setMessage(error instanceof Error ? error.message : String(error)),
@@ -104,7 +107,7 @@ export function CompanyLifecyclePage({
     mutationFn: switchCurrentCompany,
     onSuccess: async (session) => {
       queryClient.setQueryData(chatQueryKeys.currentSession(), session);
-      setMessage("Current company changed.");
+      setMessage(t("companyPage.currentChanged"));
       await refreshRuntimeState();
     },
     onError: (error) => setMessage(error instanceof Error ? error.message : String(error)),
@@ -134,8 +137,8 @@ export function CompanyLifecyclePage({
   return (
     <main className="grid h-svh w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
       <ManagementPageHeader
-        title="Organization"
-        context={isInitializing ? "Set up a TinyOffice workspace" : undefined}
+        title={t("companyPage.title")}
+        context={isInitializing ? t("companyPage.setupContext") : undefined}
       />
 
       <section className="flex min-w-0 flex-col overflow-hidden bg-muted/20">
@@ -147,7 +150,7 @@ export function CompanyLifecyclePage({
           ) : null}
           {companiesQuery.isError ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {companiesQuery.error instanceof Error ? companiesQuery.error.message : "Company lifecycle could not load."}
+              {companiesQuery.error instanceof Error ? companiesQuery.error.message : t("companyPage.loadFailed")}
             </div>
           ) : null}
         </div> : null}
@@ -157,7 +160,7 @@ export function CompanyLifecyclePage({
             <section className="min-w-0 border-b xl:border-b-0 xl:border-r">
               <div className="flex items-center justify-between gap-3 px-4 py-3">
                 <div className="min-w-0">
-                  <h2 className="text-base font-semibold leading-tight">Companies</h2>
+                  <h2 className="text-base font-semibold leading-tight">{t("companyPage.companies")}</h2>
                 </div>
                 <NewCompanyDialog
                   open={createDialogOpen}
@@ -174,14 +177,14 @@ export function CompanyLifecyclePage({
                     className="h-9 pl-8"
                     value={query}
                     onChange={(event) => setQuery(event.currentTarget.value)}
-                    placeholder="Search companies..."
+                    placeholder={t("companyPage.search")}
                   />
                 </label>
               </div>
               <Separator />
               <div className="grid gap-2 p-3">
                 {companiesQuery.isLoading ? (
-                  <ProductState compact description="Loading companies..." />
+                  <ProductState compact description={t("companyPage.loading")} />
                 ) : visibleCompanies.length ? (
                   visibleCompanies.map((company) => (
                     <CompanyRow
@@ -193,7 +196,7 @@ export function CompanyLifecyclePage({
                     />
                   ))
                 ) : (
-                  <ProductState compact description={companies.length ? "No company matches this search." : "No company has been initialized."} />
+                  <ProductState compact description={companies.length ? t("companyPage.noMatch") : t("companyPage.noneInitialized")} />
                 )}
               </div>
             </section>
@@ -209,7 +212,7 @@ export function CompanyLifecyclePage({
                   onDelete={(confirmationText) => requestTransition(() => deleteMutation.mutate({ companyId: selectedCompany.companyId, confirmationText }))}
                 />
               ) : (
-                <ProductState description="Select a company to view settings." />
+                <ProductState description={t("companyPage.selectCompany")} />
               )}
             </section>
           </div>
@@ -232,25 +235,28 @@ function NewCompanyDialog({
   onOpenChange: (open: boolean) => void;
   onCreate: (input: CreateCompanyRequest) => void;
 }): ReactElement {
+  const { t } = useTranslation();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         <Button type="button" size="sm">
           <Plus className="size-4" />
-          New company
+          {t("companyPage.newCompany")}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Create company</DialogTitle>
+          <DialogTitle>{t("companyPage.createCompany")}</DialogTitle>
           <DialogDescription>
-            Initialize a company workspace, owner record, and first HR runtime member.
+            {t("companyPage.createDescription")}
           </DialogDescription>
         </DialogHeader>
         <CreateCompanyPanel
           viewModel={viewModel}
           busy={busy}
           onCreate={onCreate}
+          title={t("companyPage.createCompany")}
+          submitLabel={t("companyPage.createCompany")}
         />
       </DialogContent>
     </Dialog>
@@ -272,6 +278,7 @@ function CompanySettingsPanel({
   onUpdateProfile: (displayName: string) => void;
   onDelete: (confirmationText: string) => void;
 }): ReactElement {
+  const { t } = useTranslation();
   return (
     <div className="grid min-w-0 gap-0">
       <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
@@ -279,24 +286,24 @@ function CompanySettingsPanel({
           <div className="flex items-center gap-2">
             <BriefcaseBusinessIcon className="size-4 text-muted-foreground" aria-hidden="true" />
             <h2 className="truncate text-lg font-semibold leading-tight">{company.displayName}</h2>
-            {current ? <Badge variant="secondary">Current</Badge> : null}
+            {current ? <Badge variant="secondary">{t("common.current")}</Badge> : null}
           </div>
         </div>
         {!current ? (
           <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onMakeCurrent}>
-            Make current
+            {t("companyPage.makeCurrent")}
           </Button>
         ) : null}
       </div>
       <Separator />
       <div className="grid gap-5 p-5">
         <section className="grid gap-3">
-          <SectionHeading title="Identity" />
+          <SectionHeading title={t("companyPage.identity")} />
           <CompanyIdentityEditor company={company} busy={busy} onSave={onUpdateProfile} />
         </section>
 
         <Separator />
-        {current ? <CompanyBrandingPanel company={company} /> : <section className="grid gap-3"><SectionHeading title="Profile & branding" /><p className="text-sm text-muted-foreground">Make this Company current before editing its branding.</p></section>}
+        {current ? <CompanyBrandingPanel company={company} /> : <section className="grid gap-3"><SectionHeading title={t("companyPage.profileBranding")} /><p className="text-sm text-muted-foreground">{t("companyPage.brandingCurrentOnly")}</p></section>}
 
         <Separator />
 
@@ -319,6 +326,7 @@ function CompanyIdentityEditor({
   busy: boolean;
   onSave: (displayName: string) => void;
 }): ReactElement {
+  const { t } = useTranslation();
   const [displayName, setDisplayName] = useState(company.displayName);
 
   useEffect(() => setDisplayName(company.displayName), [company.companyId, company.displayName]);
@@ -329,34 +337,35 @@ function CompanyIdentityEditor({
     <div className="grid gap-3">
       <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
         <label className="grid gap-1.5 text-sm font-medium">
-          Company name
+          {t("companyPage.companyName")}
           <Input value={displayName} maxLength={120} onChange={(event) => setDisplayName(event.currentTarget.value)} />
         </label>
         <Button type="button" size="sm" disabled={busy || !dirty || !normalized} onClick={() => onSave(normalized)}>
-          Save name
+          {t("companyPage.saveName")}
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        The internal company identifier stays fixed so conversations, employees, files, and runtime history keep the same identity.
+        {t("companyPage.idImmutable")}
       </p>
       <div className="grid divide-y border-y sm:grid-cols-2 sm:divide-x sm:divide-y-0">
-        <Fact label="Created" value={formatTimestamp(company.createdAt)} />
-        <Fact label="Updated" value={formatTimestamp(company.updatedAt)} />
+        <Fact label={t("companyPage.createdAt")} value={formatTimestamp(company.createdAt)} />
+        <Fact label={t("companyPage.updatedAt")} value={formatTimestamp(company.updatedAt)} />
       </div>
     </div>
   );
 }
 
 function CompanyBrandingPanel({ company }: { company: CompanyLifecycleRecordDto }): ReactElement {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const logoInputRef = useRef<HTMLInputElement>(null);
   const query = useQuery({ queryKey: chatQueryKeys.branding(company.companyId), queryFn: () => getCompanyBranding({ companyId: company.companyId }) });
   const upload = useMutation({ mutationFn: (file: File) => uploadCompanyLogo({ companyId: company.companyId, file }), onSuccess: (state) => queryClient.setQueryData(chatQueryKeys.branding(company.companyId), state) });
   const remove = useMutation({ mutationFn: () => removeCompanyLogo({ companyId: company.companyId }), onSuccess: (state) => queryClient.setQueryData(chatQueryKeys.branding(company.companyId), state) });
-  return <section className="grid gap-3"><SectionHeading title="Profile & branding" /><div className="flex flex-wrap items-center gap-4 py-1">
+  return <section className="grid gap-3"><SectionHeading title={t("companyPage.profileBranding")} /><div className="flex flex-wrap items-center gap-4 py-1">
     <div className="flex size-16 items-center justify-center overflow-hidden rounded-xl bg-muted text-lg font-semibold">{query.data?.logoUrl ? <img src={`${query.data.logoUrl}?v=${encodeURIComponent(query.data.logoUrl)}`} alt={`${company.displayName} logo`} className="size-full object-cover" /> : company.displayName.slice(0, 2).toUpperCase()}</div>
-    <div className="grid gap-2"><div><div className="text-sm font-medium">Company logo</div><div className="text-xs text-muted-foreground">PNG, JPEG, or WebP. Up to 5 MB.</div></div><div className="flex flex-wrap gap-2"><input ref={logoInputRef} className="hidden" type="file" accept="image/png,image/jpeg,image/webp" disabled={upload.isPending} tabIndex={-1} aria-hidden="true" onChange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ""; if (file) upload.mutate(file); }} /><Button type="button" variant="outline" size="sm" disabled={upload.isPending} onClick={() => logoInputRef.current?.click()}><Upload />{upload.isPending ? "Uploading..." : query.data?.logoUrl ? "Replace logo" : "Choose logo"}</Button>{query.data?.logoUrl ? <Button type="button" variant="outline" size="sm" disabled={remove.isPending} onClick={() => remove.mutate()}>Remove</Button> : null}</div></div>
-  </div>{upload.error ? <p className="text-sm text-destructive">{upload.error instanceof Error ? upload.error.message : "Logo upload failed."}</p> : null}</section>;
+    <div className="grid gap-2"><div><div className="text-sm font-medium">{t("companyPage.logo")}</div><div className="text-xs text-muted-foreground">{t("companyPage.logoRequirements")}</div></div><div className="flex flex-wrap gap-2"><input ref={logoInputRef} className="hidden" type="file" accept="image/png,image/jpeg,image/webp" disabled={upload.isPending} tabIndex={-1} aria-hidden="true" onChange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ""; if (file) upload.mutate(file); }} /><Button type="button" variant="outline" size="sm" disabled={upload.isPending} onClick={() => logoInputRef.current?.click()}><Upload />{upload.isPending ? t("companyPage.uploading") : query.data?.logoUrl ? t("companyPage.replaceLogo") : t("companyPage.chooseLogo")}</Button>{query.data?.logoUrl ? <Button type="button" variant="outline" size="sm" disabled={remove.isPending} onClick={() => remove.mutate()}>{t("companyPage.removeLogo")}</Button> : null}</div></div>
+  </div>{upload.error ? <p className="text-sm text-destructive">{upload.error instanceof Error ? upload.error.message : t("companyPage.uploadFailed")}</p> : null}</section>;
 }
 
 export function CreateCompanyPanel({
@@ -372,6 +381,7 @@ export function CreateCompanyPanel({
   title?: string;
   submitLabel?: string;
 }): ReactElement {
+  const { t } = useTranslation();
   const [displayName, setDisplayName] = useState("");
   const [hrEmployeeDisplayName, setHrEmployeeDisplayName] = useState("");
   const [modelValue, setModelValue] = useState("");
@@ -423,13 +433,13 @@ export function CreateCompanyPanel({
                 variant="ghost"
                 size="icon-xs"
                 className="rounded-full text-muted-foreground"
-                aria-label="Create company details"
+                aria-label={t("companyPage.createDetails")}
               >
                 <Info className="size-3.5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent className="max-w-64 text-sm">
-              Creates the company, your boss member record, and the first HR runtime member.
+              {t("companyPage.createDetailsHelp")}
             </TooltipContent>
           </Tooltip>
         </h2>
@@ -437,25 +447,25 @@ export function CreateCompanyPanel({
       <Separator />
       <div className="grid gap-3 p-4">
         <label className="grid gap-1.5 text-sm">
-          Company name
+          {t("companyPage.companyName")}
           <Input value={displayName} onChange={(event) => setDisplayName(event.currentTarget.value)} required />
         </label>
         <label className="grid gap-1.5 text-sm">
-          HR name
+          {t("companyPage.hrName")}
           <Input value={hrEmployeeDisplayName} onChange={(event) => setHrEmployeeDisplayName(event.currentTarget.value)} required />
         </label>
         <RuntimeModelSelect
-          label="HR model"
+          label={t("companyPage.hrModel")}
           value={modelValue}
           availableModels={availableModels}
           onChange={setModelValue}
         />
         <RuntimeModelSelect
-          label="System AI model"
+          label={t("companyPage.systemAiModel")}
           value={systemAiModelValue}
           availableModels={availableModels}
           onChange={setSystemAiModelValue}
-          tooltip="System AI handles backend workspace tasks such as chat title generation and topic summaries."
+          tooltip={t("companyPage.systemAiHelp")}
         />
         <Button className="w-fit" type="submit" disabled={busy}>
           <Plus />
@@ -483,6 +493,7 @@ function RuntimeModelSelect({
   className?: string;
   onChange: (value: string) => void;
 }): ReactElement {
+  const { t } = useTranslation();
   return (
     <label className={`grid gap-1.5 text-sm ${className ?? ""}`}>
       <span className="flex items-center gap-1.5">
@@ -495,7 +506,7 @@ function RuntimeModelSelect({
                 variant="ghost"
                 size="icon-xs"
                 className="rounded-full text-muted-foreground"
-                aria-label={`${label} details`}
+                aria-label={t("companyPage.modelDetails", { label })}
               >
                 <Info className="size-3.5" />
               </Button>
@@ -509,7 +520,7 @@ function RuntimeModelSelect({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="none">Set later</SelectItem>
+          <SelectItem value="none">{t("common.setLater")}</SelectItem>
           {availableModels.map((model) => (
             <SelectItem key={`${label}-${model.provider}/${model.id}`} value={`${model.provider}/${model.id}`}>
               {model.name}
@@ -532,6 +543,7 @@ function CompanyRow({
   selected: boolean;
   onSelect: () => void;
 }): ReactElement {
+  const { t } = useTranslation();
   return (
     <SelectionRow
       selected={selected}
@@ -542,14 +554,14 @@ function CompanyRow({
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <SelectionRowTitle className="truncate text-sm">{company.displayName}</SelectionRowTitle>
-            {current ? <Badge variant="secondary">Current</Badge> : null}
+            {current ? <Badge variant="secondary">{t("common.current")}</Badge> : null}
           </div>
         </div>
         <div className="shrink-0 text-xs text-muted-foreground">{formatShortDate(company.updatedAt)}</div>
       </div>
       <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-        <span>Created {formatShortDate(company.createdAt)}</span>
-        <span>Updated {formatShortDate(company.updatedAt)}</span>
+        <span>{t("companyPage.createdAt")} {formatShortDate(company.createdAt)}</span>
+        <span>{t("companyPage.updatedAt")} {formatShortDate(company.updatedAt)}</span>
       </div>
     </SelectionRow>
   );
@@ -581,6 +593,7 @@ function DangerZone({
   busy: boolean;
   onDelete: (confirmationText: string) => void;
 }): ReactElement {
+  const { t } = useTranslation();
   const [confirmationText, setConfirmationText] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
@@ -599,47 +612,47 @@ function DangerZone({
 
   return (
     <section className="grid gap-3">
-      <SectionHeading title="Danger zone" />
+      <SectionHeading title={t("companyPage.dangerZone")} />
       <div className="rounded-md border border-destructive/25 bg-destructive/5 px-3 py-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-sm font-medium text-destructive">
               <AlertTriangle className="size-4" />
-              Delete company
+              {t("companyPage.deleteCompany")}
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              Removes the company row, company-scoped PostgreSQL data, and file assets.
+              {t("companyPage.deleteDescription")}
             </p>
           </div>
           <Dialog open={deleteDialogOpen} onOpenChange={handleDeleteDialogOpenChange}>
             <DialogTrigger asChild>
               <Button type="button" variant="destructive" size="sm" disabled={busy}>
                 <Trash2 className="size-4" />
-                Delete
+                {t("common.delete")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <AlertTriangle className="size-5 text-destructive" />
-                  Delete company permanently
+                  {t("companyPage.deletePermanently")}
                 </DialogTitle>
                 <DialogDescription>
-                  Type DELETE to remove {company.displayName}. This action cannot be undone.
+                  {t("companyPage.deleteConfirmation", { name: company.displayName })}
                 </DialogDescription>
               </DialogHeader>
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm">
                 <p className="font-medium text-destructive">{company.displayName}</p>
               </div>
               <Input
-                aria-label={`Confirm delete ${company.companyId}`}
+                aria-label={t("companyPage.confirmDeleteLabel", { id: company.companyId })}
                 value={confirmationText}
                 onChange={(event) => setConfirmationText(event.currentTarget.value)}
                 placeholder="DELETE"
               />
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => handleDeleteDialogOpenChange(false)}>
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   type="button"
@@ -648,7 +661,7 @@ function DangerZone({
                   onClick={confirmDelete}
                 >
                   <Trash2 className="size-4" />
-                  I understand, delete company
+                  {t("companyPage.understandDelete")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -681,9 +694,9 @@ function selectedCompanyFor(
 }
 
 function formatTimestamp(value: string): string {
-  return new Date(value).toLocaleString();
+  return new Date(value).toLocaleString(currentUiLocale());
 }
 
 function formatShortDate(value: string): string {
-  return new Date(value).toLocaleDateString();
+  return new Date(value).toLocaleDateString(currentUiLocale());
 }

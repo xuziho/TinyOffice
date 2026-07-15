@@ -14,8 +14,8 @@ import {
 
 test("workforce navigation contains only people and company skills", () => {
   assert.deepEqual(workforceNavigation, [
-    { view: "employees", label: "Employees" },
-    { view: "skills", label: "Company Skills" },
+    { view: "employees", labelKey: "nav.employees" },
+    { view: "skills", labelKey: "nav.companySkills" },
   ]);
   assert.equal(isWorkforceView("employees"), true);
   assert.equal(isWorkforceView("skills"), true);
@@ -23,8 +23,8 @@ test("workforce navigation contains only people and company skills", () => {
 });
 
 test("console rail destinations keep standalone and grouped responsibilities explicit", () => {
-  assert.deepEqual(organizationNavigation, [{ view: "company", label: "Organization" }]);
-  assert.deepEqual(integrationsNavigation, [{ view: "integrations", label: "Integrations" }]);
+  assert.deepEqual(organizationNavigation, [{ view: "company", labelKey: "nav.organization" }]);
+  assert.deepEqual(integrationsNavigation, [{ view: "integrations", labelKey: "nav.integrations" }]);
   assert.deepEqual(aiRuntimeNavigation.map((item) => item.view), ["system-ai", "prompt", "access", "capabilities"]);
   assert.deepEqual(operationsNavigation.map((item) => item.view), ["sessions", "doctor", "backup", "updates"]);
   assert.equal(isAiRuntimeView("access"), true);

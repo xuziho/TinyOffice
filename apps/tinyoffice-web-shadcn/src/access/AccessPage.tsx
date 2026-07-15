@@ -13,6 +13,7 @@ import { chatQueryKeys } from "@/chat/chatQueryKeys";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Save, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactElement, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { reconcileAccessPolicyEditor, type AccessPolicyEditorState } from "./accessPolicyEditorModel";
 import type {
   TinyOfficeCurrentSession,
@@ -29,6 +30,7 @@ const decisionClassName: Record<ToolSafetyDecision, string> = {
 };
 
 export function AccessPage({ currentSession }: { currentSession?: TinyOfficeCurrentSession }): ReactElement {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const companyId = currentSession?.companyId ?? currentSession?.currentCompanyId ?? "";
   const accessQuery = useQuery({
@@ -92,7 +94,7 @@ export function AccessPage({ currentSession }: { currentSession?: TinyOfficeCurr
                   </span>
                 </SelectionRow>
               ))}
-              {accessQuery.isLoading ? <PanelNote>Loading Access policy...</PanelNote> : null}
+              {accessQuery.isLoading ? <PanelNote>{t("admin.loadingAccess")}</PanelNote> : null}
               {accessQuery.error ? <PanelNote>{errorText(accessQuery.error, "Failed to load Access policy.")}</PanelNote> : null}
             </SelectionList>
           </ScrollArea>
@@ -113,7 +115,7 @@ export function AccessPage({ currentSession }: { currentSession?: TinyOfficeCurr
                     <div className="flex shrink-0 items-center gap-2">
                       <Button type="button" size="sm" disabled={!parsedPolicy?.ok || !policyChanged || saveMutation.isPending} onClick={() => saveMutation.mutate()}>
                         <Save className="mr-2 size-4" />
-                        Save changes
+                        {t("common.saveChanges")}
                       </Button>
                       <SaveStateBadge dirty={policyChanged} saving={saveMutation.isPending} />
                     </div>
@@ -137,7 +139,7 @@ export function AccessPage({ currentSession }: { currentSession?: TinyOfficeCurr
                 </details>
               </>
             ) : (
-              <PanelNote>Select a company to edit Access policy.</PanelNote>
+              <PanelNote>{t("admin.selectCompanyAccess")}</PanelNote>
             )}
           </main>
         </ScrollArea>
@@ -147,11 +149,12 @@ export function AccessPage({ currentSession }: { currentSession?: TinyOfficeCurr
 }
 
 function RuleGroupDetails({ group }: { group: ToolSafetyCapabilityGroup }): ReactElement {
+  const { t } = useTranslation();
   const resourcePatterns = group.resourcePatterns ?? [];
   const commandColumns = commandPatternColumns(group);
   return (
     <section className="grid gap-3">
-      <SectionTitle>Configured rules</SectionTitle>
+      <SectionTitle>{t("admin.configuredRules")}</SectionTitle>
       {group.kind === "command" ? (
         commandColumns.length ? (
           <div className="grid gap-2 md:grid-cols-3">
@@ -178,9 +181,10 @@ function RuleGroupDetails({ group }: { group: ToolSafetyCapabilityGroup }): Reac
 }
 
 function GuardBoundary(): ReactElement {
+  const { t } = useTranslation();
   return (
     <section className="grid gap-3">
-      <SectionTitle>Runtime boundary</SectionTitle>
+      <SectionTitle>{t("admin.runtimeBoundary")}</SectionTitle>
       <div className="grid divide-y border-y text-sm text-[var(--tiny-muted)]">
         <div className="py-2">
           Access guards tool calls for sensitive paths and high-risk commands. It is not a sandbox and not a full business permission system.

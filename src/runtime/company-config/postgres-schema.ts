@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   user_id text PRIMARY KEY,
   display_name text NOT NULL,
   avatar_seed text,
+  ui_locale text NOT NULL DEFAULT 'system' CHECK (ui_locale IN ('system', 'en', 'zh-CN')),
   profile_initialized_at timestamptz,
   current_company_id text REFERENCES companies(company_id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL,
@@ -1087,6 +1088,19 @@ ALTER TABLE company_members
   ADD CONSTRAINT company_members_display_name_nonempty CHECK (btrim(display_name) <> ''),
   ADD CONSTRAINT company_members_role_nonempty CHECK (btrim(role) <> ''),
   ADD CONSTRAINT company_members_avatar_seed_nonempty CHECK (btrim(avatar_seed) <> '');
+`,
+  },
+  {
+    id: "pg_016_user_ui_locale_20260716",
+    sql: `
+ALTER TABLE user_profiles
+  ADD COLUMN IF NOT EXISTS ui_locale text NOT NULL DEFAULT 'system';
+
+ALTER TABLE user_profiles
+  DROP CONSTRAINT IF EXISTS user_profiles_ui_locale_check;
+
+ALTER TABLE user_profiles
+  ADD CONSTRAINT user_profiles_ui_locale_check CHECK (ui_locale IN ('system', 'en', 'zh-CN'));
 `,
   },
 ];

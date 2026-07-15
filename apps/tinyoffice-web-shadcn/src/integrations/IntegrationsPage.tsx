@@ -3,11 +3,13 @@ import { Button } from "@/components/ui/button";
 import { ManagementPageHeader } from "@/components/product/ManagementPageHeader";
 import { ArrowRightIcon, BellRingIcon, FileInputIcon, MessageCircleIcon, PlugZapIcon, TimerIcon } from "lucide-react";
 import type { ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 
 export function IntegrationsPage(): ReactElement {
+  const { t } = useTranslation();
   return (
     <div className="flex h-svh min-w-0 flex-col overflow-hidden bg-background">
-      <ManagementPageHeader title="Integrations" />
+      <ManagementPageHeader title={t("nav.integrations")} />
       <div className="min-h-0 flex-1 overflow-auto p-6">
         <div className="mx-auto grid max-w-5xl gap-6">
           <section className="py-2">
@@ -17,31 +19,31 @@ export function IntegrationsPage(): ReactElement {
                   <PlugZapIcon className="size-5" />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-lg font-semibold">External Intake</h2>
+                  <h2 className="text-lg font-semibold">{t("admin.externalIntake")}</h2>
                   <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-                    Forms, monitoring, email automation, and scheduled scripts can send events to a specific AI employee. The employee decides whether to respond, record evidence, or create a background Task.
+                    {t("admin.externalIntakeDescription")}
                   </p>
                 </div>
               </div>
-              <Badge variant="secondary">Available</Badge>
+              <Badge variant="secondary">{t("common.available")}</Badge>
             </div>
 
             <div className="mt-6 grid divide-y border-y md:grid-cols-3 md:divide-x md:divide-y-0">
-              <UseCase icon={<BellRingIcon />} title="Monitoring alerts" description="Notify an operations employee when a service needs attention." />
-              <UseCase icon={<FileInputIcon />} title="Forms and requests" description="Route a new customer or internal request to the right employee." />
-              <UseCase icon={<TimerIcon />} title="Scheduled automation" description="Hand generated reports or collected data to an analyst employee." />
+              <UseCase icon={<BellRingIcon />} title={t("admin.monitoringAlerts")} description={t("admin.monitoringAlertsDescription")} />
+              <UseCase icon={<FileInputIcon />} title={t("admin.formsRequests")} description={t("admin.formsRequestsDescription")} />
+              <UseCase icon={<TimerIcon />} title={t("admin.scheduledAutomation")} description={t("admin.scheduledAutomationDescription")} />
             </div>
 
             <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-md border bg-muted/20 p-4">
               <div>
-                <div className="text-sm font-medium">Tell an AI employee what you want to connect.</div>
+                <div className="text-sm font-medium">{t("admin.askEmployee")}</div>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  The employee can inspect TinyOffice's Intake contract, write the integration code, and verify the connection for you.
+                  {t("admin.askEmployeeDescription")}
                 </p>
               </div>
               <Button asChild>
                 <a href="/chat">
-                  <MessageCircleIcon /> Ask AI to set it up <ArrowRightIcon />
+                  <MessageCircleIcon /> {t("admin.askAiSetup")} <ArrowRightIcon />
                 </a>
               </Button>
             </div>

@@ -41,6 +41,7 @@ import { hydrateSkillEditor, type SkillEditorState } from "./skillEditorModel";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Save, UserRound } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import type {
   EmployeeAdminRecord,
   EmployeeInstructionFile,
@@ -70,6 +71,7 @@ const employeeTabTriggerClassName = [
 ].join(" ");
 
 export function EmployeesPage({ currentSession }: { currentSession?: TinyOfficeCurrentSession }): ReactElement {
+  const { t } = useTranslation();
   const { requestTransition } = useUnsavedChangesNavigation();
   const queryClient = useQueryClient();
   const companyId = currentSession?.companyId ?? currentSession?.currentCompanyId ?? "";
@@ -109,7 +111,7 @@ export function EmployeesPage({ currentSession }: { currentSession?: TinyOfficeC
   const saveMutation = useMutation({
     mutationFn: () => {
       if (!selectedEmployee || !draft) {
-        throw new Error("Select an employee before saving.");
+        throw new Error(t("employeesPage.selectBeforeSave"));
       }
       return saveEmployee({ companyId, employee: employeeFromDraft(selectedEmployee, draft) });
     },
@@ -174,7 +176,7 @@ export function EmployeesPage({ currentSession }: { currentSession?: TinyOfficeC
         <aside className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] border-r border-[var(--tiny-line-soft)] bg-[var(--tiny-sidebar)]">
           <div className="grid gap-2 border-b border-[var(--tiny-line-faint)] px-3 py-3">
             <div className="flex items-center justify-between gap-3 px-1">
-              <h2 className="text-base font-semibold leading-tight">Employees</h2>
+              <h2 className="text-base font-semibold leading-tight">{t("employeesPage.title")}</h2>
               <CreateEmployeeDialog
                 companyId={companyId}
                 model={model}
@@ -185,12 +187,12 @@ export function EmployeesPage({ currentSession }: { currentSession?: TinyOfficeC
                 }}
               />
             </div>
-            <div className="tiny-segmented-control grid grid-cols-2" aria-label="Employee lifecycle view">
+            <div className="tiny-segmented-control grid grid-cols-2" aria-label={t("employeesPage.lifecycleView")}>
               <Button className="tiny-segmented-trigger" data-active={employeeView === "active" || undefined} type="button" size="sm" variant="ghost" onClick={() => requestTransition(() => setEmployeeView("active"))}>
-                Active {activeEmployeeCount}
+                {t("employeesPage.activeCount", { count: activeEmployeeCount })}
               </Button>
               <Button className="tiny-segmented-trigger" data-active={employeeView === "inactive" || undefined} type="button" size="sm" variant="ghost" onClick={() => requestTransition(() => setEmployeeView("inactive"))}>
-                Inactive {inactiveEmployeeCount}
+                {t("employeesPage.inactiveCount", { count: inactiveEmployeeCount })}
               </Button>
             </div>
           </div>
@@ -210,10 +212,10 @@ export function EmployeesPage({ currentSession }: { currentSession?: TinyOfficeC
                   </span>
                 </SelectionRow>
               ))}
-              {employeesQuery.isLoading ? <PanelNote>Loading employees...</PanelNote> : null}
-              {employeesQuery.error ? <PanelNote>{errorText(employeesQuery.error, "Failed to load Employees.")}</PanelNote> : null}
+              {employeesQuery.isLoading ? <PanelNote>{t("common.loading")}</PanelNote> : null}
+              {employeesQuery.error ? <PanelNote>{errorText(employeesQuery.error, t("employeesPage.loadFailed"))}</PanelNote> : null}
               {!employeesQuery.isLoading && visibleEmployees.length === 0 ? (
-                <PanelNote>{employeeView === "active" ? "No active employees." : "No inactive employees."}</PanelNote>
+                <PanelNote>{employeeView === "active" ? t("employeesPage.noActive") : t("employeesPage.noInactive")}</PanelNote>
               ) : null}
             </SelectionList>
           </ScrollArea>
@@ -235,7 +237,7 @@ export function EmployeesPage({ currentSession }: { currentSession?: TinyOfficeC
                 onSetEnabled={(enabled) => lifecycleMutation.mutateAsync(enabled).then(() => undefined)}
               />
             ) : (
-              <PanelNote>Select an employee to edit runtime configuration.</PanelNote>
+              <PanelNote>{t("employeesPage.selectToEdit")}</PanelNote>
             )}
           </div>
         </ScrollArea>
@@ -269,6 +271,7 @@ function EmployeeEditor({
   changingLifecycle: boolean;
   onSetEnabled(enabled: boolean): Promise<void>;
 }): ReactElement {
+  const { t } = useTranslation();
   const instructionFile = editableAgentsFile(employee);
   return (
     <div className="grid min-w-0 gap-4">
@@ -278,14 +281,14 @@ function EmployeeEditor({
             <div className="flex min-w-0 items-center gap-2">
               <UserRound className="size-5 text-[var(--tiny-muted)]" />
               <h1 className="truncate text-xl font-semibold">{employeeLabel(employee)}</h1>
-              {employee.enabled === false ? <Badge variant="outline">Inactive</Badge> : null}
+              {employee.enabled === false ? <Badge variant="outline">{t("common.inactive")}</Badge> : null}
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <EmployeeLifecycleAction employee={employee} pending={changingLifecycle} onSetEnabled={onSetEnabled} />
             <Button type="button" size="sm" disabled={saving || !dirty} onClick={onSave}>
               <Save className="mr-2 size-4" />
-              Save changes
+              {t("common.saveChanges")}
             </Button>
             <SaveStateBadge dirty={dirty} saving={saving} />
           </div>
@@ -294,30 +297,30 @@ function EmployeeEditor({
       </section>
       <Tabs defaultValue="general" className="flex min-w-0 flex-col">
         <TabsList variant="line" className="tiny-content-tabs w-fit max-w-full overflow-x-auto">
-          <TabsTrigger value="general" className={employeeTabTriggerClassName}>General</TabsTrigger>
+          <TabsTrigger value="general" className={employeeTabTriggerClassName}>{t("employeesPage.general")}</TabsTrigger>
           <TabsTrigger value="agents" className={employeeTabTriggerClassName}>AGENTS.md</TabsTrigger>
-          <TabsTrigger value="skills" className={employeeTabTriggerClassName}>Skills</TabsTrigger>
-          <TabsTrigger value="assets" className={employeeTabTriggerClassName}>Assets</TabsTrigger>
+          <TabsTrigger value="skills" className={employeeTabTriggerClassName}>{t("employeesPage.skills")}</TabsTrigger>
+          <TabsTrigger value="assets" className={employeeTabTriggerClassName}>{t("employeesPage.assets")}</TabsTrigger>
         </TabsList>
         <TabsContent value="general" className="grid gap-3 pt-3">
-          <AvatarSeedEditor memberId={employee.employeeId} displayName={draft.displayName || "Unnamed employee"} avatarSeed={draft.avatarSeed} disabled={saving} onChange={(avatarSeed) => onDraftChange({ ...draft, avatarSeed })} />
+          <AvatarSeedEditor memberId={employee.employeeId} displayName={draft.displayName || t("employeesPage.unnamed")} avatarSeed={draft.avatarSeed} disabled={saving} onChange={(avatarSeed) => onDraftChange({ ...draft, avatarSeed })} />
           <FieldGrid>
-            <LabelledField label="Display name">
+            <LabelledField label={t("employeesPage.displayName")}>
               <Input value={draft.displayName} onChange={(event) => onDraftChange({ ...draft, displayName: event.currentTarget.value })} />
             </LabelledField>
-            <LabelledField label="Role">
+            <LabelledField label={t("employeesPage.role")}>
               <Input value={draft.role} onChange={(event) => onDraftChange({ ...draft, role: event.currentTarget.value })} />
             </LabelledField>
-            <LabelledField label="Presence">
+            <LabelledField label={t("employeesPage.presence")}>
               <Select value={draft.presenceMode} onValueChange={(value) => onDraftChange({ ...draft, presenceMode: value as EmployeeDraft["presenceMode"] })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {(model?.presenceModes ?? ["resident", "auto_exit_idle"]).map((mode) => <SelectItem key={mode} value={mode}>{mode}</SelectItem>)}
+                  {(model?.presenceModes ?? ["resident", "auto_exit_idle"]).map((mode) => <SelectItem key={mode} value={mode}>{t(`enums.${mode}`)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </LabelledField>
           </FieldGrid>
-          <LabelledField label="Responsibilities">
+          <LabelledField label={t("employeesPage.responsibilities")}>
             <Textarea
               className="min-h-28"
               value={draft.sceneProfile}
@@ -325,26 +328,26 @@ function EmployeeEditor({
             />
           </LabelledField>
           <section className="grid gap-3 border-t border-[var(--tiny-line-soft)] pt-4">
-            <h2 className="text-sm font-semibold">Runtime</h2>
+            <h2 className="text-sm font-semibold">{t("employeesPage.runtime")}</h2>
             <div className="grid items-start gap-3 md:grid-cols-[minmax(0,2fr)_minmax(180px,1fr)]">
-              <LabelledField label="Runtime model">
+              <LabelledField label={t("employeesPage.runtimeModel")}>
                 <div className="grid gap-1.5">
                   <Select value={modelRefFromDraft(draft)} onValueChange={(value) => onDraftChange({ ...draft, ...draftModelFromRef(value) })}>
-                    <SelectTrigger className="w-full"><SelectValue placeholder="Runtime model" /></SelectTrigger>
+                    <SelectTrigger className="w-full"><SelectValue placeholder={t("employeesPage.runtimeModel")} /></SelectTrigger>
                     <SelectContent>
                       {runtimeModelOptions(model, draft).map((option) => (
                         <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <span className="text-xs text-[var(--tiny-muted)]">Provider: {draft.modelProvider || "Not set"}</span>
+                  <span className="text-xs text-[var(--tiny-muted)]">{t("employeesPage.provider", { provider: draft.modelProvider || t("employeesPage.notSet") })}</span>
                 </div>
               </LabelledField>
-              <LabelledField label="Thinking level">
+              <LabelledField label={t("employeesPage.thinkingLevel")}>
                 <Select value={draft.thinkingLevel} onValueChange={(value) => onDraftChange({ ...draft, thinkingLevel: value as EmployeeThinkingLevel })}>
                   <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {(model?.thinkingLevels ?? ["off", "minimal", "low", "medium", "high", "xhigh"]).map((level) => <SelectItem key={level} value={level}>{level}</SelectItem>)}
+                    {(model?.thinkingLevels ?? ["off", "minimal", "low", "medium", "high", "xhigh"]).map((level) => <SelectItem key={level} value={level}>{t(`enums.${level}`)}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </LabelledField>
@@ -354,12 +357,12 @@ function EmployeeEditor({
         <TabsContent value="agents" className="grid gap-3 pt-3">
           <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-[var(--tiny-muted)]">
             <span className="min-w-0 truncate">{instructionFile?.relativePath ?? "AGENTS.md"}</span>
-            {instructionFile?.exists === false ? <Badge variant="outline">No AGENTS.md yet.</Badge> : null}
+            {instructionFile?.exists === false ? <Badge variant="outline">{t("employeesPage.noAgents")}</Badge> : null}
           </div>
           <Textarea
             className="min-h-[320px] font-mono text-xs leading-5"
             value={draft.agentsContent}
-            placeholder={instructionFile?.exists === false ? "Write employee-specific instructions here. Saving will create AGENTS.md." : undefined}
+            placeholder={instructionFile?.exists === false ? t("employeesPage.agentsPlaceholder") : undefined}
             onChange={(event) => onDraftChange({ ...draft, agentsContent: event.currentTarget.value })}
           />
         </TabsContent>
@@ -367,10 +370,10 @@ function EmployeeEditor({
           <EmployeeSkillsPanel companyId={companyId} employee={employee} />
         </TabsContent>
         <TabsContent value="assets" className="grid gap-2 pt-3 text-sm">
-          <PathRow label="Home" value={employee.localAssets?.homePath} />
-          <PathRow label="Workspace" value={employee.localAssets?.workspacePath} />
-          <PathRow label="Company skills" value={companySkillsPath(employee)} />
-          <PathRow label="Employee skills" value={employeeSkillsPath(employee)} />
+          <PathRow label={t("employeesPage.home")} value={employee.localAssets?.homePath} />
+          <PathRow label={t("employeesPage.workspace")} value={employee.localAssets?.workspacePath} />
+          <PathRow label={t("employeesPage.companySkills")} value={companySkillsPath(employee)} />
+          <PathRow label={t("employeesPage.employeeSkills")} value={employeeSkillsPath(employee)} />
         </TabsContent>
       </Tabs>
     </div>
@@ -382,6 +385,7 @@ function EmployeeLifecycleAction({ employee, pending, onSetEnabled }: {
   pending: boolean;
   onSetEnabled(enabled: boolean): Promise<void>;
 }): ReactElement {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const enabled = employee.enabled !== false;
   const [error, setError] = useState<string>();
@@ -391,28 +395,28 @@ function EmployeeLifecycleAction({ employee, pending, onSetEnabled }: {
       await onSetEnabled(!enabled);
       setOpen(false);
     } catch (caught) {
-      setError(errorText(caught, "Failed to change employee lifecycle."));
+      setError(errorText(caught, t("employeesPage.lifecycleFailed")));
     }
   }
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button type="button" size="sm" variant={enabled ? "destructive" : "outline"} disabled={pending}>{enabled ? "Deactivate" : "Reactivate"}</Button>
+        <Button type="button" size="sm" variant={enabled ? "destructive" : "outline"} disabled={pending}>{enabled ? t("employeesPage.deactivate") : t("employeesPage.reactivate")}</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{enabled ? "Deactivate employee?" : "Reactivate employee?"}</DialogTitle>
+          <DialogTitle>{enabled ? t("employeesPage.deactivateTitle") : t("employeesPage.reactivateTitle")}</DialogTitle>
           <DialogDescription>
             {enabled
-              ? "New Chat and Task execution will stop. Existing messages, tasks, sessions, and history stay available."
-              : "This employee will be able to receive new Chat turns and Task runs again."}
+              ? t("employeesPage.deactivateDescription")
+              : t("employeesPage.reactivateDescription")}
           </DialogDescription>
         </DialogHeader>
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={pending}>{t("common.cancel")}</Button>
           <Button type="button" variant={enabled ? "destructive" : "default"} onClick={() => void confirm()} disabled={pending}>
-            {pending ? "Saving..." : enabled ? "Deactivate" : "Reactivate"}
+            {pending ? t("common.saving") : enabled ? t("employeesPage.deactivate") : t("employeesPage.reactivate")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -421,6 +425,7 @@ function EmployeeLifecycleAction({ employee, pending, onSetEnabled }: {
 }
 
 function EmployeeSkillsPanel({ companyId, employee }: { companyId: string; employee: EmployeeAdminRecord }): ReactElement {
+  const { t } = useTranslation();
   const { requestTransition } = useUnsavedChangesNavigation();
   const queryClient = useQueryClient();
   const [selectedSkillId, setSelectedSkillId] = useState("");
@@ -463,13 +468,13 @@ function EmployeeSkillsPanel({ companyId, employee }: { companyId: string; emplo
   });
 
   if (!skillsQuery.isLoading && !hasPrivateSkills) {
-    return <PanelNote>No private skill file exists for this employee.</PanelNote>;
+    return <PanelNote>{t("employeesPage.noPrivateSkill")}</PanelNote>;
   }
 
   return (
     <div className="grid gap-3">
       <div className="text-sm text-[var(--tiny-muted)]">
-        Employee-private skills are edited here after they already exist. New skills still start from Chat and the company skill-creator workflow.
+        {t("employeesPage.privateSkillHelp")}
       </div>
       <div className="grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)]">
         <div className="grid content-start gap-1">
@@ -482,14 +487,14 @@ function EmployeeSkillsPanel({ companyId, employee }: { companyId: string; emplo
               onClick={() => requestTransition(() => setSelectedSkillId(skill.skillId))}
             />
               ))}
-              {skillsQuery.isLoading ? <PanelNote>Loading skills...</PanelNote> : null}
+              {skillsQuery.isLoading ? <PanelNote>{t("employeesPage.loadingSkills")}</PanelNote> : null}
             </div>
         <div className="grid min-w-0 gap-2">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0 truncate text-sm text-[var(--tiny-muted)]">{skillQuery.data?.relativePath ?? "SKILL.md"}</div>
             <Button type="button" size="sm" disabled={!skillQuery.data || !skillDirty || saveSkillMutation.isPending} onClick={() => saveSkillMutation.mutate()}>
               <Save className="mr-2 size-4" />
-              Save skill
+              {t("employeesPage.saveSkill")}
             </Button>
             <SaveStateBadge dirty={skillDirty} saving={saveSkillMutation.isPending} />
           </div>
@@ -505,7 +510,7 @@ function EmployeeSkillsPanel({ companyId, employee }: { companyId: string; emplo
               }));
             }}
           />
-          {saveSkillMutation.error ? <div className="text-sm text-destructive">{errorText(saveSkillMutation.error, "Failed to save skill.")}</div> : null}
+          {saveSkillMutation.error ? <div className="text-sm text-destructive">{errorText(saveSkillMutation.error, t("employeesPage.saveSkillFailed"))}</div> : null}
         </div>
       </div>
     </div>
@@ -525,6 +530,7 @@ function CreateEmployeeDialog({
   disabled: boolean;
   onCreated(): Promise<void>;
 }): ReactElement {
+  const { t } = useTranslation();
   const [displayName, setDisplayName] = useState("");
   const [role, setRole] = useState("");
   const [summary, setSummary] = useState("");
@@ -554,34 +560,34 @@ function CreateEmployeeDialog({
       <DialogTrigger asChild>
         <Button type="button" size="sm" className="h-8 gap-1.5 px-2 text-sm" disabled={disabled}>
           <Plus className="size-4" />
-          New employee
+          {t("employeesPage.newEmployee")}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>New employee</DialogTitle>
-          <DialogDescription>Create a runtime-capable employee in the current company.</DialogDescription>
+          <DialogTitle>{t("employeesPage.newEmployee")}</DialogTitle>
+          <DialogDescription>{t("employeesPage.newEmployeeDescription")}</DialogDescription>
         </DialogHeader>
         <div className="grid gap-3">
-          <Input value={displayName} placeholder="Display name" onChange={(event) => setDisplayName(event.currentTarget.value)} />
+          <Input value={displayName} placeholder={t("employeesPage.displayName")} onChange={(event) => setDisplayName(event.currentTarget.value)} />
           <div className="rounded-md border border-[var(--tiny-line-soft)] px-3 py-2 text-xs text-[var(--tiny-muted)]">
-            Employee ID will be generated as <span className="font-mono text-foreground">{previewEmployeeId(displayName)}</span>.
+            {t("employeesPage.idPreview", { id: previewEmployeeId(displayName) })}
           </div>
-          <Input value={role} placeholder="Role" onChange={(event) => setRole(event.currentTarget.value)} />
+          <Input value={role} placeholder={t("employeesPage.role")} onChange={(event) => setRole(event.currentTarget.value)} />
           <Select value={runtimeModelRef} onValueChange={setRuntimeModelRef}>
-            <SelectTrigger><SelectValue placeholder="Runtime model" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder={t("employeesPage.runtimeModel")} /></SelectTrigger>
             <SelectContent>
               {runtimeModelOptions(model, runtime ? draftFromRuntime(runtime) : undefined).map((option) => (
                 <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Textarea value={summary} placeholder="Responsibilities" onChange={(event) => setSummary(event.currentTarget.value)} />
-          {mutation.error ? <div className="text-sm text-destructive">{errorText(mutation.error, "Failed to create employee.")}</div> : null}
+          <Textarea value={summary} placeholder={t("employeesPage.responsibilities")} onChange={(event) => setSummary(event.currentTarget.value)} />
+          {mutation.error ? <div className="text-sm text-destructive">{errorText(mutation.error, t("employeesPage.createFailed"))}</div> : null}
         </div>
         <DialogFooter>
           <Button type="button" disabled={mutation.isPending} onClick={() => mutation.mutate()}>
-            Create
+            {t("common.create")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -80,8 +80,8 @@ test("audited selection rows expose the shared title contract", () => {
   const company = readFileSync(new URL("./CompanyLifecyclePage.tsx", import.meta.url), "utf8");
 
   assert.match(selectionList, /title === undefined \? children : \([\s\S]*?<SelectionRowTitle/);
-  assert.match(settings, /<SelectionRow\b[^>]*title="My Profile"/);
-  assert.match(settings, /<SelectionRow\b[^>]*title="Security"/);
+  assert.match(settings, /<SelectionRow\b[^>]*title=\{t\("settings\.profile"\)\}/);
+  assert.match(settings, /<SelectionRow\b[^>]*title=\{t\("settings\.security"\)\}/);
   assert.match(employees, /selected=\{skill\.skillId === activeSkillId\}[\s\S]*?title=\{skill\.name\}/);
   assert.match(company, /function CompanyRow[\s\S]*?<SelectionRowTitle/);
 });

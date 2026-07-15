@@ -9,9 +9,11 @@ import { useUnsavedChanges } from "@/config/unsavedChangesContext";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BotIcon } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import type { CompaniesAdminViewModel, CompanySystemAiSettingDto, SaveCompanySystemAiSettingsRequest, TinyOfficeCurrentSession, TinyOfficeRuntimeModelDto } from "tinyoffice/frontend-api-contracts";
 
 export function SystemAiPage({ currentSession }: { currentSession?: TinyOfficeCurrentSession }): ReactElement {
+  const { t } = useTranslation();
   const companyId = currentSession?.companyId ?? currentSession?.currentCompanyId ?? "";
   const queryClient = useQueryClient();
   const companiesQuery = useQuery({ queryKey: chatQueryKeys.companies(), queryFn: listCompanies });
@@ -28,11 +30,11 @@ export function SystemAiPage({ currentSession }: { currentSession?: TinyOfficeCu
             <div className="flex gap-3">
               <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted"><BotIcon className="size-4" /></div>
               <div>
-                <h2 className="font-semibold">Workspace automation models</h2>
-                <p className="mt-1 text-sm text-muted-foreground">System AI handles generated Chat titles and Topic summaries. It is separate from employee runtime models.</p>
+                <h2 className="font-semibold">{t("admin.systemAiTitle")}</h2>
+                <p className="mt-1 text-sm text-muted-foreground">{t("admin.systemAiDescription")}</p>
               </div>
             </div>
-            <Badge variant="secondary">Developer tool</Badge>
+            <Badge variant="secondary">{t("admin.developerTool")}</Badge>
           </div>
           <div className="pt-5">
             {companiesQuery.isLoading ? <ProductState description="Loading System AI settings..." />
@@ -47,6 +49,7 @@ export function SystemAiPage({ currentSession }: { currentSession?: TinyOfficeCu
 }
 
 function SystemAiSettingsForm({ companyId, viewModel, busy, error, onSave }: { companyId: string; viewModel?: CompaniesAdminViewModel; busy: boolean; error: unknown; onSave(input: SaveCompanySystemAiSettingsRequest): void }): ReactElement {
+  const { t } = useTranslation();
   const availableModels = viewModel?.availableModels ?? [];
   const titleValue = modelValue(settingFor(viewModel, companyId, "chat_title_generation"));
   const summaryValue = modelValue(settingFor(viewModel, companyId, "chat_topic_summary"));
@@ -72,12 +75,12 @@ function SystemAiSettingsForm({ companyId, viewModel, busy, error, onSave }: { c
   return (
     <form className="grid gap-4" onSubmit={submit}>
       <div className="grid gap-4 md:grid-cols-2">
-        <ModelSelect label="Chat title generation" value={titleModel} options={availableModels} onChange={setTitleModel} />
-        <ModelSelect label="Topic summaries" value={summaryModel} options={availableModels} onChange={setSummaryModel} />
+        <ModelSelect label={t("admin.chatTitles")} value={titleModel} options={availableModels} onChange={setTitleModel} />
+        <ModelSelect label={t("admin.topicSummaries")} value={summaryModel} options={availableModels} onChange={setSummaryModel} />
       </div>
       {error ? <p className="text-sm text-destructive">{error instanceof Error ? error.message : String(error)}</p> : null}
       <div className="flex items-center gap-3">
-        <Button type="submit" disabled={busy || !dirty}>Save System AI</Button>
+        <Button type="submit" disabled={busy || !dirty}>{t("admin.saveSystemAi")}</Button>
         <SaveStateBadge dirty={dirty} saving={busy && dirty} />
       </div>
     </form>
@@ -85,7 +88,8 @@ function SystemAiSettingsForm({ companyId, viewModel, busy, error, onSave }: { c
 }
 
 function ModelSelect({ label, value, options, onChange }: { label: string; value: string; options: TinyOfficeRuntimeModelDto[]; onChange(value: string): void }): ReactElement {
-  return <label className="grid gap-1.5 text-sm">{label}<Select value={value || "none"} onValueChange={(next) => onChange(next === "none" ? "" : next)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Set later</SelectItem>{options.map((option) => <SelectItem key={`${label}-${option.provider}/${option.id}`} value={`${option.provider}/${option.id}`}>{option.name}</SelectItem>)}</SelectContent></Select></label>;
+  const { t } = useTranslation();
+  return <label className="grid gap-1.5 text-sm">{label}<Select value={value || "none"} onValueChange={(next) => onChange(next === "none" ? "" : next)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">{t("common.setLater")}</SelectItem>{options.map((option) => <SelectItem key={`${label}-${option.provider}/${option.id}`} value={`${option.provider}/${option.id}`}>{option.name}</SelectItem>)}</SelectContent></Select></label>;
 }
 
 function settingFor(model: CompaniesAdminViewModel | undefined, companyId: string, capability: CompanySystemAiSettingDto["capability"]): CompanySystemAiSettingDto | undefined {

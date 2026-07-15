@@ -1,4 +1,5 @@
 import { assertNoForbiddenPublicCarrierFields } from "../../collaboration/contracts/conversation-message-contract.js";
+import { formatHandoffCandidateForPrompt } from "../../collaboration/contracts/participant-ref.js";
 import type { ProcessTraceEvent } from "../contracts/process-trace-event.js";
 import type { EmployeeHome } from "../registry/employee-home.js";
 import {
@@ -231,7 +232,7 @@ export async function executeTinyOfficeChatNaturalLanguageTurn(
           "",
           "Handoff candidates:",
           ...finalOutputReachableParticipants(input.context).map((participant) =>
-            `- ${participant.displayName || participant.id} (${participant.id})${participant.role ? `: role=${participant.role}` : ""}`
+            `- ${formatHandoffCandidateForPrompt(participant)}`
           ),
         ].join("\n"),
       }],

@@ -2,6 +2,7 @@ import type { AgentToolResult, ExtensionAPI } from "@earendil-works/pi-coding-ag
 import { Type } from "typebox";
 
 import { OperatingLogService } from "../../operating-log/operating-log-service.js";
+import { formatHandoffCandidateForPrompt } from "../contracts/participant-ref.js";
 import { capabilityRegistry, type CapabilityScene } from "../../runtime/capabilities/capability-registry.js";
 import { executeTinyOfficeCapabilityCallTool } from "../../runtime/capabilities/capability-tool.js";
 import { recallRuntimeMemories } from "../../runtime/memory/runtime-memory-service.js";
@@ -356,11 +357,11 @@ export default function collaborationActionsExtension(pi: ExtensionAPI) {
       const selected = candidates.find((candidate) => candidate.id === toId);
       if (!selected) {
         const candidateList = candidates
-          .map((candidate) => `${candidate.displayName || candidate.id} (${candidate.id})`)
-          .join(", ");
+          .map((candidate) => `- ${formatHandoffCandidateForPrompt(candidate)}`)
+          .join("\n");
         throw new Error(
           `handoff_topic_turn target "${toId}" is not a current Handoff candidate. ` +
-          `Choose exactly one candidate id${candidateList ? `: ${candidateList}` : " from the current Topic context"}.`,
+          `Choose exactly one candidate id${candidateList ? `:\n${candidateList}` : " from the current Topic context"}.`,
         );
       }
       return {

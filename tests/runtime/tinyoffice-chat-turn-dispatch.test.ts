@@ -697,9 +697,9 @@ test("TinyOffice Chat room context exposes handoff candidates without the curren
   const contextText = naturalLanguageInput.contextBlocks?.[0]?.text || "";
   assert.doesNotMatch(contextText, /Participants:/);
   assert.match(contextText, /Handoff candidates:/);
-  assert.match(contextText, /Xuziho \(xuziho\): role=boss/);
-  assert.match(contextText, /Avery Webb \(avery-webb\): role=admin/);
-  assert.doesNotMatch(contextText, /Mira \(employee-hr\): role=hr/);
+  assert.match(contextText, /id="xuziho"; displayName="Xuziho"; role="boss"/);
+  assert.match(contextText, /id="avery-webb"; displayName="Avery Webb"; role="admin"/);
+  assert.doesNotMatch(contextText, /id="employee-hr"; displayName="Mira"; role="hr"/);
   assert.doesNotMatch(contextText, /channelRole=/);
   assert.doesNotMatch(contextText, /kind=company_member/);
   assert.doesNotMatch(contextText, /kind=employee/);
@@ -3536,6 +3536,10 @@ test("TinyOffice Chat repairs one missing Channel handoff without replacing the 
   assert.equal(calls.length, 2);
   assert.deepEqual(calls[1]?.activeToolNames, ["handoff_topic_turn"]);
   assert.match(calls[1]?.contextBlocks?.[0]?.text || "", /Do not write another visible reply/);
+  assert.match(
+    calls[1]?.contextBlocks?.[0]?.text || "",
+    /id="iris-growth"; displayName="Iris"/,
+  );
   assert.equal(result.chatOutput.message, "I am Nora, and Iris should continue next.");
   assert.equal(result.stateAction?.targetMemberId, "iris-growth");
 });

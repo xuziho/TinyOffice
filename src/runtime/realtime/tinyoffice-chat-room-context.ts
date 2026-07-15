@@ -8,7 +8,10 @@ import {
   assertChatParticipantAccess,
   isChatParticipantAllowed,
 } from "../../collaboration/chat/chat-permissions.js";
-import type { ParticipantRef } from "../../collaboration/contracts/participant-ref.js";
+import {
+  formatHandoffCandidateForPrompt,
+  type ParticipantRef,
+} from "../../collaboration/contracts/participant-ref.js";
 import type {
   TinyOfficeChatTurnDispatchReady,
   TinyOfficeChatTurnDispatchReason,
@@ -214,16 +217,9 @@ export async function assembleTinyOfficeChatRoomContext(input: {
 
 export function formatTinyOfficeChatTopicContextForExecution(context: TinyOfficeChatRoomContext): string {
   const candidateLines = context.conversation.handoffCandidates.length > 0
-    ? context.conversation.handoffCandidates.map((participant) => {
-      const label = participant.displayName
-        ? `${participant.displayName} (${participant.id})`
-        : participant.id;
-      const details = [
-        participant.role ? `role=${participant.role}` : undefined,
-        participant.summary ? `summary=${participant.summary}` : undefined,
-      ].filter(Boolean);
-      return details.length > 0 ? `- ${label}: ${details.join("; ")}` : `- ${label}`;
-    })
+    ? context.conversation.handoffCandidates.map((participant) =>
+      `- ${formatHandoffCandidateForPrompt(participant)}`
+    )
     : ["- none"];
   const currentMessageBody = context.currentMessage?.body.trim();
   const conversationTitle = context.conversation.title.trim();

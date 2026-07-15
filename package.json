@@ -38,6 +38,7 @@
     "dev:tinyoffice-web-shadcn": "npm run dev --prefix apps/tinyoffice-web-shadcn",
     "build:tinyoffice-web-shadcn": "npm run build --prefix apps/tinyoffice-web-shadcn",
     "check:tinyoffice-web-shadcn": "npm run check --prefix apps/tinyoffice-web-shadcn",
+    "check:tinyoffice-web-shadcn:quality": "npm run check:quality --prefix apps/tinyoffice-web-shadcn",
     "dogfood:update-runtime": "powershell -ExecutionPolicy Bypass -File scripts/dogfood/update-runtime.ps1",
     "dogfood:verify": "powershell -ExecutionPolicy Bypass -File scripts/dogfood/verify-dogfood.ps1",
     "runtime:postgres:ensure": "powershell -ExecutionPolicy Bypass -File scripts/runtime/ensure-tinyoffice-postgres.ps1",

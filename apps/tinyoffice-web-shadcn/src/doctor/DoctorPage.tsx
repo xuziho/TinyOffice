@@ -14,7 +14,6 @@ import type {
   TinyOfficeDoctorSection,
   TinyOfficeDoctorStatus,
 } from "tinyoffice/frontend-api-contracts";
-import { SectionContentHeader } from "@/app/SectionContentHeader";
 
 export function DoctorPage({ currentSession }: { currentSession?: TinyOfficeCurrentSession }): ReactElement {
   const companyId = currentSession?.companyId ?? currentSession?.currentCompanyId;
@@ -25,9 +24,7 @@ export function DoctorPage({ currentSession }: { currentSession?: TinyOfficeCurr
   });
 
   return (
-    <main className="grid h-full w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
-      <SectionContentHeader description={companyId ? "Read-only diagnostics for the current company" : "Read-only diagnostics"} />
-
+    <main className="h-full w-full overflow-hidden bg-background">
       {!companyId ? (
         <StateBlock>Select a company before running diagnostics.</StateBlock>
       ) : doctorQuery.isLoading ? (
@@ -45,7 +42,7 @@ export function DoctorPage({ currentSession }: { currentSession?: TinyOfficeCurr
 
 function DoctorReport({ report }: { report: TinyOfficeDoctorReport }): ReactElement {
   return (
-    <section className="grid min-h-0 grid-cols-[300px_minmax(0,1fr)] overflow-hidden">
+    <section className="grid h-full min-h-0 grid-cols-[300px_minmax(0,1fr)] overflow-hidden">
       <aside className="border-r bg-muted/20 p-4">
         <div className="flex items-center gap-2">
           <StatusIcon status={report.overallStatus} />

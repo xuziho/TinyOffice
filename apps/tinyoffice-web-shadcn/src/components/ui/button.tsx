@@ -9,7 +9,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "border-[1.5px] border-[var(--tiny-line)] bg-[var(--tiny-pink)] text-[var(--tiny-text)] shadow-[1.5px_1.5px_0_var(--tiny-line)] hover:bg-[var(--tiny-pink-strong)] hover:text-[var(--tiny-text)] disabled:border-[var(--tiny-line-faint)] disabled:bg-[var(--tiny-disabled)] disabled:text-[var(--tiny-muted)] disabled:shadow-none",
+        default: "border-[1.5px] border-[var(--tiny-line)] bg-[var(--tiny-action-surface)] text-[var(--tiny-text)] shadow-[1.5px_1.5px_0_var(--tiny-line)] hover:bg-[var(--tiny-action-hover)] hover:text-[var(--tiny-text)] disabled:border-[var(--tiny-line-faint)] disabled:bg-[var(--tiny-disabled)] disabled:text-[var(--tiny-muted)] disabled:shadow-none",
         outline:
           "border-[var(--tiny-line-soft)] bg-[var(--tiny-surface)] text-[var(--tiny-text)] shadow-[1px_1px_0_var(--tiny-line-soft)] hover:border-[var(--tiny-line)] hover:bg-[var(--tiny-quiet)] hover:text-[var(--tiny-text)] hover:shadow-none aria-expanded:bg-[var(--tiny-quiet)] aria-expanded:text-[var(--tiny-text)]",
         secondary:

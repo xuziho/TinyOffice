@@ -11,6 +11,16 @@ export const chatQueryKeys = {
   all: () => ["tinyoffice"] as const,
   currentSession: () => ["tinyoffice", "current-session"] as const,
   companies: () => ["tinyoffice", "companies"] as const,
+  myProfile: () => ["tinyoffice", "my-profile"] as const,
+  updates: () => ["tinyoffice", "updates"] as const,
+  backups: () => ["tinyoffice", "backups"] as const,
+  branding: (companyId?: string) => ["tinyoffice", "company-branding", companyId ?? ""] as const,
+  capabilities: (companyId?: string) => ["tinyoffice", "capabilities", companyId ?? ""] as const,
+  companySkills: (companyId?: string) => ["tinyoffice", "company-skills", companyId ?? ""] as const,
+  companySkill: (companyId?: string, skillId?: string) => [
+    ...chatQueryKeys.companySkills(companyId),
+    skillId ?? "",
+  ] as const,
   projectionScope: (companyId?: string) => ["tinyoffice", "chat", "projection", companyId ?? ""] as const,
   projection: (companyId?: string, viewer?: ViewerKey) => [
     ...chatQueryKeys.projectionScope(companyId),

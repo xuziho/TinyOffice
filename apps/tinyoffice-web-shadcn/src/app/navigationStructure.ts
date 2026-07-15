@@ -7,7 +7,6 @@ export type NavigationItem = {
 
 export type PageSection = {
   title: string;
-  description: string;
   items: readonly NavigationItem[];
 };
 
@@ -37,17 +36,14 @@ export const operationsNavigation: readonly NavigationItem[] = [
 export const pageSections: readonly PageSection[] = [
   {
     title: "Workforce",
-    description: "People and shared working knowledge",
     items: workforceNavigation,
   },
   {
     title: "AI & Runtime",
-    description: "Models, prompts, access rules, and runtime contracts",
     items: aiRuntimeNavigation,
   },
   {
     title: "Operations",
-    description: "Runtime evidence, system health, recovery, and product maintenance",
     items: operationsNavigation,
   },
 ];

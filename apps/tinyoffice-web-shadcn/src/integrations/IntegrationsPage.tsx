@@ -2,24 +2,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowRightIcon, BellRingIcon, FileInputIcon, MessageCircleIcon, PlugZapIcon, TimerIcon } from "lucide-react";
 import type { ReactElement } from "react";
-import type { TinyOfficeCurrentSession } from "tinyoffice/frontend-api-contracts";
 
-export function IntegrationsPage({ currentSession }: { currentSession?: TinyOfficeCurrentSession }): ReactElement {
-  const companyId = currentSession?.companyId ?? currentSession?.currentCompanyId ?? "";
-
+export function IntegrationsPage(): ReactElement {
   return (
     <div className="flex h-svh min-w-0 flex-col overflow-hidden bg-background">
       <header className="tiny-room-header border-b">
         <div className="min-w-0">
           <h1 className="tiny-room-title truncate">Integrations</h1>
-          <p className="tiny-room-subtitle truncate">
-            Connect external systems to AI employees - {companyId || "No company selected"}
-          </p>
         </div>
       </header>
       <div className="min-h-0 flex-1 overflow-auto p-6">
         <div className="mx-auto grid max-w-5xl gap-6">
-          <section className="rounded-md border bg-background p-6">
+          <section className="py-2">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex min-w-0 gap-3">
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted">
@@ -35,7 +29,7 @@ export function IntegrationsPage({ currentSession }: { currentSession?: TinyOffi
               <Badge variant="secondary">Available</Badge>
             </div>
 
-            <div className="mt-6 grid gap-3 md:grid-cols-3">
+            <div className="mt-6 grid divide-y border-y md:grid-cols-3 md:divide-x md:divide-y-0">
               <UseCase icon={<BellRingIcon />} title="Monitoring alerts" description="Notify an operations employee when a service needs attention." />
               <UseCase icon={<FileInputIcon />} title="Forms and requests" description="Route a new customer or internal request to the right employee." />
               <UseCase icon={<TimerIcon />} title="Scheduled automation" description="Hand generated reports or collected data to an analyst employee." />
@@ -63,7 +57,7 @@ export function IntegrationsPage({ currentSession }: { currentSession?: TinyOffi
 
 function UseCase({ icon, title, description }: { icon: ReactElement; title: string; description: string }): ReactElement {
   return (
-    <div className="rounded-md border p-4">
+    <div className="p-4">
       <div className="flex size-8 items-center justify-center rounded-md bg-muted text-muted-foreground [&_svg]:size-4">{icon}</div>
       <h3 className="mt-3 text-sm font-medium">{title}</h3>
       <p className="mt-1 text-sm leading-5 text-muted-foreground">{description}</p>

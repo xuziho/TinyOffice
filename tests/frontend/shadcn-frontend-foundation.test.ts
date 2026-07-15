@@ -29,6 +29,7 @@ async function readChatProductSource(): Promise<string> {
     "apps/tinyoffice-web-shadcn/src/chat/SystemMessage.tsx",
     "apps/tinyoffice-web-shadcn/src/chat/chatUiUtils.ts",
     "apps/tinyoffice-web-shadcn/src/chat/useChatWorkspace.ts",
+    "apps/tinyoffice-web-shadcn/src/chat/chatWorkspaceOperations.ts",
     "apps/tinyoffice-web-shadcn/src/chat/chatQueryKeys.ts",
     "apps/tinyoffice-web-shadcn/src/chat/useChatRealtime.ts",
   ];
@@ -294,7 +295,7 @@ test("shadcn app shell exposes Employees as the runtime employee configuration s
   assert.match(navigationStructureSource, /view: "access", label: "Access"/);
   assert.match(navigationStructureSource, /view: "doctor", label: "Health"/);
   assert.match(navigationSource, /return "\/employees"/);
-  assert.match(employeesPageSource, /Employee configuration/);
+  assert.doesNotMatch(employeesPageSource, /Employee configuration/);
   assert.match(employeesPageSource, /AGENTS\.md/);
   assert.match(employeesPageSource, /No AGENTS\.md yet\./);
   assert.match(employeesPageSource, /instructionFile\?\.exists === false/);
@@ -326,7 +327,7 @@ test("shadcn app shell exposes Prompt as the company Prompt Policy surface", asy
   assert.match(navigationStructureSource, /view: "prompt", label: "Prompt"/);
   assert.match(appSource, /activeView === "prompt"/);
   assert.match(navigationSource, /return "\/prompt"/);
-  assert.match(promptPageSource, /Company prompt configuration/);
+  assert.doesNotMatch(promptPageSource, /Company prompt configuration/);
   assert.match(promptPageSource, /Foundation prompts/);
   assert.match(promptPageSource, /Scene blocks/);
   assert.match(promptPageSource, /Loaded by/);
@@ -366,7 +367,7 @@ test("shadcn app shell keeps read-only Capabilities and operational Health in ex
   assert.match(capabilitiesPageSource, /Read only/);
   assert.match(navigationSource, /return "\/access"/);
   assert.match(navigationSource, /return "\/doctor"/);
-  assert.match(accessPageSource, /Company access policy/);
+  assert.doesNotMatch(accessPageSource, /Company access policy/);
   assert.match(accessPageSource, /Rule groups/);
   assert.match(accessPageSource, /Runtime boundary/);
   assert.match(accessPageSource, /Advanced policy JSON/);
@@ -378,7 +379,9 @@ test("shadcn app shell keeps read-only Capabilities and operational Health in ex
   assert.match(accessClientSource, /getAccessRequests/);
   assert.match(accessClientSource, /resolveAccessRequest/);
   assert.match(accessClientSource, /previewAccessDecision/);
-  assert.match(doctorPageSource, /Read-only diagnostics/);
+  assert.match(doctorPageSource, /getDoctorReport/);
+  assert.match(doctorPageSource, /Overall status/);
+  assert.doesNotMatch(doctorPageSource, /useMutation/);
   assert.match(doctorPageSource, /Next steps/);
   assert.match(doctorPageSource, /getDoctorReport/);
   assert.doesNotMatch(doctorPageSource, /policyJson|JSON\.stringify|raw JSON/i);
@@ -939,7 +942,7 @@ test("shadcn chat room composer sends real replies through the API client", asyn
 
 test("shadcn chat composer uploads image attachments before sending messages", async () => {
   const composerSource = await readText("apps/tinyoffice-web-shadcn/src/chat/Composer.tsx");
-  const hookSource = await readText("apps/tinyoffice-web-shadcn/src/chat/useChatWorkspace.ts");
+  const operationsSource = await readText("apps/tinyoffice-web-shadcn/src/chat/chatWorkspaceOperations.ts");
   const chatClientSource = await readText("apps/tinyoffice-web-shadcn/src/api/chatClient.ts");
 
   assert.match(chatClientSource, /uploadChatImageAttachment/);
@@ -953,7 +956,7 @@ test("shadcn chat composer uploads image attachments before sending messages", a
   assert.match(composerSource, /uploadedAttachmentIds/);
   assert.match(composerSource, /const canSend = Boolean\(submitValue\)/);
   assert.doesNotMatch(composerSource, /!trimmedDraft/);
-  assert.match(hookSource, /attachmentIds: value\.attachmentIds/);
+  assert.match(operationsSource, /attachmentIds: value\.attachmentIds/);
 });
 
 test("shadcn chat composer groups toolbar affordances and can disable images", async () => {
@@ -1079,7 +1082,12 @@ test("management navigation uses direct rail sections and one shared tab hierarc
   assert.match(appSource, /<SectionNavigation activeView=\{activeView\} section=\{pageSection\} onSelect=\{selectView\}/);
   assert.match(sectionNavigationSource, /aria-current=\{item\.view === activeView \? "page"/);
   assert.match(sectionNavigationSource, /tiny-section-tabs/);
+  assert.match(sectionNavigationSource, /overflow-y-hidden/);
   assert.match(sectionNavigationSource, /data-active=\{item\.view === activeView\}/);
+  assert.doesNotMatch(sectionNavigationSource, /section\.description/);
+  assert.doesNotMatch(navigationStructureSource, /description:/);
+  assert.match(cssSource, /\.tiny-soft-retro-shell \.tiny-section-tabs \{[^}]*scrollbar-width: none/);
+  assert.match(cssSource, /\.tiny-section-tab\[data-slot="button"\]\[data-active="true"\] \{[^}]*background: var\(--tiny-tab-active-surface\)[^}]*color: var\(--tiny-tab-active-ink\)[^}]*box-shadow: inset 0 -3px 0 var\(--tiny-tab-indicator\)/);
   assert.match(navigationStructureSource, /title: "Workforce"[\s\S]*title: "AI & Runtime"[\s\S]*title: "Operations"/);
 });
 
@@ -1098,4 +1106,30 @@ test("product actions share one button lifecycle and file uploads use the Button
   assert.match(companySource, /<Upload \/>/);
   assert.match(backupSource, /<Button disabled=\{creating\}/);
   assert.doesNotMatch(productSource.replace(await readText("apps/tinyoffice-web-shadcn/src/components/ui/sidebar.tsx"), ""), /<button\b/);
+});
+
+test("management pages avoid empty action strips and decorative nested surfaces", async () => {
+  const companySource = await readText("apps/tinyoffice-web-shadcn/src/app/CompanyLifecyclePage.tsx");
+  const integrationsSource = await readText("apps/tinyoffice-web-shadcn/src/integrations/IntegrationsPage.tsx");
+  const settingsSource = await readText("apps/tinyoffice-web-shadcn/src/settings/SettingsPage.tsx");
+  const backupSource = await readText("apps/tinyoffice-web-shadcn/src/backup/BackupPage.tsx");
+  const actionPageSources = await Promise.all([
+    "apps/tinyoffice-web-shadcn/src/access/AccessPage.tsx",
+    "apps/tinyoffice-web-shadcn/src/backup/BackupPage.tsx",
+    "apps/tinyoffice-web-shadcn/src/capabilities/CapabilitiesPage.tsx",
+    "apps/tinyoffice-web-shadcn/src/employees/EmployeesPage.tsx",
+    "apps/tinyoffice-web-shadcn/src/prompt/PromptPolicyPage.tsx",
+    "apps/tinyoffice-web-shadcn/src/skills/CompanySkillsPage.tsx",
+  ].map(readText));
+
+  for (const source of actionPageSources) {
+    assert.doesNotMatch(source, /SectionContentHeader/);
+  }
+  assert.match(companySource, /message \|\| companiesQuery\.isError \? <div/);
+  assert.match(companySource, /grid overflow-hidden rounded-md border bg-background xl:grid-cols/);
+  assert.doesNotMatch(companySource, /profile and lifecycle/);
+  assert.match(integrationsSource, /grid divide-y border-y md:grid-cols-3/);
+  assert.doesNotMatch(integrationsSource, /tiny-room-subtitle/);
+  assert.doesNotMatch(settingsSource, /tiny-settings-primary-surface/);
+  assert.match(backupSource, /<h2 className="text-lg font-semibold">Backups<\/h2><Button/);
 });

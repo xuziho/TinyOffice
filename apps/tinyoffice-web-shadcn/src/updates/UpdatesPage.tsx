@@ -5,22 +5,21 @@ import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tan
 import { AlertTriangle, Check, Download, RefreshCw } from "lucide-react";
 import type { ReactElement } from "react";
 import type { TinyOfficeUpdateStatus } from "tinyoffice/frontend-api-contracts";
-import { SectionContentHeader } from "@/app/SectionContentHeader";
+import { chatQueryKeys } from "@/chat/chatQueryKeys";
 
 export function UpdatesPage(): ReactElement {
   const queryClient = useQueryClient();
-  const updates = useQuery({ queryKey: ["tinyoffice", "updates"], queryFn: getUpdateStatus, staleTime: 60_000 });
+  const updates = useQuery({ queryKey: chatQueryKeys.updates(), queryFn: getUpdateStatus, staleTime: 60_000 });
   const install = useMutation({
     mutationFn: installApprovedUpdate,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["tinyoffice", "updates"] });
+      await queryClient.invalidateQueries({ queryKey: chatQueryKeys.updates() });
     },
   });
 
   return (
-    <main className="grid h-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
-      <SectionContentHeader description="Approved product maintenance and runtime compatibility" />
-      <div className="overflow-auto p-4 sm:p-6">
+    <main className="h-full overflow-hidden bg-background">
+      <div className="h-full overflow-auto p-4 sm:p-6">
         <UpdatesPanel
           query={updates}
           installing={install.isPending}

@@ -136,11 +136,7 @@ export function CompanyLifecyclePage({
           <div className="tiny-room-title truncate">
             Organization
           </div>
-          <div className="tiny-room-subtitle truncate">
-            {isInitializing
-              ? "Set up a TinyOffice workspace"
-              : `${currentCompanyName(viewModel, currentSession)} profile and lifecycle`}
-          </div>
+          {isInitializing ? <div className="tiny-room-subtitle truncate">Set up a TinyOffice workspace</div> : null}
         </div>
         <NewCompanyDialog
           open={createDialogOpen}
@@ -151,8 +147,8 @@ export function CompanyLifecyclePage({
         />
       </header>
 
-      <section className="grid min-w-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-muted/20">
-        <div className="grid gap-2 border-b border-[var(--tiny-line-soft)] bg-background px-5 py-3">
+      <section className="flex min-w-0 flex-col overflow-hidden bg-muted/20">
+        {message || companiesQuery.isError ? <div className="grid gap-2 border-b border-[var(--tiny-line-soft)] bg-background px-5 py-3">
           {message ? (
             <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm" role="status">
               {message}
@@ -163,11 +159,11 @@ export function CompanyLifecyclePage({
               {companiesQuery.error instanceof Error ? companiesQuery.error.message : "Company lifecycle could not load."}
             </div>
           ) : null}
-        </div>
+        </div> : null}
 
-        <ScrollArea className="min-h-0">
-          <div className="grid gap-4 px-5 py-4 xl:grid-cols-[minmax(360px,440px)_minmax(0,1fr)]">
-            <section className="min-w-0 rounded-md border bg-background">
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="mx-5 my-4 grid overflow-hidden rounded-md border bg-background xl:grid-cols-[minmax(360px,440px)_minmax(0,1fr)]">
+            <section className="min-w-0 border-b xl:border-b-0 xl:border-r">
               <div className="flex items-center justify-between gap-3 px-4 py-3">
                 <div className="min-w-0">
                   <h2 className="text-base font-semibold leading-tight">Companies</h2>
@@ -204,7 +200,7 @@ export function CompanyLifecyclePage({
               </div>
             </section>
 
-            <section className="min-w-0 rounded-md border bg-background">
+            <section className="min-w-0">
               {selectedCompany ? (
                 <CompanySettingsPanel
                   company={selectedCompany}
@@ -302,7 +298,7 @@ function CompanySettingsPanel({
         </section>
 
         <Separator />
-        {current ? <CompanyBrandingPanel company={company} /> : <section className="grid gap-3"><SectionHeading title="Profile & branding" /><p className="rounded-md border p-3 text-sm text-muted-foreground">Make this Company current before editing its branding.</p></section>}
+        {current ? <CompanyBrandingPanel company={company} /> : <section className="grid gap-3"><SectionHeading title="Profile & branding" /><p className="text-sm text-muted-foreground">Make this Company current before editing its branding.</p></section>}
 
         <Separator />
 
@@ -345,7 +341,7 @@ function CompanyIdentityEditor({
       <p className="text-xs text-muted-foreground">
         The internal company identifier stays fixed so conversations, employees, files, and runtime history keep the same identity.
       </p>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid divide-y border-y sm:grid-cols-2 sm:divide-x sm:divide-y-0">
         <Fact label="Created" value={formatTimestamp(company.createdAt)} />
         <Fact label="Updated" value={formatTimestamp(company.updatedAt)} />
       </div>
@@ -356,10 +352,10 @@ function CompanyIdentityEditor({
 function CompanyBrandingPanel({ company }: { company: CompanyLifecycleRecordDto }): ReactElement {
   const queryClient = useQueryClient();
   const logoInputRef = useRef<HTMLInputElement>(null);
-  const query = useQuery({ queryKey: ["company-branding", company.companyId], queryFn: () => getCompanyBranding({ companyId: company.companyId }) });
-  const upload = useMutation({ mutationFn: (file: File) => uploadCompanyLogo({ companyId: company.companyId, file }), onSuccess: (state) => queryClient.setQueryData(["company-branding", company.companyId], state) });
-  const remove = useMutation({ mutationFn: () => removeCompanyLogo({ companyId: company.companyId }), onSuccess: (state) => queryClient.setQueryData(["company-branding", company.companyId], state) });
-  return <section className="grid gap-3"><SectionHeading title="Profile & branding" /><div className="flex flex-wrap items-center gap-4 rounded-md border p-4">
+  const query = useQuery({ queryKey: chatQueryKeys.branding(company.companyId), queryFn: () => getCompanyBranding({ companyId: company.companyId }) });
+  const upload = useMutation({ mutationFn: (file: File) => uploadCompanyLogo({ companyId: company.companyId, file }), onSuccess: (state) => queryClient.setQueryData(chatQueryKeys.branding(company.companyId), state) });
+  const remove = useMutation({ mutationFn: () => removeCompanyLogo({ companyId: company.companyId }), onSuccess: (state) => queryClient.setQueryData(chatQueryKeys.branding(company.companyId), state) });
+  return <section className="grid gap-3"><SectionHeading title="Profile & branding" /><div className="flex flex-wrap items-center gap-4 py-1">
     <div className="flex size-16 items-center justify-center overflow-hidden rounded-xl bg-muted text-lg font-semibold">{query.data?.logoUrl ? <img src={`${query.data.logoUrl}?v=${encodeURIComponent(query.data.logoUrl)}`} alt={`${company.displayName} logo`} className="size-full object-cover" /> : company.displayName.slice(0, 2).toUpperCase()}</div>
     <div className="grid gap-2"><div><div className="text-sm font-medium">Company logo</div><div className="text-xs text-muted-foreground">PNG, JPEG, or WebP. Up to 5 MB.</div></div><div className="flex flex-wrap gap-2"><input ref={logoInputRef} className="hidden" type="file" accept="image/png,image/jpeg,image/webp" disabled={upload.isPending} tabIndex={-1} aria-hidden="true" onChange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ""; if (file) upload.mutate(file); }} /><Button type="button" variant="outline" size="sm" disabled={upload.isPending} onClick={() => logoInputRef.current?.click()}><Upload />{upload.isPending ? "Uploading..." : query.data?.logoUrl ? "Replace logo" : "Choose logo"}</Button>{query.data?.logoUrl ? <Button type="button" variant="outline" size="sm" disabled={remove.isPending} onClick={() => remove.mutate()}>Remove</Button> : null}</div></div>
   </div>{upload.error ? <p className="text-sm text-destructive">{upload.error instanceof Error ? upload.error.message : "Logo upload failed."}</p> : null}</section>;
@@ -579,7 +575,7 @@ function SectionHeading({ title }: { title: string }): ReactElement {
 
 function Fact({ label, value }: { label: string; value: string }): ReactElement {
   return (
-    <div className="min-w-0 rounded-md border bg-muted/25 px-3 py-2">
+    <div className="min-w-0 px-3 py-2">
       <div className="text-[11px] font-semibold uppercase text-muted-foreground">{label}</div>
       <div className="mt-1 truncate text-sm">{value}</div>
     </div>
@@ -700,9 +696,4 @@ function formatTimestamp(value: string): string {
 
 function formatShortDate(value: string): string {
   return new Date(value).toLocaleDateString();
-}
-
-function currentCompanyName(viewModel: CompaniesAdminViewModel | undefined, session: TinyOfficeCurrentSession | undefined): string {
-  const companyId = session?.companyId ?? session?.currentCompanyId;
-  return viewModel?.companies.find((company) => company.companyId === companyId)?.displayName ?? "Company";
 }

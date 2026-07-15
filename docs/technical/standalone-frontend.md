@@ -51,4 +51,6 @@ node --import tsx --test apps\tinyoffice-web-shadcn\src\api\chatClient.test.ts a
 npm run check --prefix apps/tinyoffice-web-shadcn
 npm run build --prefix apps/tinyoffice-web-shadcn
 npm run lint --prefix apps/tinyoffice-web-shadcn
+npm run check:ui-boundaries --prefix apps/tinyoffice-web-shadcn
+npm run analyze:bundle --prefix apps/tinyoffice-web-shadcn
 ```

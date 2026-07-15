@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { shouldSubmitComposerKey } from "./Composer";
+import { shouldSubmitComposerKey } from "./composerKeyModel";
 
 function keyEvent(input: {
   key: string;

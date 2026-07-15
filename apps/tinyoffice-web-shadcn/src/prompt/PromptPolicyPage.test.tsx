@@ -93,7 +93,9 @@ test("renders Prompt Policy as a company-level prompt editor", async () => {
     </QueryClientProvider>,
   );
 
-  assert.match(html, /Company prompt configuration/);
+  assert.doesNotMatch(html, /Company prompt configuration/);
+  assert.doesNotMatch(html, /Unsaved changes/);
+  assert.match(html, /You are an employee in TinyOffice/);
   assert.doesNotMatch(html, />Prompt Policy</);
   assert.match(html, /Foundation prompts/);
   assert.match(html, /Scene blocks/);

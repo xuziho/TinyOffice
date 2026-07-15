@@ -122,7 +122,7 @@ test("renders Employees as an employee configuration surface", async () => {
     </QueryClientProvider>,
   );
 
-  assert.match(html, /Employee configuration/);
+  assert.doesNotMatch(html, /Employee configuration/);
   assert.doesNotMatch(html, />Employees</);
   assert.match(html, /New employee/);
   assert.doesNotMatch(html, /Reload all/);
@@ -157,7 +157,7 @@ test("does not render a private skill editor when the employee has no private sk
 });
 
 test("hydrates delayed Skill content without creating a false unsaved state", async () => {
-  const { hydrateSkillEditor } = await import("./EmployeesPage");
+  const { hydrateSkillEditor } = await import("./skillEditorModel");
   const hydrated = hydrateSkillEditor(
     { identity: "", content: "", baseline: "" },
     "ziho-e-com:employee-hr:recruit-employee",
@@ -173,7 +173,7 @@ test("hydrates delayed Skill content without creating a false unsaved state", as
 });
 
 test("preserves edits during refetch and loads content when the employee or Skill changes", async () => {
-  const { hydrateSkillEditor } = await import("./EmployeesPage");
+  const { hydrateSkillEditor } = await import("./skillEditorModel");
   const dirty = {
     identity: "ziho-e-com:employee-hr:recruit-employee",
     content: "User edit",

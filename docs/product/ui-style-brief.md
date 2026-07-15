@@ -54,7 +54,7 @@ All standalone product routes use the same Soft Neo-Retro shell as Chat and Task
 
 Shared visual treatment does not make every page structurally identical. Workforce, AI & Runtime, and Operations share page-level sibling navigation, while their pages keep separate routes and workflows. Sessions remains an evidence inspector; Employees and Company Skills remain configuration workspaces; Integrations remains an intake setup surface; System AI, Prompt, Access, Capabilities, and Health retain their technical workflows; Settings owns personal profile and security; Backup and Updates retain independent operational scope. The shared layer must never replace a route's fields, grouping, permissions, filters, actions, or runtime behavior.
 
-Within a grouped section, the section heading names the product area and the active tab names the page. The content header is deliberately lighter and contains only additional scope, object context, state, or actions. It does not repeat the active tab as another page title.
+Within a grouped section, the section heading names the product area and the active tab names the page. Section slogans and generic page descriptions are omitted because the heading and tabs already establish location. The content header is deliberately lighter and appears only for actions or information that changes a decision: selected-object context, operational scope, read-only state, risk, or save state. It does not repeat the active tab, expose an internal Company id as decoration, or restate the page purpose.
 
 Every page family must cover populated, empty, loading, error, success, disabled, menu, dialog, and destructive states that its real workflow exposes. New product pages should enter through the shared Soft Neo-Retro shell and semantic component roles rather than adding a page-local visual theme.
 
@@ -117,6 +117,7 @@ Controls are unified by meaning rather than by putting the same border around ev
 
 - **Segmented controls** switch between mutually exclusive peer views, such as Active / Inactive or Current / Scheduled / History. The group has one shared frame and the selected segment uses cyan emphasis.
 - **Content tabs** navigate sections inside one object, such as Profile / Runtime / AGENTS.md / Skills / Assets. They use a quiet baseline and active underline instead of another boxed control.
+- **Product-section tabs** navigate sibling pages within a rail domain, such as Runtime Sessions / Health / Backup & Restore / Updates. They use the standard line-tab pattern: a quiet shared tab strip, a light integrated selection tint, stronger selected label color, and a three-pixel indicator joined to the baseline. They do not become framed buttons, detached pills, or raised cards. Native scrollbars stay hidden while horizontal scrolling remains available on narrow viewports.
 - **Filter chips** refine a result set. Inactive chips are quiet and mostly borderless; selected chips use cyan emphasis. A row of filters must not read as a row of primary buttons.
 - **Selects, dropdown menus, and popovers** use the same warm-paper, ink-boundary treatment in both closed and portal-rendered open states. Highlight, selected, disabled, and checked states remain visibly distinct.
 - **Actions** keep explicit roles: pink for the principal command, warm-paper for quiet commands, semantic warning/destructive color where the workflow requires it, and icon-only treatment only when the icon has an accessible name.
@@ -144,6 +145,22 @@ Selecting an employee Message as the source for the right-side Activity panel mu
 ## Avoid
 
 Avoid large gradients, decorative blobs, large rounded cards, heavy soft shadows, excessive whitespace, marketing hero layouts, one-off styling per page, childish stationery styling, and copied native-chat-shell styling.
+
+## Product Surface Hierarchy
+
+Pages use the fewest visible containers that still explain interaction and ownership. A page shell or split-pane workspace is already a surface; its ordinary sections should be separated with spacing, headings, dividers, or quiet background changes instead of wrapping every section in another rounded bordered card.
+
+Use visible borders and elevation for real interaction boundaries:
+
+- inputs, editors, dialogs, menus, and other controls
+- selected navigation rows and independently actionable list items
+- Chat messages, attachments, task records, runtime turns, and other durable product objects
+- destructive, warning, error, confirmation, and security-sensitive callouts
+- one intentional workspace frame when multiple panes belong to the same management object
+
+Do not reserve full-width rows for absent subtitles, status text, or page-level actions. A status row renders only when it has content. A create, save, reset, or lifecycle action sits beside the heading or object it changes. Generic subtitles that only restate the page name are omitted; explanatory copy remains when it communicates scope, risk, prerequisites, or a non-obvious product contract.
+
+Nested cards are allowed only when the inner object has an independent interaction or lifecycle. Decorative card-on-card grouping is not a product boundary and should be flattened into the parent surface.
 
 ## Employee Avatar Direction
 
@@ -196,6 +213,12 @@ The current default token values preserve the existing quiet standalone shell di
 Use official shadcn components and app/workspace/admin/chat blocks where they fit. Do not use marketing, landing-page, pricing, hero, testimonial, decorative dashboard, or gradient-heavy blocks for TinyOffice product surfaces.
 
 Chat surfaces should prefer official shadcn chat primitives where applicable: `message-scroller`, `message`, `bubble`, `attachment`, and `marker`.
+
+The accepted runtime component stack is one system: React + Tailwind + local shadcn components, with Radix providing low-level accessible behavior, Lucide providing the single icon set, and focused primitives such as cmdk or the official shadcn message scroller hidden behind `src/components/ui`. Product pages and product composition components must import the local shared layer instead of importing Radix, cmdk, or `@shadcn/react` directly. A second visual component kit, styling runtime, or icon set requires an explicit product-level architecture decision rather than a page-local dependency addition. `npm run check:ui-boundaries` enforces this boundary.
+
+Theme roles are split by ownership: palette and shared primitive rules remain in `src/index.css`, while cross-product selection, action, status, focus, overlay, and reduced-motion behavior lives in `src/styles/semantic-states.css`. New page-specific CSS must not override these shared states with another literal color. Query identity follows the same rule: production pages use the centralized `chatQueryKeys` factory instead of constructing cache keys locally.
+
+Frontend quality is verified with strict TypeScript, zero-warning Oxlint, the UI boundary check, tests, and the production bundle budget. The production build prints the largest manifest chunks so a dependency cannot become heavy without leaving visible evidence. Large focused modules such as avatar generation should be optimized and measured independently rather than used as a reason to replace the component foundation.
 
 Retired local primitives such as `AdminShell`, page-specific primitive wrappers, and state blocks are not the frontend foundation.
 

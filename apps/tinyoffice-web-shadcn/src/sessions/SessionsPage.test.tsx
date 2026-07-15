@@ -344,7 +344,7 @@ test("keeps session list columns visible when previews are long", async () => {
 });
 
 test("keeps previous session data while backend filters refetch", async () => {
-  const { sessionQueryPlaceholderData } = await import("./SessionsPage");
+  const { sessionQueryPlaceholderData } = await import("./sessionQueryModel");
   const previous = sessionViewModel();
 
   assert.equal(sessionQueryPlaceholderData(previous), previous);

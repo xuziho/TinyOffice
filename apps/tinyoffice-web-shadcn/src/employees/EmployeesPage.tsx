@@ -36,7 +36,7 @@ import { Textarea } from "../components/ui/textarea";
 import { SaveStateBadge } from "../config/SaveStateBadge";
 import { useUnsavedChanges, useUnsavedChangesNavigation } from "../config/unsavedChangesContext";
 import { chatQueryKeys } from "../chat/chatQueryKeys";
-import { SectionContentHeader } from "../app/SectionContentHeader";
+import { hydrateSkillEditor, type SkillEditorState } from "./skillEditorModel";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Save, UserRound } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
@@ -168,25 +168,22 @@ export function EmployeesPage({ currentSession }: { currentSession?: TinyOfficeC
   });
 
   return (
-    <div className="grid h-full w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
-      <SectionContentHeader
-        description={<>Employee configuration - {companyId || "No company selected"}</>}
-        actions={
-          <CreateEmployeeDialog
-            companyId={companyId}
-            model={model}
-            runtimeDefaults={selectedEmployee?.runtime}
-            disabled={!companyId}
-            onCreated={async () => {
-              await queryClient.invalidateQueries({ queryKey: chatQueryKeys.employeesScope(companyId) });
-            }}
-          />
-        }
-      />
-      <section className="grid min-h-0 grid-cols-[300px_minmax(0,1fr)] overflow-hidden">
+    <div className="h-full w-full overflow-hidden">
+      <section className="grid h-full min-h-0 grid-cols-[300px_minmax(0,1fr)] overflow-hidden">
         <aside className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] border-r border-[var(--tiny-line-soft)] bg-[var(--tiny-sidebar)]">
           <div className="grid gap-2 border-b border-[var(--tiny-line-faint)] px-3 py-3">
-            <div className="tiny-section-label px-1">Runtime-capable employees</div>
+            <div className="flex items-center justify-between gap-2 px-1">
+              <div className="tiny-section-label">Runtime-capable employees</div>
+              <CreateEmployeeDialog
+                companyId={companyId}
+                model={model}
+                runtimeDefaults={selectedEmployee?.runtime}
+                disabled={!companyId}
+                onCreated={async () => {
+                  await queryClient.invalidateQueries({ queryKey: chatQueryKeys.employeesScope(companyId) });
+                }}
+              />
+            </div>
             <div className="tiny-segmented-control grid grid-cols-2" aria-label="Employee lifecycle view">
               <Button className="tiny-segmented-trigger" data-active={employeeView === "active" || undefined} type="button" size="sm" variant="ghost" onClick={() => requestTransition(() => setEmployeeView("active"))}>
                 Active {activeEmployeeCount}
@@ -331,7 +328,7 @@ function EmployeeEditor({
           </LabelledField>
         </TabsContent>
         <TabsContent value="runtime" className="grid gap-3 pt-3">
-          <div className="grid gap-2 rounded-md border border-[var(--tiny-line-soft)] px-3 py-2 text-sm md:grid-cols-3">
+          <div className="grid divide-y border-y text-sm md:grid-cols-3 md:divide-x md:divide-y-0">
             <RuntimeValue label="Provider" value={draft.modelProvider || "Not set"} />
             <RuntimeValue label="Model" value={draft.modelId || "Not set"} />
             <RuntimeValue label="Thinking" value={draft.thinkingLevel} />
@@ -424,15 +421,6 @@ function EmployeeLifecycleAction({ employee, pending, onSetEnabled }: {
       </DialogContent>
     </Dialog>
   );
-}
-
-type SkillEditorState = { identity: string; content: string; baseline: string };
-
-export function hydrateSkillEditor(current: SkillEditorState, identity: string, serverContent: string): SkillEditorState {
-  if (current.identity !== identity || (current.content === current.baseline && current.baseline !== serverContent)) {
-    return { identity, content: serverContent, baseline: serverContent };
-  }
-  return current;
 }
 
 function EmployeeSkillsPanel({ companyId, employee }: { companyId: string; employee: EmployeeAdminRecord }): ReactElement {
@@ -547,7 +535,7 @@ function CreateEmployeeDialog({
   const [runtimeModelRef, setRuntimeModelRef] = useState(() => defaultRuntimeModelRef(model, runtimeDefaults));
   useEffect(() => {
     setRuntimeModelRef((current) => current || defaultRuntimeModelRef(model, runtimeDefaults));
-  }, [model?.availableModels, runtimeDefaults?.modelProvider, runtimeDefaults?.modelId]);
+  }, [model, runtimeDefaults]);
   const runtime = runtimeFromRef(runtimeModelRef, runtimeDefaults);
   const mutation = useMutation({
     mutationFn: () => createEmployee({

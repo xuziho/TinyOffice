@@ -17,6 +17,7 @@ import { chatRouteFocusFromSearch, type ChatRouteFocus } from "@/chat/chatRouteS
 import type { NavigationAlertState } from "@/chat/navigationAlertState";
 import {
   appViewHref,
+  appViewFromPathname,
   navigationHref,
   navigationReturnContextFromState,
   navigationStateWithReturn,
@@ -57,7 +58,7 @@ export function App(): ReactElement {
   const { hasUnsavedChanges, requestTransition } = useUnsavedChangesNavigation();
   const committedLocationRef = useRef(window.location.href);
   const queryClient = useQueryClient();
-  const [activeView, setActiveView] = useState<AppView>(() => initialViewFromLocation());
+  const [activeView, setActiveView] = useState<AppView>(() => appViewFromPathname(window.location.pathname));
   const [chatFocus, setChatFocus] = useState<ChatRouteFocus>(() => chatFocusFromLocation());
   const sessionQuery = useQuery({ queryKey: chatQueryKeys.currentSession(), queryFn: getCurrentSession });
   const currentSession = sessionQuery.data;
@@ -75,7 +76,7 @@ export function App(): ReactElement {
   const currentCompanyName = currentCompanyDisplayName(currentSession, companiesQuery.data);
   const currentCompanyId = currentSession?.companyId ?? currentSession?.currentCompanyId ?? "";
   const pageSection = pageSectionForView(activeView);
-  const brandingQuery = useQuery({ queryKey: ["company-branding", currentCompanyId], enabled: Boolean(currentCompanyId), queryFn: () => getCompanyBranding({ companyId: currentCompanyId }) });
+  const brandingQuery = useQuery({ queryKey: chatQueryKeys.branding(currentCompanyId), enabled: Boolean(currentCompanyId), queryFn: () => getCompanyBranding({ companyId: currentCompanyId }) });
   const switchCompanyMutation = useMutation({
     mutationFn: switchCurrentCompany,
     onSuccess: async (session) => {
@@ -98,7 +99,7 @@ export function App(): ReactElement {
 
   useEffect(() => {
     function syncViewFromLocation(): void {
-      setActiveView(initialViewFromLocation());
+      setActiveView(appViewFromPathname(window.location.pathname));
       setSessionFocus(sessionFocusFromLocation());
       setTaskFocus(taskFocusFromLocation());
       setChatFocus(chatFocusFromLocation());
@@ -250,7 +251,7 @@ export function App(): ReactElement {
           ) : activeView === "skills" ? (
             <CompanySkillsPage currentSession={currentSession} />
           ) : activeView === "integrations" ? (
-            <IntegrationsPage currentSession={currentSession} />
+            <IntegrationsPage />
           ) : activeView === "prompt" ? (
             <PromptPolicyPage currentSession={currentSession} />
           ) : activeView === "system-ai" ? (
@@ -444,52 +445,6 @@ function ViewButton({
       </a>
     </Button>
   );
-}
-
-function initialViewFromLocation(): AppView {
-  if (window.location.pathname.includes("company")) {
-    return "company";
-  }
-  if (window.location.pathname.includes("employees")) {
-    return "employees";
-  }
-  if (window.location.pathname.includes("integrations")) {
-    return "integrations";
-  }
-  if (window.location.pathname.includes("skills")) {
-    return "skills";
-  }
-  if (window.location.pathname.includes("capabilities")) {
-    return "capabilities";
-  }
-  if (window.location.pathname.includes("prompt")) {
-    return "prompt";
-  }
-  if (window.location.pathname.includes("access")) {
-    return "access";
-  }
-  if (window.location.pathname.includes("doctor")) {
-    return "doctor";
-  }
-  if (window.location.pathname.includes("backup")) {
-    return "backup";
-  }
-  if (window.location.pathname.includes("sessions")) {
-    return "sessions";
-  }
-  if (window.location.pathname.includes("tasks")) {
-    return "tasks";
-  }
-  if (window.location.pathname.includes("settings")) {
-    return "settings";
-  }
-  if (window.location.pathname.includes("updates")) {
-    return "updates";
-  }
-  if (window.location.pathname.includes("system-ai")) {
-    return "system-ai";
-  }
-  return "chat";
 }
 
 function RouteLoadingFallback(): ReactElement {

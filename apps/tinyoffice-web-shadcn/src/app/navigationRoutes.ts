@@ -2,6 +2,24 @@ import type { MouseEvent } from "react";
 
 export type AppView = "access" | "backup" | "capabilities" | "chat" | "company" | "doctor" | "employees" | "integrations" | "prompt" | "sessions" | "settings" | "skills" | "system-ai" | "tasks" | "updates";
 
+const appViewByPathSegment: Readonly<Record<string, AppView>> = {
+  access: "access",
+  backup: "backup",
+  capabilities: "capabilities",
+  chat: "chat",
+  company: "company",
+  doctor: "doctor",
+  employees: "employees",
+  integrations: "integrations",
+  prompt: "prompt",
+  sessions: "sessions",
+  settings: "settings",
+  skills: "skills",
+  "system-ai": "system-ai",
+  tasks: "tasks",
+  updates: "updates",
+};
+
 export type ChatSurfaceRoute = "direct" | "channel";
 
 export type NavigationTarget =
@@ -62,6 +80,11 @@ export function appViewHref(view: AppView): string {
     case "chat":
       return "/chat";
   }
+}
+
+export function appViewFromPathname(pathname: string): AppView {
+  const firstSegment = pathname.split("/").filter(Boolean)[0] ?? "chat";
+  return appViewByPathSegment[firstSegment] ?? "chat";
 }
 
 export function chatRoomHref(input: { roomId: string; surface?: ChatSurfaceRoute }): string {

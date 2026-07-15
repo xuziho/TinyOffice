@@ -29,6 +29,7 @@ async function readChatProductSource(): Promise<string> {
     "apps/tinyoffice-web-shadcn/src/chat/SystemMessage.tsx",
     "apps/tinyoffice-web-shadcn/src/chat/chatUiUtils.ts",
     "apps/tinyoffice-web-shadcn/src/chat/useChatWorkspace.ts",
+    "apps/tinyoffice-web-shadcn/src/chat/chatWorkspaceOperations.ts",
     "apps/tinyoffice-web-shadcn/src/chat/chatQueryKeys.ts",
     "apps/tinyoffice-web-shadcn/src/chat/useChatRealtime.ts",
   ];
@@ -939,7 +940,7 @@ test("shadcn chat room composer sends real replies through the API client", asyn
 
 test("shadcn chat composer uploads image attachments before sending messages", async () => {
   const composerSource = await readText("apps/tinyoffice-web-shadcn/src/chat/Composer.tsx");
-  const hookSource = await readText("apps/tinyoffice-web-shadcn/src/chat/useChatWorkspace.ts");
+  const operationsSource = await readText("apps/tinyoffice-web-shadcn/src/chat/chatWorkspaceOperations.ts");
   const chatClientSource = await readText("apps/tinyoffice-web-shadcn/src/api/chatClient.ts");
 
   assert.match(chatClientSource, /uploadChatImageAttachment/);
@@ -953,7 +954,7 @@ test("shadcn chat composer uploads image attachments before sending messages", a
   assert.match(composerSource, /uploadedAttachmentIds/);
   assert.match(composerSource, /const canSend = Boolean\(submitValue\)/);
   assert.doesNotMatch(composerSource, /!trimmedDraft/);
-  assert.match(hookSource, /attachmentIds: value\.attachmentIds/);
+  assert.match(operationsSource, /attachmentIds: value\.attachmentIds/);
 });
 
 test("shadcn chat composer groups toolbar affordances and can disable images", async () => {
@@ -1079,7 +1080,10 @@ test("management navigation uses direct rail sections and one shared tab hierarc
   assert.match(appSource, /<SectionNavigation activeView=\{activeView\} section=\{pageSection\} onSelect=\{selectView\}/);
   assert.match(sectionNavigationSource, /aria-current=\{item\.view === activeView \? "page"/);
   assert.match(sectionNavigationSource, /tiny-section-tabs/);
+  assert.match(sectionNavigationSource, /overflow-y-hidden/);
   assert.match(sectionNavigationSource, /data-active=\{item\.view === activeView\}/);
+  assert.match(cssSource, /\.tiny-soft-retro-shell \.tiny-section-tabs \{[^}]*scrollbar-width: none/);
+  assert.match(cssSource, /\.tiny-section-tab\[data-slot="button"\]\[data-active="true"\] \{[^}]*background: var\(--tiny-tab-active-surface\)[^}]*color: var\(--tiny-tab-active-ink\)[^}]*box-shadow: inset 0 -3px 0 var\(--tiny-tab-indicator\)/);
   assert.match(navigationStructureSource, /title: "Workforce"[\s\S]*title: "AI & Runtime"[\s\S]*title: "Operations"/);
 });
 

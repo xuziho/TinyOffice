@@ -21,7 +21,7 @@ export function OwnerOnboardingPage({ session }: { session: TinyOfficeCurrentSes
 
 function OwnerOnboardingContent({ session }: { session: TinyOfficeCurrentSession }): ReactElement {
   const queryClient = useQueryClient();
-  const profileQuery = useQuery({ queryKey: ["my-profile"], queryFn: getMyProfile });
+  const profileQuery = useQuery({ queryKey: chatQueryKeys.myProfile(), queryFn: getMyProfile });
   const companiesQuery = useQuery({ queryKey: chatQueryKeys.companies(), queryFn: listCompanies });
   const [displayName, setDisplayName] = useState("");
   const [avatarSeed, setAvatarSeed] = useState("");

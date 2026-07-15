@@ -1,0 +1,334 @@
+/* Expressive semantic surface layer. Color reinforces hierarchy; it does not replace structure or labels. */
+.tiny-soft-retro-shell {
+  background: var(--tiny-canvas);
+}
+
+.tiny-soft-retro-shell .tiny-company-mark {
+  background: var(--tiny-cyan-strong);
+}
+
+.tiny-soft-retro-shell .tiny-rail-button:hover,
+.tiny-soft-retro-shell .tiny-rail-button[data-state="open"],
+.tiny-soft-retro-shell .tiny-rail-button[data-active="true"] {
+  background: var(--tiny-action-surface) !important;
+}
+
+.tiny-soft-retro-chat .tiny-sidebar-row[data-active="true"],
+.tiny-soft-retro-chat .tiny-sidebar-row[data-active=true],
+.tiny-chat-mention-item[data-selected="true"],
+.tiny-product-menu [data-slot="dropdown-menu-item"]:focus,
+.tiny-product-menu [data-slot="dropdown-menu-item"][data-highlighted] {
+  background: var(--tiny-selected-surface) !important;
+}
+
+.tiny-soft-retro-chat .tiny-message-row [data-slot="bubble"] > [data-slot="bubble-content"],
+.tiny-soft-retro-chat .tiny-composer-box,
+.tiny-soft-retro-chat .tiny-context-row:has(.tiny-participant-name),
+.tiny-soft-retro-chat .tiny-trace-panel,
+.tiny-soft-retro-chat .tiny-trace-empty,
+.tiny-soft-retro-chat .tiny-chat-attachment-card,
+.tiny-soft-retro-chat .tiny-chat-system-message,
+.tiny-task-table,
+.tiny-task-empty,
+.tiny-session-turn,
+.tiny-soft-retro-sessions table,
+.tiny-soft-retro-product [data-slot="table-container"],
+.tiny-soft-retro-sessions [data-slot="table-container"] {
+  background: var(--tiny-surface) !important;
+}
+
+.tiny-soft-retro-chat .tiny-message-mine > [data-slot="bubble-content"] {
+  background: var(--tiny-message-mine-surface) !important;
+}
+
+.tiny-soft-retro-chat .tiny-send-button,
+.tiny-task-attention-action,
+.tiny-task-primary-action,
+.tiny-chat-dialog [data-slot="button"][data-variant="default"],
+.tiny-soft-retro-product [data-slot="button"][data-variant="default"],
+.tiny-soft-retro-sessions [data-slot="button"][data-variant="default"],
+[data-slot="dialog-content"] [data-slot="button"][data-variant="default"] {
+  border-color: var(--tiny-line);
+  background: var(--tiny-action-surface);
+  color: var(--tiny-text);
+}
+
+.tiny-soft-retro-chat .tiny-send-button:hover,
+.tiny-task-attention-action:hover,
+.tiny-task-primary-action:hover,
+.tiny-chat-dialog [data-slot="button"][data-variant="default"]:hover,
+.tiny-soft-retro-product [data-slot="button"][data-variant="default"]:hover,
+.tiny-soft-retro-sessions [data-slot="button"][data-variant="default"]:hover,
+[data-slot="dialog-content"] [data-slot="button"][data-variant="default"]:hover {
+  background: var(--tiny-action-hover);
+  color: var(--tiny-text);
+}
+
+.tiny-soft-retro-shell [data-slot="button"][data-variant="destructive"],
+[data-slot="dialog-content"] [data-slot="button"][data-variant="destructive"],
+[data-slot="alert-dialog-content"] [data-slot="button"][data-variant="destructive"],
+.tiny-task-dialog [data-slot="button"][data-variant="destructive"] {
+  border-color: var(--tiny-danger-ink);
+  background: var(--tiny-danger-strong);
+  color: #fff;
+  box-shadow: 1.5px 1.5px 0 var(--tiny-danger-ink);
+}
+
+.tiny-soft-retro-shell [data-slot="button"][data-variant="destructive"]:hover,
+[data-slot="dialog-content"] [data-slot="button"][data-variant="destructive"]:hover,
+[data-slot="alert-dialog-content"] [data-slot="button"][data-variant="destructive"]:hover,
+.tiny-task-dialog [data-slot="button"][data-variant="destructive"]:hover {
+  background: var(--tiny-danger);
+  color: var(--tiny-danger-ink);
+  box-shadow: .5px .5px 0 var(--tiny-danger-ink);
+  transform: translate(1px, 1px);
+}
+
+.tiny-soft-retro-product [data-slot="tabs-list"],
+.tiny-soft-retro-sessions .tiny-session-filters,
+.tiny-task-filter-panel,
+.tiny-task-controls,
+.tiny-chat-dialog [data-slot="dialog-footer"],
+[data-slot="dialog-content"] [data-slot="dialog-footer"] {
+  background: var(--tiny-quiet);
+}
+
+.tiny-soft-retro-product [data-slot="tabs-trigger"][data-state="active"],
+.tiny-task-filter-row [data-slot="tabs-trigger"][data-state="active"],
+.tiny-filter-chip[data-slot="button"][data-active="true"],
+.tiny-segmented-trigger[data-slot="button"][data-active="true"],
+.tiny-selection-row[data-slot="button"][data-active="true"],
+[data-slot="select-item"][data-state="checked"],
+[data-slot="dropdown-menu-checkbox-item"][data-state="checked"],
+[data-slot="dropdown-menu-radio-item"][data-state="checked"] {
+  background: var(--tiny-selected-surface);
+}
+
+.tiny-selection-row[data-slot="button"]:hover,
+.tiny-filter-chip[data-slot="button"]:hover,
+.tiny-segmented-trigger[data-slot="button"]:hover,
+.tiny-soft-retro-sessions tbody tr:hover,
+.tiny-task-table tbody tr:hover,
+.tiny-session-disclosure > summary:hover,
+.tiny-session-turn > summary:hover {
+  background: var(--tiny-selected-hover);
+}
+
+.tiny-task-attention > div:first-child,
+.tiny-soft-retro-tasks .tiny-task-attention > div:first-child,
+.tiny-soft-retro-chat .tiny-related-task-row,
+.tiny-soft-retro-chat .tiny-chat-access-card,
+.tiny-session-count.yellow,
+.tiny-capability-effect.write[data-slot="badge"],
+[data-slot="tooltip-content"] {
+  background: var(--tiny-yellow);
+}
+
+.tiny-session-status.completed,
+.tiny-session-count.mint,
+.tiny-soft-retro-chat .tiny-chat-access-card [data-slot="button"][data-variant="default"] {
+  background: var(--tiny-mint);
+}
+
+.tiny-session-status.running,
+.tiny-session-status.in_progress,
+.tiny-session-count.cyan,
+.tiny-capability-effect[data-slot="badge"] {
+  background: var(--tiny-selected-surface);
+}
+
+.tiny-session-status.failed,
+.tiny-task-error,
+.tiny-soft-retro-chat .tiny-chat-system-message-error {
+  border-color: var(--tiny-danger-strong);
+  background: color-mix(in srgb, var(--tiny-danger) 42%, var(--tiny-surface));
+  color: var(--tiny-danger-ink);
+}
+
+[data-slot="select-content"],
+[data-slot="popover-content"],
+[data-slot="dropdown-menu-content"],
+[data-slot="dialog-content"]:not(.tiny-chat-dialog):not(.tiny-task-dialog),
+[data-slot="alert-dialog-content"]:not(.tiny-chat-dialog):not(.tiny-task-dialog) {
+  background: var(--tiny-canvas);
+}
+
+[data-slot="dropdown-menu-item"]:not([data-disabled]):hover,
+[data-slot="dropdown-menu-checkbox-item"]:not([data-disabled]):hover,
+[data-slot="dropdown-menu-radio-item"]:not([data-disabled]):hover,
+[data-slot="select-item"]:focus,
+[data-slot="select-item"][data-highlighted],
+[data-slot="dropdown-menu-item"]:focus,
+[data-slot="dropdown-menu-item"][data-highlighted],
+[data-slot="dropdown-menu-checkbox-item"]:focus,
+[data-slot="dropdown-menu-radio-item"]:focus {
+  background: var(--tiny-running-surface);
+}
+
+[data-slot="dropdown-menu-item"][data-variant="destructive"] {
+  color: var(--tiny-danger-ink);
+}
+
+[data-slot="dropdown-menu-item"][data-variant="destructive"]:not([data-disabled]):hover,
+[data-slot="dropdown-menu-item"][data-variant="destructive"]:focus,
+[data-slot="dropdown-menu-item"][data-variant="destructive"][data-highlighted] {
+  border-color: var(--tiny-danger-strong);
+  background: var(--tiny-danger);
+  color: var(--tiny-danger-ink);
+}
+
+.tiny-soft-retro-shell,
+.tiny-soft-retro-shell * {
+  scrollbar-color: color-mix(in srgb, var(--tiny-text) 48%, var(--tiny-quiet)) var(--tiny-quiet);
+}
+
+.tiny-soft-retro-shell *::-webkit-scrollbar-track,
+.tiny-soft-retro-shell *::-webkit-scrollbar-corner {
+  background: var(--tiny-quiet);
+}
+
+.tiny-soft-retro-shell *::-webkit-scrollbar-thumb {
+  border-color: var(--tiny-quiet);
+  background: color-mix(in srgb, var(--tiny-text) 48%, var(--tiny-quiet));
+}
+
+.tiny-soft-retro-shell *::-webkit-scrollbar-thumb:hover {
+  background: var(--tiny-cyan-strong);
+}
+
+/* Native disclosures and text links share the same keyboard and pointer feedback as shadcn controls. */
+.tiny-soft-retro-shell summary {
+  border-radius: 6px;
+  transition: background-color 140ms ease, color 140ms ease, transform 80ms ease;
+}
+
+.tiny-soft-retro-shell summary:hover,
+.tiny-soft-retro-shell summary:focus-visible {
+  background: var(--tiny-quiet);
+  color: var(--tiny-text);
+}
+
+.tiny-soft-retro-shell summary:focus-visible,
+.tiny-soft-retro-shell a[href]:not([data-slot="button"]):focus-visible {
+  outline: 2px solid var(--tiny-line);
+  outline-offset: 2px;
+}
+
+.tiny-soft-retro-shell summary:active {
+  transform: translateY(1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tiny-soft-retro-shell *,
+  .tiny-soft-retro-shell *::before,
+  .tiny-soft-retro-shell *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* Settings is the reference composition for semantic hierarchy on configuration pages. */
+.tiny-settings-primary-surface,
+.tiny-settings-status-band,
+.tiny-settings-readiness {
+  border-color: var(--tiny-line);
+  background: var(--tiny-surface);
+  box-shadow: 3px 3px 0 rgba(36, 35, 31, .2);
+}
+
+.tiny-settings-status-band {
+  background: var(--tiny-info-surface);
+}
+
+.tiny-settings-comparison {
+  overflow: hidden;
+  border: 1px solid var(--tiny-line-soft);
+  border-radius: 9px;
+  background: var(--tiny-surface);
+}
+
+.tiny-settings-comparison .tiny-settings-fact {
+  min-width: 0;
+  border-right: 1px solid var(--tiny-line-faint);
+}
+
+.tiny-settings-comparison .tiny-settings-fact:last-child {
+  border-right: 0;
+}
+
+.tiny-settings-readiness .is-warning {
+  background: color-mix(in srgb, var(--tiny-yellow) 66%, var(--tiny-surface));
+}
+
+.tiny-settings-readiness .is-success {
+  background: color-mix(in srgb, var(--tiny-mint) 66%, var(--tiny-surface));
+}
+
+.tiny-settings-policy,
+.tiny-settings-quiet-state,
+.tiny-settings-model-changes {
+  background: var(--tiny-quiet);
+}
+
+.tiny-settings-quiet-state,
+.tiny-settings-model-changes {
+  border: 1px solid var(--tiny-line-faint);
+}
+
+.tiny-settings-warning-surface {
+  border-color: color-mix(in srgb, var(--tiny-yellow) 46%, var(--tiny-line));
+  background: color-mix(in srgb, var(--tiny-yellow) 70%, var(--tiny-surface));
+  color: #674f00;
+}
+
+.tiny-settings-danger-surface {
+  border: 1px solid var(--tiny-danger-strong);
+  background: color-mix(in srgb, var(--tiny-danger) 38%, var(--tiny-surface));
+  color: var(--tiny-danger-ink);
+}
+
+.tiny-settings-state {
+  border-color: var(--tiny-line-soft);
+  color: var(--tiny-text);
+}
+
+.tiny-settings-state.is-success { background: var(--tiny-mint); }
+.tiny-settings-state.is-warning { background: var(--tiny-yellow); }
+.tiny-settings-state.is-danger { border-color: var(--tiny-danger-strong); background: var(--tiny-danger); color: var(--tiny-danger-ink); }
+
+.tiny-semantic-success,
+.tiny-semantic-warning,
+.tiny-semantic-danger {
+  border-width: 1px;
+  border-style: solid;
+}
+
+.tiny-semantic-success {
+  border-color: var(--tiny-success-strong);
+  background: color-mix(in srgb, var(--tiny-mint) 72%, var(--tiny-surface));
+  color: var(--tiny-success-ink);
+}
+
+.tiny-semantic-warning {
+  border-color: var(--tiny-warning-strong);
+  background: color-mix(in srgb, var(--tiny-yellow) 72%, var(--tiny-surface));
+  color: var(--tiny-warning-ink);
+}
+
+.tiny-semantic-danger {
+  border-color: var(--tiny-danger-strong);
+  background: color-mix(in srgb, var(--tiny-danger) 42%, var(--tiny-surface));
+  color: var(--tiny-danger-ink);
+}
+
+@media (max-width: 1023px) {
+  .tiny-settings-comparison .tiny-settings-fact:nth-child(2n) { border-right: 0; }
+  .tiny-settings-comparison .tiny-settings-fact:nth-child(-n + 2) { border-bottom: 1px solid var(--tiny-line-faint); }
+}
+
+@media (max-width: 639px) {
+  .tiny-settings-comparison .tiny-settings-fact { border-right: 0; border-bottom: 1px solid var(--tiny-line-faint); }
+  .tiny-settings-comparison .tiny-settings-fact:last-child { border-bottom: 0; }
+}

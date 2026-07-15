@@ -16,7 +16,7 @@ type SettingsSection = "profile" | "security";
 export function SettingsPage({ currentSession }: { currentSession?: TinyOfficeCurrentSession }): ReactElement {
   const queryClient = useQueryClient();
   const [section, setSection] = useState<SettingsSection>("profile");
-  const query = useQuery({ queryKey: ["my-profile"], queryFn: getMyProfile });
+  const query = useQuery({ queryKey: chatQueryKeys.myProfile(), queryFn: getMyProfile });
   const [displayName, setDisplayName] = useState("");
   const [avatarSeed, setAvatarSeed] = useState("");
   useEffect(() => {

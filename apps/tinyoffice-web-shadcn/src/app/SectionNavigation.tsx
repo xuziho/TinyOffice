@@ -19,14 +19,14 @@ export function SectionNavigation({
         <h1 className="text-base font-semibold leading-tight">{section.title}</h1>
         <div className="mt-0.5 truncate text-xs text-muted-foreground">{section.description}</div>
       </div>
-      <nav className="tiny-section-tabs flex min-w-0 items-stretch gap-5 overflow-x-auto border-t px-5 sm:px-7" aria-label={`${section.title} pages`}>
+      <nav className="tiny-section-tabs flex min-w-0 items-stretch gap-2 overflow-x-auto overflow-y-hidden border-t px-5 sm:px-7" aria-label={`${section.title} pages`}>
         {section.items.map((item) => (
           <Button
             key={item.view}
             asChild
             size="sm"
             variant="ghost"
-            className="tiny-section-tab relative h-10 shrink-0 rounded-none px-0 text-muted-foreground shadow-none hover:bg-transparent hover:text-foreground data-[active=true]:font-semibold data-[active=true]:text-foreground"
+            className="tiny-section-tab relative h-10 shrink-0 rounded-none px-3 text-muted-foreground shadow-none hover:text-foreground data-[active=true]:font-semibold"
             data-active={item.view === activeView}
           >
             <a

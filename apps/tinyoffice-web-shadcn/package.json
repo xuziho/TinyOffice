@@ -5,11 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && node scripts/check-bundle-size.mjs",
+    "build": "tsc -b && vite build && node scripts/check-bundle-size.mjs && node scripts/report-bundle-size.mjs",
     "check:bundle": "node scripts/check-bundle-size.mjs",
     "check": "tsc -b --noEmit",
+    "check:ui-boundaries": "node scripts/check-ui-boundaries.mjs",
+    "check:quality": "npm run check && npm run lint && npm run check:ui-boundaries",
     "test": "node --import tsx --test \"src/**/*.test.ts\" \"src/**/*.test.tsx\"",
-    "lint": "oxlint",
+    "lint": "oxlint --deny-warnings",
+    "analyze:bundle": "node scripts/report-bundle-size.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

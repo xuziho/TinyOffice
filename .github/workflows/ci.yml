@@ -34,6 +34,8 @@ jobs:
         run: npm run setup:ci
       - name: Type check
         run: npm run check
+      - name: Verify frontend quality and dependency boundaries
+        run: npm run check:tinyoffice-web-shadcn:quality
       - name: Verify dependency licenses
         run: npm run check:dependency-licenses
       - name: Verify public source boundary

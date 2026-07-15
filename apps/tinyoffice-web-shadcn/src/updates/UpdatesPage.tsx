@@ -6,14 +6,15 @@ import { AlertTriangle, Check, Download, RefreshCw } from "lucide-react";
 import type { ReactElement } from "react";
 import type { TinyOfficeUpdateStatus } from "tinyoffice/frontend-api-contracts";
 import { SectionContentHeader } from "@/app/SectionContentHeader";
+import { chatQueryKeys } from "@/chat/chatQueryKeys";
 
 export function UpdatesPage(): ReactElement {
   const queryClient = useQueryClient();
-  const updates = useQuery({ queryKey: ["tinyoffice", "updates"], queryFn: getUpdateStatus, staleTime: 60_000 });
+  const updates = useQuery({ queryKey: chatQueryKeys.updates(), queryFn: getUpdateStatus, staleTime: 60_000 });
   const install = useMutation({
     mutationFn: installApprovedUpdate,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["tinyoffice", "updates"] });
+      await queryClient.invalidateQueries({ queryKey: chatQueryKeys.updates() });
     },
   });
 

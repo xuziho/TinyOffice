@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { reconcileAccessPolicyEditor } from "./AccessPage";
+import { reconcileAccessPolicyEditor } from "./accessPolicyEditorModel";
 
 test("initializes the Access editor from the first server policy", () => {
   assert.deepEqual(reconcileAccessPolicyEditor(undefined, "company-a", "{\"version\":1}"), {

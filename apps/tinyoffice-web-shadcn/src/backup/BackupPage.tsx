@@ -6,11 +6,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Archive, Download, LoaderCircle, ShieldCheck } from "lucide-react";
 import type { ReactElement } from "react";
 import { SectionContentHeader } from "@/app/SectionContentHeader";
+import { chatQueryKeys } from "@/chat/chatQueryKeys";
 
 export function BackupPage(): ReactElement {
   const queryClient = useQueryClient();
-  const query = useQuery({ queryKey: ["tinyoffice", "backups"], queryFn: listBackups, refetchInterval: (state) => state.state.data?.jobs.some((job) => job.status === "creating") ? 1500 : false });
-  const mutation = useMutation({ mutationFn: createBackup, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tinyoffice", "backups"] }) });
+  const query = useQuery({ queryKey: chatQueryKeys.backups(), queryFn: listBackups, refetchInterval: (state) => state.state.data?.jobs.some((job) => job.status === "creating") ? 1500 : false });
+  const mutation = useMutation({ mutationFn: createBackup, onSuccess: () => queryClient.invalidateQueries({ queryKey: chatQueryKeys.backups() }) });
   const creating = mutation.isPending || query.data?.jobs.some((job) => job.status === "creating");
   return <main className="grid h-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
     <SectionContentHeader description="Create verified full-instance backups. Scheduled automation uses the TinyOffice CLI." actions={<Button disabled={creating} onClick={() => mutation.mutate()}>{creating ? <LoaderCircle className="animate-spin" /> : <Archive />}Create backup</Button>} />

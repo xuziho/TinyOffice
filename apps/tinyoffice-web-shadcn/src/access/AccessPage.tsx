@@ -13,6 +13,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Save, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactElement, type ReactNode } from "react";
 import { SectionContentHeader } from "@/app/SectionContentHeader";
+import { reconcileAccessPolicyEditor, type AccessPolicyEditorState } from "./accessPolicyEditorModel";
 import type {
   TinyOfficeCurrentSession,
   ToolGuardPolicy,
@@ -26,12 +27,6 @@ const decisionClassName: Record<ToolSafetyDecision, string> = {
   ask: "tiny-semantic-warning",
   deny: "tiny-semantic-danger",
 };
-
-export interface AccessPolicyEditorState {
-  companyId: string;
-  serverJson: string;
-  draftJson: string;
-}
 
 export function AccessPage({ currentSession }: { currentSession?: TinyOfficeCurrentSession }): ReactElement {
   const queryClient = useQueryClient();
@@ -237,24 +232,6 @@ function PanelNote({ children }: { children: ReactNode }): ReactElement {
 
 function selectedAccessGroup(model: ToolSafetyViewModel | undefined, selectedGroupId: string): ToolSafetyCapabilityGroup | undefined {
   return model?.capabilityGroups.find((group) => group.id === selectedGroupId) ?? model?.capabilityGroups[0];
-}
-
-export function reconcileAccessPolicyEditor(
-  current: AccessPolicyEditorState | undefined,
-  companyId: string,
-  serverJson: string,
-): AccessPolicyEditorState {
-  if (!current || current.companyId !== companyId) {
-    return { companyId, serverJson, draftJson: serverJson };
-  }
-  if (current.serverJson === serverJson) {
-    return current;
-  }
-  return {
-    companyId,
-    serverJson,
-    draftJson: current.draftJson === current.serverJson ? serverJson : current.draftJson,
-  };
 }
 
 function parsePolicyJson(value: string): { ok: true; policy: ToolGuardPolicy } | { ok: false; message: string } {

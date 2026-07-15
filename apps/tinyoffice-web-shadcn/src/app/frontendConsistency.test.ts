@@ -5,7 +5,10 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const srcRoot = fileURLToPath(new URL("..", import.meta.url));
-const css = readFileSync(new URL("../index.css", import.meta.url), "utf8");
+const css = [
+  readFileSync(new URL("../index.css", import.meta.url), "utf8"),
+  readFileSync(new URL("../styles/semantic-states.css", import.meta.url), "utf8"),
+].join("\n");
 
 function productSourceFiles(directory = srcRoot): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {

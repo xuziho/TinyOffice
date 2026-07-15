@@ -43,6 +43,7 @@ import {
   chatReturnTargetForSession,
   type SessionListPresentation,
 } from "./sessionExplorerModel";
+import { sessionQueryPlaceholderData } from "./sessionQueryModel";
 
 export interface SessionFocus {
   employeeId?: string;
@@ -66,12 +67,6 @@ function navigationTargetMatchesChatReturnTarget(
       target.roomId === chatTarget.conversationId &&
       target.surface === chatTarget.surface,
   );
-}
-
-export function sessionQueryPlaceholderData(
-  previousData: SessionExplorerViewModel | undefined,
-): SessionExplorerViewModel | undefined {
-  return previousData;
 }
 
 export function SessionsPage({

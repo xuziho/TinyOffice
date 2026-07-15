@@ -37,6 +37,7 @@ import { SaveStateBadge } from "../config/SaveStateBadge";
 import { useUnsavedChanges, useUnsavedChangesNavigation } from "../config/unsavedChangesContext";
 import { chatQueryKeys } from "../chat/chatQueryKeys";
 import { SectionContentHeader } from "../app/SectionContentHeader";
+import { hydrateSkillEditor, type SkillEditorState } from "./skillEditorModel";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Save, UserRound } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
@@ -426,15 +427,6 @@ function EmployeeLifecycleAction({ employee, pending, onSetEnabled }: {
   );
 }
 
-type SkillEditorState = { identity: string; content: string; baseline: string };
-
-export function hydrateSkillEditor(current: SkillEditorState, identity: string, serverContent: string): SkillEditorState {
-  if (current.identity !== identity || (current.content === current.baseline && current.baseline !== serverContent)) {
-    return { identity, content: serverContent, baseline: serverContent };
-  }
-  return current;
-}
-
 function EmployeeSkillsPanel({ companyId, employee }: { companyId: string; employee: EmployeeAdminRecord }): ReactElement {
   const { requestTransition } = useUnsavedChangesNavigation();
   const queryClient = useQueryClient();
@@ -547,7 +539,7 @@ function CreateEmployeeDialog({
   const [runtimeModelRef, setRuntimeModelRef] = useState(() => defaultRuntimeModelRef(model, runtimeDefaults));
   useEffect(() => {
     setRuntimeModelRef((current) => current || defaultRuntimeModelRef(model, runtimeDefaults));
-  }, [model?.availableModels, runtimeDefaults?.modelProvider, runtimeDefaults?.modelId]);
+  }, [model, runtimeDefaults]);
   const runtime = runtimeFromRef(runtimeModelRef, runtimeDefaults);
   const mutation = useMutation({
     mutationFn: () => createEmployee({

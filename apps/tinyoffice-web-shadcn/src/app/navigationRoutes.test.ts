@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  appViewFromPathname,
   appViewHref,
   chatRoomHref,
   navigationHref,
@@ -11,6 +12,14 @@ import {
   sessionsHref,
   tasksHref,
 } from "./navigationRoutes";
+
+test("appViewFromPathname resolves exact top-level routes without substring guessing", () => {
+  assert.equal(appViewFromPathname("/sessions"), "sessions");
+  assert.equal(appViewFromPathname("/system-ai"), "system-ai");
+  assert.equal(appViewFromPathname("/company/settings"), "company");
+  assert.equal(appViewFromPathname("/not-company"), "chat");
+  assert.equal(appViewFromPathname("/"), "chat");
+});
 
 test("appViewHref returns stable top-level module paths", () => {
   assert.equal(appViewHref("chat"), "/chat");

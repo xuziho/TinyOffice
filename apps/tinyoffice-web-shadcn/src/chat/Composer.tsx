@@ -5,7 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { EmployeeAvatar } from "@/components/product/EmployeeAvatar";
 import { discardChatImageAttachment, uploadChatImageAttachment } from "@/api/chatClient";
 import { AtSignIcon, ImageIcon, MessageSquarePlusIcon, PaperclipIcon, SendIcon, SquareIcon, XIcon } from "lucide-react";
-import { useEffect, useRef, useState, type ClipboardEvent, type FocusEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactElement } from "react";
+import { useCallback, useEffect, useRef, useState, type ClipboardEvent, type FocusEvent, type ReactElement } from "react";
+import { shouldSubmitComposerKey } from "./composerKeyModel";
 import { canAcceptImageFile, pendingImageFromFile, type PendingImageAttachment } from "./imageAttachmentState";
 import {
   applyMentionSelection,
@@ -18,26 +19,6 @@ import {
   type ComposerSubmitValue,
   type MentionCandidate,
 } from "./mentionComposerModel";
-
-type ComposerKeyEvent = Pick<
-  ReactKeyboardEvent<HTMLTextAreaElement>,
-  "altKey" | "ctrlKey" | "key" | "metaKey" | "shiftKey"
-> & {
-  nativeEvent?: {
-    isComposing?: boolean;
-  };
-};
-
-export function shouldSubmitComposerKey(event: ComposerKeyEvent): boolean {
-  return (
-    event.key === "Enter" &&
-    !event.shiftKey &&
-    !event.altKey &&
-    !event.ctrlKey &&
-    !event.metaKey &&
-    !event.nativeEvent?.isComposing
-  );
-}
 
 export function StartEntryButton({
   label,
@@ -122,8 +103,18 @@ export function RoomReplyComposer({
     pendingImagesRef.current = pendingImages;
   }, [pendingImages]);
 
-  useEffect(() => {
-    return () => {
+  const discardUploadedAttachment = useCallback(async (attachmentId: string): Promise<void> => {
+    if (!companyId || !viewerMemberId) {
+      return;
+    }
+    await discardChatImageAttachment({
+      companyId,
+      memberId: viewerMemberId,
+      attachmentId,
+    }).catch(() => undefined);
+  }, [companyId, viewerMemberId]);
+
+  const cleanupPendingAttachments = useCallback((): void => {
       for (const image of pendingImagesRef.current) {
         URL.revokeObjectURL(image.previewObjectUrl);
         discardedImageIdsRef.current.add(image.localId);
@@ -132,8 +123,9 @@ export function RoomReplyComposer({
         }
       }
       pendingImagesRef.current = [];
-    };
-  }, []);
+  }, [discardUploadedAttachment]);
+
+  useEffect(() => cleanupPendingAttachments, [cleanupPendingAttachments]);
 
   useEffect(() => {
     function restoreComposerFocus(): void {
@@ -286,17 +278,6 @@ export function RoomReplyComposer({
       pendingImagesRef.current = [];
       return [];
     });
-  }
-
-  async function discardUploadedAttachment(attachmentId: string): Promise<void> {
-    if (!companyId || !viewerMemberId) {
-      return;
-    }
-    await discardChatImageAttachment({
-      companyId,
-      memberId: viewerMemberId,
-      attachmentId,
-    }).catch(() => undefined);
   }
 
   function handlePaste(event: ClipboardEvent<HTMLTextAreaElement>): void {

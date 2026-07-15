@@ -10,6 +10,7 @@ import { SelectionList, SelectionRow, SelectionRowTitle } from "@/components/pro
 import { Textarea } from "@/components/ui/textarea";
 import { useUnsavedChanges } from "@/config/unsavedChangesContext";
 import { SectionContentHeader } from "@/app/SectionContentHeader";
+import { chatQueryKeys } from "@/chat/chatQueryKeys";
 
 export function CompanySkillsPage({ currentSession }: { currentSession?: TinyOfficeCurrentSession }): ReactElement {
   const companyId = currentSession?.companyId ?? currentSession?.currentCompanyId ?? "";
@@ -17,10 +18,10 @@ export function CompanySkillsPage({ currentSession }: { currentSession?: TinyOff
   const [selected, setSelected] = useState("");
   const [content, setContent] = useState("");
   const [baseline, setBaseline] = useState("");
-  const listQuery = useQuery({ queryKey: ["company-skills", companyId], enabled: Boolean(companyId), queryFn: () => getCompanySkills({ companyId }) });
+  const listQuery = useQuery({ queryKey: chatQueryKeys.companySkills(companyId), enabled: Boolean(companyId), queryFn: () => getCompanySkills({ companyId }) });
   const skills = listQuery.data?.skills ?? [];
   const activeId = listQuery.data?.skills.some((skill) => skill.skillId === selected) ? selected : listQuery.data?.skills[0]?.skillId ?? "";
-  const skillQuery = useQuery({ queryKey: ["company-skill", companyId, activeId], enabled: Boolean(companyId && activeId), queryFn: () => getCompanySkill({ companyId, skillId: activeId }) });
+  const skillQuery = useQuery({ queryKey: chatQueryKeys.companySkill(companyId, activeId), enabled: Boolean(companyId && activeId), queryFn: () => getCompanySkill({ companyId, skillId: activeId }) });
   useUnsavedChanges(`company-skill:${companyId}`, Boolean(activeId && content !== baseline));
   useEffect(() => {
     if (!skillQuery.data) return;
@@ -33,7 +34,7 @@ export function CompanySkillsPage({ currentSession }: { currentSession?: TinyOff
       setContent(file.content);
       setBaseline(file.content);
       queryClient.setQueryData(["company-skill", companyId, activeId], file);
-      await queryClient.invalidateQueries({ queryKey: ["company-skills", companyId] });
+      await queryClient.invalidateQueries({ queryKey: chatQueryKeys.companySkills(companyId) });
     },
   });
 

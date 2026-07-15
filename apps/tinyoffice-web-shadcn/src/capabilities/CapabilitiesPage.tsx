@@ -7,11 +7,12 @@ import { getCapabilities } from "@/api/capabilitiesClient";
 import { Badge } from "@/components/ui/badge";
 import { SelectionList, SelectionRow, SelectionRowDescription, SelectionRowTitle } from "@/components/product/SelectionList";
 import { SectionContentHeader } from "@/app/SectionContentHeader";
+import { chatQueryKeys } from "@/chat/chatQueryKeys";
 
 export function CapabilitiesPage({ currentSession }: { currentSession?: TinyOfficeCurrentSession }): ReactElement {
   const companyId = currentSession?.companyId ?? currentSession?.currentCompanyId ?? "";
   const [selected, setSelected] = useState("");
-  const query = useQuery({ queryKey: ["capabilities", companyId], enabled: Boolean(companyId), queryFn: () => getCapabilities({ companyId }) });
+  const query = useQuery({ queryKey: chatQueryKeys.capabilities(companyId), enabled: Boolean(companyId), queryFn: () => getCapabilities({ companyId }) });
   const active = query.data?.capabilities.find((item) => item.id === selected) ?? query.data?.capabilities[0];
   return <main className="grid h-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
     <SectionContentHeader description="System-owned runtime contracts" actions={<Badge className="tiny-page-attribute" variant="secondary"><LockKeyhole />Read only</Badge>} />

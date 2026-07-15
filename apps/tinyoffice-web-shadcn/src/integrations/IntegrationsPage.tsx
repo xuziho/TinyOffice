@@ -1,16 +1,13 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ManagementPageHeader } from "@/components/product/ManagementPageHeader";
 import { ArrowRightIcon, BellRingIcon, FileInputIcon, MessageCircleIcon, PlugZapIcon, TimerIcon } from "lucide-react";
 import type { ReactElement } from "react";
 
 export function IntegrationsPage(): ReactElement {
   return (
     <div className="flex h-svh min-w-0 flex-col overflow-hidden bg-background">
-      <header className="tiny-room-header border-b">
-        <div className="min-w-0">
-          <h1 className="tiny-room-title truncate">Integrations</h1>
-        </div>
-      </header>
+      <ManagementPageHeader title="Integrations" />
       <div className="min-h-0 flex-1 overflow-auto p-6">
         <div className="mx-auto grid max-w-5xl gap-6">
           <section className="py-2">

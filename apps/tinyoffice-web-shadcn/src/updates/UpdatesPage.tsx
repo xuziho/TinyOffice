@@ -1,6 +1,7 @@
 import { getUpdateStatus, installApprovedUpdate } from "@/api/updateClient";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ProductState } from "@/components/product/ProductState";
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
 import { AlertTriangle, Check, Download, RefreshCw } from "lucide-react";
 import type { ReactElement } from "react";
@@ -42,7 +43,7 @@ function UpdatesPanel({ query, installing, installError, onCheck, onInstall }: {
   const status = query.data;
   return <section className="tiny-settings-updates grid max-w-4xl gap-5">
     <div className="tiny-settings-status-band flex flex-wrap items-start justify-between gap-4 rounded-md border p-5"><div><div className="flex items-center gap-2"><h2 className="font-semibold">Product updates</h2>{status ? <UpdateStateBadge state={status.pi.state} /> : null}</div><p className="mt-1 max-w-2xl text-sm text-muted-foreground">TinyOffice checks the PI registry for upstream releases and installs only versions approved by the TinyOffice stable manifest.</p></div><Button variant="outline" disabled={query.isFetching} onClick={onCheck}><RefreshCw className={query.isFetching ? "animate-spin" : ""} />Check for updates</Button></div>
-    {query.isLoading ? <div className="tiny-settings-quiet-state rounded-md p-8 text-center text-sm text-muted-foreground">Checking update sources...</div> : query.error ? <div className="tiny-settings-danger-surface rounded-md p-4 text-sm">{query.error.message}</div> : status ? <>
+    {query.isLoading ? <ProductState description="Checking update sources..." /> : query.error ? <ProductState tone="error" description={query.error.message} /> : status ? <>
       <div className="tiny-settings-comparison grid sm:grid-cols-2 lg:grid-cols-4"><UpdateValue label="TinyOffice" value={status.tinyOfficeVersion} /><UpdateValue label="Installed PI" value={status.pi.installedVersion} /><UpdateValue label="Latest upstream" value={status.pi.npmLatestVersion ?? "Unavailable"} /><UpdateValue label="Approved PI" value={status.pi.approvedVersion} /></div>
       <div className="tiny-settings-readiness grid overflow-hidden rounded-md border">
         <div className={`flex items-start gap-3 p-5 ${status.runtime.compatible ? "is-success" : "is-warning"}`}>{status.runtime.compatible ? <Check className="mt-0.5 size-5" /> : <AlertTriangle className="mt-0.5 size-5" />}<div><h3 className="font-medium">Runtime compatibility</h3><p className="mt-1 text-sm text-muted-foreground">Node {status.runtime.nodeVersion} installed · Node {status.runtime.minimumNodeVersion} or newer required</p></div></div>

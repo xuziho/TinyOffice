@@ -368,7 +368,7 @@ test("shadcn app shell keeps read-only Capabilities and operational Health in ex
   assert.match(navigationSource, /return "\/access"/);
   assert.match(navigationSource, /return "\/doctor"/);
   assert.doesNotMatch(accessPageSource, /Company access policy/);
-  assert.match(accessPageSource, /Rule groups/);
+  assert.match(accessPageSource, /<SelectionList/);
   assert.match(accessPageSource, /Runtime boundary/);
   assert.match(accessPageSource, /Advanced policy JSON/);
   assert.match(accessPageSource, /grid-cols-\[300px_minmax\(0,1fr\)\]/);
@@ -1065,7 +1065,10 @@ test("management navigation uses direct rail sections and one shared tab hierarc
   const promptSource = await readText("apps/tinyoffice-web-shadcn/src/prompt/PromptPolicyPage.tsx");
   const sectionNavigationSource = await readText("apps/tinyoffice-web-shadcn/src/app/SectionNavigation.tsx");
   const navigationStructureSource = await readText("apps/tinyoffice-web-shadcn/src/app/navigationStructure.ts");
-  const cssSource = await readText("apps/tinyoffice-web-shadcn/src/index.css");
+  const cssSource = [
+    await readText("apps/tinyoffice-web-shadcn/src/index.css"),
+    await readText("apps/tinyoffice-web-shadcn/src/styles/semantic-states.css"),
+  ].join("\n");
 
   assert.match(selectionSource, /SelectionGroupLabel/);
   assert.match(selectionSource, /SelectionRowTitle/);
@@ -1092,7 +1095,10 @@ test("management navigation uses direct rail sections and one shared tab hierarc
 });
 
 test("product actions share one button lifecycle and file uploads use the Button primitive", async () => {
-  const cssSource = await readText("apps/tinyoffice-web-shadcn/src/index.css");
+  const cssSource = [
+    await readText("apps/tinyoffice-web-shadcn/src/index.css"),
+    await readText("apps/tinyoffice-web-shadcn/src/styles/semantic-states.css"),
+  ].join("\n");
   const companySource = await readText("apps/tinyoffice-web-shadcn/src/app/CompanyLifecyclePage.tsx");
   const backupSource = await readText("apps/tinyoffice-web-shadcn/src/backup/BackupPage.tsx");
   const appSources = await readdir(path.join(appRoot, "src"), { recursive: true });

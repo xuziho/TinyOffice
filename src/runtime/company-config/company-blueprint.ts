@@ -55,6 +55,7 @@ export interface CompanyBlueprintSeedInput {
   systemAiRuntime?: unknown;
   ownerMemberId?: unknown;
   ownerDisplayName?: unknown;
+  ownerAvatarSeed?: unknown;
   conflictMode?: "create" | "upsert";
 }
 
@@ -400,23 +401,26 @@ async function seedOwnerMember(input: {
   companyId: string;
   ownerMemberId?: unknown;
   ownerDisplayName?: unknown;
+  ownerAvatarSeed?: unknown;
 }): Promise<void> {
   const ownerMemberId = normalizeOwnerMemberId(input.ownerMemberId);
   if (!ownerMemberId) {
     return;
   }
   const ownerDisplayName = normalizeOptionalString(input.ownerDisplayName) || ownerMemberId;
+  const ownerAvatarSeed = normalizeOptionalString(input.ownerAvatarSeed) || ownerMemberId;
   await input.client.query(
     `INSERT INTO company_members (
   company_id, id, display_name, role, summary, avatar_seed, created_at, updated_at
 )
-VALUES ($1, $2, $3, 'boss', 'Company boss.', $2, NOW(), NOW())
+VALUES ($1, $2, $3, 'boss', 'Company boss.', $4, NOW(), NOW())
 ON CONFLICT (company_id, id) DO UPDATE SET
   display_name = EXCLUDED.display_name,
   role = EXCLUDED.role,
   summary = EXCLUDED.summary,
+  avatar_seed = EXCLUDED.avatar_seed,
   updated_at = NOW()`,
-    [input.companyId, ownerMemberId, ownerDisplayName],
+    [input.companyId, ownerMemberId, ownerDisplayName, ownerAvatarSeed],
   );
 }
 
@@ -507,6 +511,7 @@ ON CONFLICT (company_id) DO UPDATE SET
     companyId,
     ownerMemberId: input.ownerMemberId,
     ownerDisplayName: input.ownerDisplayName,
+    ownerAvatarSeed: input.ownerAvatarSeed,
   });
   const hrEmployeeId = await resolveHrEmployeeId({
     client: input.client,
@@ -539,6 +544,7 @@ export async function instantiateDefaultCompanyBlueprint(input: {
   systemAiRuntime?: unknown;
   ownerMemberId?: unknown;
   ownerDisplayName?: unknown;
+  ownerAvatarSeed?: unknown;
   conflictMode?: "create" | "upsert";
 } & CompanyPostgresOpenOptions): Promise<CompanyBlueprintInstance> {
   const postgres = await openConfiguredPostgresConnection(input.repoRoot, input);
@@ -559,6 +565,7 @@ export async function instantiateDefaultCompanyBlueprint(input: {
       systemAiRuntime: input.systemAiRuntime,
       ownerMemberId: input.ownerMemberId,
       ownerDisplayName: input.ownerDisplayName,
+      ownerAvatarSeed: input.ownerAvatarSeed,
       conflictMode: input.conflictMode,
     });
     assets = await writeDefaultCompanyBlueprintAssets({

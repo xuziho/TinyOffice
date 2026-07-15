@@ -25,6 +25,7 @@ import {
   type CompanyPostgresOpenOptions,
   type CompanyPostgresPoolLike,
 } from "./postgres-runtime-connection.js";
+import { loadUserProfile } from "./user-profile.js";
 
 export interface CompanyRecord {
   companyId: string;
@@ -566,7 +567,15 @@ export async function createCompanyWithoutCarrier(input: {
   const companyId = normalizeCreateCompanyId(input);
   const displayName = normalizeDisplayName(input.displayName, companyId);
   const ownerMemberId = normalizeOwnerMemberId(input.ownerMemberId);
-  const ownerDisplayName = normalizeOptionalString(input.ownerDisplayName) || ownerMemberId;
+  const requestedOwnerDisplayName = normalizeOptionalString(input.ownerDisplayName) || ownerMemberId;
+  const ownerProfile = ownerMemberId
+    ? await loadUserProfile({
+        repoRoot: input.repoRoot,
+        userId: ownerMemberId,
+        fallbackDisplayName: requestedOwnerDisplayName,
+      })
+    : undefined;
+  const ownerDisplayName = ownerProfile?.displayName || requestedOwnerDisplayName;
   const hrRuntime = normalizeHrRuntime(input.hrRuntime);
   const systemAiRuntime = normalizeSystemAiRuntime(input.systemAiRuntime);
   const hr = await instantiateDefaultCompanyBlueprint({
@@ -576,6 +585,7 @@ export async function createCompanyWithoutCarrier(input: {
     hrEmployeeDisplayName: input.hrEmployeeDisplayName,
     ownerMemberId,
     ownerDisplayName,
+    ownerAvatarSeed: ownerProfile?.avatarSeed,
     hrRuntime,
     systemAiRuntime,
     conflictMode: "create",

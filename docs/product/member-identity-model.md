@@ -57,6 +57,8 @@ External Intake follows the same member-first routing boundary. Intake events mu
 
 `company_members` remains the identity source of truth, but TinyOffice no longer exposes direct public CRUD routes under `/api/companies/:companyId/members...`.
 
+Every stored Company Member must have a non-empty `display_name`, `role`, and `avatar_seed`. Database constraints and repository readers enforce that invariant; current projections must fail explicitly instead of turning an id into a display name or inventing a generic role. During first-time onboarding, Company creation reads the already-initialized Owner account profile so the new Owner member starts with the same authoritative display name and avatar.
+
 Current product paths use narrower surfaces:
 
 - `GET /api/companies/:companyId/directory` for frontend member selection.

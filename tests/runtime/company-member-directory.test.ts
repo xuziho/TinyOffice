@@ -20,6 +20,7 @@ class FakeCompanyMemberClient {
       return {
         rows: [{
           id: params?.[1],
+          avatar_seed: params?.[1],
           display_name: params?.[2],
           role: params?.[3],
           summary: params?.[4],
@@ -30,6 +31,7 @@ class FakeCompanyMemberClient {
       return {
         rows: [{
           id: params?.[1],
+          avatar_seed: params?.[4],
           display_name: "Xu Ziho",
           role: params?.[2],
           summary: params?.[3],
@@ -42,6 +44,7 @@ class FakeCompanyMemberClient {
     return {
       rows: [{
         id: "xuziho",
+        avatar_seed: "xuziho-avatar",
         display_name: "Xu Ziho",
         role: "boss",
         summary: "Final report target.",
@@ -73,6 +76,7 @@ test("company member directory reads PostgreSQL company members without filesyst
   assert.equal(directory.members.length, 1);
   assert.deepEqual(directory.members[0], {
     id: "xuziho",
+    avatarSeed: "xuziho-avatar",
     displayName: "Xu Ziho",
     role: "boss",
     summary: "Final report target.",
@@ -190,6 +194,7 @@ test("company member profiles still project to scene participant refs", () => {
   const directory = {
     members: [{
       id: "member-mira",
+      avatarSeed: "member-mira",
       displayName: "Mira",
       role: "hr",
     }],

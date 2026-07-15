@@ -63,7 +63,7 @@ export class WorkBlockedRecoveryConversationService {
     messageService: WorkBlockedRecoveryConversationMessageService;
     recoveryRequests: WorkBlockedRecoveryRequestRepositoryLike;
     resolveEmployee(memberId: string): Promise<EmployeeHome | undefined>;
-    resolveMemberDisplayName?(memberId: string): Promise<string | undefined>;
+    resolveMemberDisplayName(memberId: string): Promise<string | undefined>;
     onMessageCreated?(result: SendMessageResult): void | Promise<void>;
     createId?: (prefix: string) => string;
     now?: () => string;
@@ -259,8 +259,11 @@ export class WorkBlockedRecoveryConversationService {
   }
 
   private async memberDisplayName(memberId: string): Promise<string> {
-    const resolved = await this.input.resolveMemberDisplayName?.(memberId);
-    return resolved?.trim() || memberId;
+    const resolved = (await this.input.resolveMemberDisplayName(memberId))?.trim();
+    if (!resolved) {
+      throw new Error(`displayName is required for Company member ${memberId}`);
+    }
+    return resolved;
   }
 
   private createId(prefix: string): string {

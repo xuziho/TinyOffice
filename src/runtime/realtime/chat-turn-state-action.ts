@@ -104,17 +104,34 @@ function successfulToolArgumentCalls(
   events: Array<Pick<ProcessTraceEvent, "kind" | "timestamp" | "status" | "metadata">>,
   toolName: string,
 ): Array<Record<string, unknown>> {
-  const candidates = events
+  const completedCalls = events
     .filter((event) =>
       event.kind === "model_tool_call" &&
       event.metadata?.toolName === toolName &&
       event.status === "succeeded"
-    );
-  return candidates
+    )
     .map((event) => event.metadata?.arguments)
     .filter((args): args is Record<string, unknown> =>
       !!args && typeof args === "object" && !Array.isArray(args)
     );
+  const toolResults = events.filter((event) =>
+    event.kind === "model_tool_result" && event.metadata?.toolName === toolName
+  );
+  if (toolResults.length === 0) {
+    return completedCalls;
+  }
+
+  const pendingCalls = [...completedCalls];
+  const successfulCalls: Array<Record<string, unknown>> = [];
+
+  for (const event of toolResults) {
+    const args = pendingCalls.shift();
+    if (args && event.status === "succeeded") {
+      successfulCalls.push(args);
+    }
+  }
+
+  return successfulCalls;
 }
 
 function stringFrom(value: unknown): string | undefined {

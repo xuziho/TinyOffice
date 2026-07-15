@@ -2237,6 +2237,90 @@ test("TinyOffice Chat state action ignores streamed handoff start placeholders",
   assert.equal(result.ok ? result.stateAction?.targetMemberId : undefined, "iris-growth");
 });
 
+test("TinyOffice Chat state action accepts one corrected handoff after a failed target attempt", () => {
+  const result = resolveChatTurnStateAction({
+    sceneType: "channel",
+    topicId: "topic-1",
+    assistantMessage: "I finished my part and am returning the topic.",
+    reachableParticipants: [
+      { id: "lina", displayName: "Lina", role: "content" },
+      { id: "owner", displayName: "Xu Ziho", role: "boss" },
+    ],
+    events: [
+      {
+        kind: "model_tool_call",
+        timestamp: "2026-07-15T02:31:38.000Z",
+        status: "succeeded",
+        metadata: {
+          toolName: "handoff_topic_turn",
+          arguments: { toId: "xu-ziho" },
+        },
+      },
+      {
+        kind: "model_tool_result",
+        timestamp: "2026-07-15T02:31:39.000Z",
+        status: "failed",
+        metadata: {
+          toolName: "handoff_topic_turn",
+        },
+      },
+      {
+        kind: "model_tool_call",
+        timestamp: "2026-07-15T02:31:40.000Z",
+        status: "succeeded",
+        metadata: {
+          toolName: "handoff_topic_turn",
+          arguments: { toId: "owner" },
+        },
+      },
+      {
+        kind: "model_tool_result",
+        timestamp: "2026-07-15T02:31:41.000Z",
+        status: "succeeded",
+        metadata: {
+          toolName: "handoff_topic_turn",
+        },
+      },
+    ],
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.ok ? result.stateAction?.recipientParticipantId : undefined, "owner");
+});
+
+test("TinyOffice Chat state action rejects a handoff whose tool execution failed", () => {
+  const result = resolveChatTurnStateAction({
+    sceneType: "channel",
+    topicId: "topic-1",
+    assistantMessage: "I attempted to return the topic.",
+    reachableParticipants: [{ id: "owner", displayName: "Xu Ziho", role: "boss" }],
+    events: [
+      {
+        kind: "model_tool_call",
+        timestamp: "2026-07-15T02:31:38.000Z",
+        status: "succeeded",
+        metadata: {
+          toolName: "handoff_topic_turn",
+          arguments: { toId: "xu-ziho" },
+        },
+      },
+      {
+        kind: "model_tool_result",
+        timestamp: "2026-07-15T02:31:39.000Z",
+        status: "failed",
+        metadata: {
+          toolName: "handoff_topic_turn",
+        },
+      },
+    ],
+  });
+
+  assert.deepEqual(result, {
+    ok: false,
+    error: "handoff_topic_turn must be called exactly once in every Channel Topic turn.",
+  });
+});
+
 test("TinyOffice Chat DM execution accepts provider assistant text without a final tool", async () => {
   const [decision] = buildTinyOfficeChatTurnDispatches({
     source: "chat_room_message",

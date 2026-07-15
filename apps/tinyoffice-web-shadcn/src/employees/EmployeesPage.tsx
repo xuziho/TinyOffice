@@ -36,6 +36,7 @@ import { Textarea } from "../components/ui/textarea";
 import { SaveStateBadge } from "../config/SaveStateBadge";
 import { useUnsavedChanges, useUnsavedChangesNavigation } from "../config/unsavedChangesContext";
 import { chatQueryKeys } from "../chat/chatQueryKeys";
+import { SectionContentHeader } from "../app/SectionContentHeader";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Save, UserRound } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
@@ -168,12 +169,9 @@ export function EmployeesPage({ currentSession }: { currentSession?: TinyOfficeC
 
   return (
     <div className="grid h-full w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
-      <header className="tiny-room-header flex items-center justify-between gap-3 border-b">
-        <div className="min-w-0">
-          <div className="tiny-room-title truncate">Employees</div>
-          <div className="tiny-room-subtitle truncate">Employee configuration - {companyId || "No company selected"}</div>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
+      <SectionContentHeader
+        description={<>Employee configuration - {companyId || "No company selected"}</>}
+        actions={
           <CreateEmployeeDialog
             companyId={companyId}
             model={model}
@@ -183,8 +181,8 @@ export function EmployeesPage({ currentSession }: { currentSession?: TinyOfficeC
               await queryClient.invalidateQueries({ queryKey: chatQueryKeys.employeesScope(companyId) });
             }}
           />
-        </div>
-      </header>
+        }
+      />
       <section className="grid min-h-0 grid-cols-[300px_minmax(0,1fr)] overflow-hidden">
         <aside className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] border-r border-[var(--tiny-line-soft)] bg-[var(--tiny-sidebar)]">
           <div className="grid gap-2 border-b border-[var(--tiny-line-faint)] px-3 py-3">

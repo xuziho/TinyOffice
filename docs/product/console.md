@@ -1,6 +1,6 @@
 # Operations Surface
 
-TinyOffice Operations Surface is the product area for operations and configuration modules in the standalone React app under `apps/tinyoffice-web-shadcn`. Chat, Organization, Employee Runtime, Prompt Policy, Access, Sessions, Tasks, Settings, Doctor, and Backup & Restore use shadcn surfaces. Lower-frequency Company, AI/runtime, and system destinations live in grouped Workforce and Admin menus so daily collaboration navigation remains small without hiding the product map behind implementation-oriented labels.
+TinyOffice Operations Surface is the product area for operations and configuration modules in the standalone React app under `apps/tinyoffice-web-shadcn`. Chat, Organization, Employee Runtime, Prompt Policy, Access, Sessions, Tasks, Settings, Doctor, and Backup & Restore use shadcn surfaces. The global rail exposes a small set of product domains directly; multi-page domains use a shared tab strip so users can move between related pages without an implementation-oriented Admin menu.
 
 Native HTML Console pages and `/console/...` routes are retired from current product/admin behavior. `/api/console/...` aliases are also retired. New product work must use company-scoped TinyOffice APIs directly.
 
@@ -21,9 +21,11 @@ Stable responsibilities:
 
 Company is the user-visible tenant boundary. Current product routes and APIs require explicit Company context.
 
-The global rail separates daily work from workforce and administration. Only `Chat` and `Tasks` stay in the upper primary group. `Workforce` owns Employees and Company Skills. `Admin` keeps Organization and Automation as separate responsibilities, groups System AI, Prompt, Access, and read-only Capabilities under AI & Runtime, and groups Runtime Sessions, Health, Backup & Restore, and Updates under Operations. Health opens the existing read-only Doctor route. Settings remains the account destination and owns only the current account profile and security.
+The global rail separates daily work from lower-frequency console areas. Only `Chat` and `Tasks` stay in the upper primary group. `Workforce`, `Organization`, `Integrations`, `AI & Runtime`, and `Operations` are direct rail destinations rather than children of a generic Admin menu. Workforce owns Employees and Company Skills. AI & Runtime groups System AI, Prompt, Access, and read-only Capabilities. Operations groups Runtime Sessions, Health, Backup & Restore, and Updates. Health opens the existing read-only Doctor route. Settings remains the account destination and owns only the current account profile and security.
 
 Workforce, AI & Runtime, and Operations expose their sibling pages in a shared page-level navigation strip. This common shell does not merge their routes, APIs, forms, permissions, or data ownership. Organization and Integrations remain independent pages because Company lifecycle and external intake setup are different responsibilities.
+
+The shared shell uses three non-overlapping levels: the section title identifies the product area, the active tab identifies the current page, and the content header contains only page-specific context or actions. A page must not repeat the active tab label as a second large title. Object-specific titles such as an employee-filtered Sessions scope or a selected Session detail remain visible because they add information.
 
 ## Feature Map
 
@@ -31,18 +33,18 @@ Workforce, AI & Runtime, and Operations expose their sibling pages in a shared p
 | --- | --- | --- |
 | Standalone Frontend | `apps/tinyoffice-web-shadcn` | TinyOffice APIs under `/api/companies/:companyId/...` |
 | Chat | Current rebuilt shadcn surface | Chat Projection, Conversation, and Message APIs |
-| Company Lifecycle | Admin > Organization at `/company` | PostgreSQL `companies`, Prompt Policy defaults, Access defaults |
-| Integrations | Admin > Automation at `/integrations` | External Intake setup guidance |
+| Company Lifecycle | Organization rail entry at `/company` | PostgreSQL `companies`, Prompt Policy defaults, Access defaults |
+| Integrations | Integrations rail entry at `/integrations` | External Intake setup guidance |
 | Settings | Current bottom rail module at `/settings` | Account profile and Owner security |
-| Updates | Admin > Operations > Updates at `/updates` | Update status from npm and the TinyOffice stable approval manifest |
+| Updates | Operations > Updates at `/updates` | Update status from npm and the TinyOffice stable approval manifest |
 | Tasks | Current `Tasks` rail module at `/tasks` | Work repositories and Tasks view model |
-| Sessions | Admin > Operations > Runtime Sessions at `/sessions` | Runtime session repositories and Sessions view model |
+| Sessions | Operations > Runtime Sessions at `/sessions` | Runtime session repositories and Sessions view model |
 | Status | Lightweight Chat employee context and rail status markers | Runtime status, WorkRun, Session, and dispatch evidence |
 | Employee Runtime | Workforce > Employees at `/employees` | PostgreSQL runtime-capable member config plus member-local guidance assets |
-| Prompt Policy | Admin > AI & Runtime > Prompt at `/prompt` | PostgreSQL Prompt Policy tables |
-| Access | Admin > AI & Runtime > Access at `/access` | PostgreSQL `tool_safety_policies` |
+| Prompt Policy | AI & Runtime > Prompt at `/prompt` | PostgreSQL Prompt Policy tables |
+| Access | AI & Runtime > Access at `/access` | PostgreSQL `tool_safety_policies` |
 | Members | Backend/API/tool capability; not a current rail page | `company_members` with explicit runtime binding |
-| Doctor | Admin > Operations > Health at `/doctor` | `/api/companies/:companyId/doctor`, `agentco doctor` |
+| Doctor | Operations > Health at `/doctor` | `/api/companies/:companyId/doctor`, `agentco doctor` |
 
 During local development, Vite proxies `/api` to the TinyOffice runtime. There is no Vite `/console` product proxy.
 

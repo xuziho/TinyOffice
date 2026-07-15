@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Archive, Download, LoaderCircle, ShieldCheck } from "lucide-react";
 import type { ReactElement } from "react";
+import { SectionContentHeader } from "@/app/SectionContentHeader";
 
 export function BackupPage(): ReactElement {
   const queryClient = useQueryClient();
@@ -12,10 +13,7 @@ export function BackupPage(): ReactElement {
   const mutation = useMutation({ mutationFn: createBackup, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tinyoffice", "backups"] }) });
   const creating = mutation.isPending || query.data?.jobs.some((job) => job.status === "creating");
   return <main className="grid h-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
-    <header className="tiny-room-header flex items-center justify-between gap-3 border-b">
-      <div><div className="tiny-room-title">Backup & Restore</div><div className="tiny-room-subtitle">Create verified full-instance backups. Scheduled automation uses the TinyOffice CLI.</div></div>
-      <Button disabled={creating} onClick={() => mutation.mutate()}>{creating ? <LoaderCircle className="animate-spin" /> : <Archive />}Create backup</Button>
-    </header>
+    <SectionContentHeader description="Create verified full-instance backups. Scheduled automation uses the TinyOffice CLI." actions={<Button disabled={creating} onClick={() => mutation.mutate()}>{creating ? <LoaderCircle className="animate-spin" /> : <Archive />}Create backup</Button>} />
     <ScrollArea className="min-h-0"><div className="grid gap-5 p-5">
       <section className="rounded-md border bg-[var(--tiny-quiet)] p-4"><div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 size-5 text-[var(--tiny-success-ink)]"/><div><h2 className="font-semibold">What this backup contains</h2><p className="mt-1 text-sm text-muted-foreground">PostgreSQL company and runtime data, Company and Employee Skills, employee workspaces, branding, and locally stored Chat attachments. System secrets such as provider API keys and .env are not exported.</p><p className="mt-2 text-sm text-muted-foreground">Backups still contain private company content. Keep them in a trusted or encrypted destination. Restore is CLI-only and requires maintenance mode, explicit confirmation, verification, and an automatic pre-restore safety backup.</p></div></div></section>
       {mutation.isError ? <div className="tiny-settings-danger-surface rounded-md p-3 text-sm">{mutation.error instanceof Error ? mutation.error.message : "Backup could not start."}</div> : null}

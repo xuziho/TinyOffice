@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BotIcon } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent, type ReactElement } from "react";
 import type { CompaniesAdminViewModel, CompanySystemAiSettingDto, SaveCompanySystemAiSettingsRequest, TinyOfficeCurrentSession, TinyOfficeRuntimeModelDto } from "tinyoffice/frontend-api-contracts";
+import { SectionContentHeader } from "@/app/SectionContentHeader";
 
 export function SystemAiPage({ currentSession }: { currentSession?: TinyOfficeCurrentSession }): ReactElement {
   const companyId = currentSession?.companyId ?? currentSession?.currentCompanyId ?? "";
@@ -21,12 +22,7 @@ export function SystemAiPage({ currentSession }: { currentSession?: TinyOfficeCu
 
   return (
     <div className="flex h-full min-w-0 flex-col overflow-hidden bg-background">
-      <header className="tiny-room-header border-b">
-        <div className="min-w-0">
-          <h1 className="tiny-room-title truncate">System AI</h1>
-          <p className="tiny-room-subtitle truncate">Company background models - {companyId || "No company selected"}</p>
-        </div>
-      </header>
+      <SectionContentHeader description={<>Company background models - {companyId || "No company selected"}</>} />
       <div className="min-h-0 flex-1 overflow-auto p-6">
         <section className="mx-auto max-w-5xl rounded-md border bg-background">
           <div className="flex items-start justify-between gap-3 border-b p-5">

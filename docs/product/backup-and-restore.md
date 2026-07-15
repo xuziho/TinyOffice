@@ -17,7 +17,7 @@ Per-Company import/export is not part of disaster recovery. It requires identity
 
 ## Product and automation entries
 
-Developer Tools / Backup & Restore creates a verified local backup and offers a download. The browser uses an internal TinyOffice route, but that HTTP surface is not the external automation contract.
+Operations > Backup & Restore creates a verified local backup and offers a download. The browser uses an internal TinyOffice route, but that HTTP surface is not the external automation contract.
 
 Scheduled automation uses the CLI:
 

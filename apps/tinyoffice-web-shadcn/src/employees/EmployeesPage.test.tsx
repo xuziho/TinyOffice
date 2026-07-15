@@ -122,8 +122,8 @@ test("renders Employees as an employee configuration surface", async () => {
     </QueryClientProvider>,
   );
 
-  assert.match(html, /Employees/);
   assert.match(html, /Employee configuration/);
+  assert.doesNotMatch(html, />Employees</);
   assert.match(html, /New employee/);
   assert.doesNotMatch(html, /Reload all/);
   assert.match(html, /Save changes/);

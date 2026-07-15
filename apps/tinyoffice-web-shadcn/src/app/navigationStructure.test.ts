@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  adminNavigation,
-  isAdminView,
+  aiRuntimeNavigation,
+  integrationsNavigation,
+  isAiRuntimeView,
+  isOperationsView,
   isWorkforceView,
+  operationsNavigation,
+  organizationNavigation,
   pageSectionForView,
   workforceNavigation,
 } from "./navigationStructure";
@@ -18,20 +22,15 @@ test("workforce navigation contains only people and company skills", () => {
   assert.equal(isWorkforceView("company"), false);
 });
 
-test("admin navigation groups existing routes by product responsibility", () => {
-  assert.deepEqual(adminNavigation.map((group) => ({
-    label: group.label,
-    views: group.items.map((item) => item.view),
-  })), [
-    { label: "Organization", views: ["company"] },
-    { label: "Automation", views: ["integrations"] },
-    { label: "AI & Runtime", views: ["system-ai", "prompt", "access", "capabilities"] },
-    { label: "Operations", views: ["sessions", "doctor", "backup", "updates"] },
-  ]);
-  assert.equal(isAdminView("sessions"), true);
-  assert.equal(isAdminView("doctor"), true);
-  assert.equal(isAdminView("chat"), false);
-  assert.equal(isAdminView("settings"), false);
+test("console rail destinations keep standalone and grouped responsibilities explicit", () => {
+  assert.deepEqual(organizationNavigation, [{ view: "company", label: "Organization" }]);
+  assert.deepEqual(integrationsNavigation, [{ view: "integrations", label: "Integrations" }]);
+  assert.deepEqual(aiRuntimeNavigation.map((item) => item.view), ["system-ai", "prompt", "access", "capabilities"]);
+  assert.deepEqual(operationsNavigation.map((item) => item.view), ["sessions", "doctor", "backup", "updates"]);
+  assert.equal(isAiRuntimeView("access"), true);
+  assert.equal(isAiRuntimeView("sessions"), false);
+  assert.equal(isOperationsView("doctor"), true);
+  assert.equal(isOperationsView("settings"), false);
 });
 
 test("page sections expose sibling navigation without merging product routes", () => {

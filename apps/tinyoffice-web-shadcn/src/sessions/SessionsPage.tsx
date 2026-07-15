@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { navigationHref, sessionsHref, shouldUseClientNavigation, type NavigationReturnContext, type NavigationTarget } from "@/app/navigationRoutes";
+import { SectionContentHeader } from "@/app/SectionContentHeader";
 import { chatQueryKeys } from "@/chat/chatQueryKeys";
 import { useQuery } from "@tanstack/react-query";
 import { Activity, ArrowLeft, CheckCircle2, ChevronDown, MessageSquare, Sparkles, Wrench } from "lucide-react";
@@ -147,16 +148,12 @@ export function SessionsPage({
 
   return (
     <div className="tiny-soft-retro-sessions grid h-full w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
-      <header className="tiny-product-header flex items-center justify-between gap-3 border-b">
-        <div className="min-w-0">
-          <div className="tiny-room-title truncate">{detailSession?.displayName ?? listPresentation?.title ?? "Sessions"}</div>
-          <div className="tiny-room-subtitle truncate">
-            {detailSession
-              ? `${sessionSceneLabel(detailSession.sceneType)} - ${detailSession.role || detailSession.employeeId}`
-              : `Evidence console - ${companyId || "No company selected"}`}
-          </div>
-        </div>
-        {detailSession && model?.detail ? (
+      <SectionContentHeader
+        title={detailSession?.displayName ?? (listPresentation?.title !== "Runtime sessions" ? listPresentation?.title : undefined)}
+        description={detailSession
+          ? `${sessionSceneLabel(detailSession.sceneType)} - ${detailSession.role || detailSession.employeeId}`
+          : `Evidence console - ${companyId || "No company selected"}`}
+        actions={detailSession && model?.detail ? (
           <div className="flex shrink-0 items-center gap-2">
             {returnContext && onOpenNavigationTarget ? (
               <Button asChild variant="outline" size="sm" className="tiny-session-back-action h-9 px-3">
@@ -199,8 +196,8 @@ export function SessionsPage({
               </Button>
             ) : null}
           </div>
-        ) : null}
-      </header>
+        ) : undefined}
+      />
       <section className="grid min-w-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-[var(--tiny-canvas)]">
         <ScrollArea className="min-h-0">
           <div className="grid w-full gap-4 px-6 py-5">

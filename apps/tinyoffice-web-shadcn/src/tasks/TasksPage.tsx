@@ -124,7 +124,6 @@ export function TasksPage({
     mutationFn: (input: { workTaskId: string; action: WorkTaskLifecycleAction; reason?: string }) =>
       executeWorkTaskLifecycleAction({
         companyId,
-        currentSession,
         workTaskId: input.workTaskId,
         action: input.action,
         reason: input.reason,
@@ -136,7 +135,6 @@ export function TasksPage({
   const runActionMutation = useMutation({
     mutationFn: (action: TasksAction) => executeTasksRunAction({
       path: action.path,
-      actorMemberId: currentSession?.member?.memberId,
       reason: action.id === "cancel-run" ? "Canceled from Tasks." : "Retried from Tasks.",
     }),
     onSuccess: async () => {

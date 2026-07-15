@@ -1758,7 +1758,7 @@ test("Hono TinyOffice API executes Tasks Run actions through the company-scoped 
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        actorMemberId: "ops-owner",
+        actorMemberId: "forged-member",
         reason: "Operator canceled the run.",
       }),
     });
@@ -1781,8 +1781,8 @@ test("Hono TinyOffice API executes Tasks Run actions through the company-scoped 
 
     assert.equal((await fetch(`${baseUrl}/api/work/run-792/cancel-run`, { method: "POST" })).status, 404);
     assert.deepEqual(calls, [
-      "tasks-action:acme:run-792:cancel-run:ops-owner:Operator canceled the run.",
-      "tasks-action:acme:run-792:retry-dispatch:none:none",
+      "tasks-action:acme:run-792:cancel-run:xuziho:Operator canceled the run.",
+      "tasks-action:acme:run-792:retry-dispatch:xuziho:none",
     ]);
   });
 });
@@ -2078,7 +2078,7 @@ test("Hono TinyOffice API covers shadcn frontend client routes", async () => {
       ["/api/companies/acme/tasks/runs/run-792/actions/cancel-run", {
         method: "POST",
         headers: jsonHeaders,
-        body: JSON.stringify({ actorMemberId: "xuziho", reason: "Route parity check." }),
+        body: JSON.stringify({ reason: "Route parity check." }),
       }],
       ["/api/companies/acme/work/work-task-api-1/cancel", {
         method: "POST",

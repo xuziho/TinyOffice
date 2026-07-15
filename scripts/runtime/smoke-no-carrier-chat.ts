@@ -337,6 +337,10 @@ export async function runNoCarrierTinyOfficeChatSmoke(): Promise<NoCarrierTinyOf
       return {
         companyId,
         employeeHomesById: new Map([[targetMemberId, employeeHome()]]),
+        memberProfilesById: new Map([
+          [actorMemberId, { id: actorMemberId, displayName: "Iris", role: "growth", runtimeCapable: false }],
+          [targetMemberId, { id: targetMemberId, displayName: "Nora", role: "automation", runtimeCapable: true }],
+        ]),
         employeeIds: [actorMemberId, targetMemberId],
       };
     },

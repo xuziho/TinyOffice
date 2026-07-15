@@ -1,19 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { TinyOfficeCurrentSession } from "tinyoffice/frontend-api-contracts";
 
 import { executeTasksRunAction, executeWorkTaskLifecycleAction, getTasksViewModel } from "./tasksClient";
-
-const currentSession: TinyOfficeCurrentSession = {
-  schema: "tinyoffice-current-session" as const,
-  version: 2,
-  user: { id: "xuziho", displayName: "Xu" },
-  currentCompanyId: "ziho-co",
-  companyId: "ziho-co",
-  member: { memberId: "xuziho", displayName: "Xu", role: "boss" },
-  needsProfileInitialization: false,
-  needsCompanyInitialization: false,
-};
 
 test("getTasksViewModel reads the company-scoped Tasks API with filters", async () => {
   const requests: Array<{ url: string; init?: RequestInit }> = [];
@@ -87,7 +75,6 @@ test("executeTasksRunAction posts the selected Tasks action path", async () => {
   try {
     await executeTasksRunAction({
       path: "/api/companies/ziho-co/tasks/runs/run-1/actions/cancel-run",
-      actorMemberId: "xuziho",
       reason: "Canceled from Tasks.",
     });
   } finally {
@@ -98,7 +85,6 @@ test("executeTasksRunAction posts the selected Tasks action path", async () => {
   assert.equal(requests[0]?.url, "http://127.0.0.1:5175/api/companies/ziho-co/tasks/runs/run-1/actions/cancel-run");
   assert.equal(requests[0]?.init?.method, "POST");
   assert.deepEqual(JSON.parse(String(requests[0]?.init?.body)), {
-    actorMemberId: "xuziho",
     reason: "Canceled from Tasks.",
   });
 });
@@ -120,7 +106,6 @@ test("executeWorkTaskLifecycleAction posts WorkTask lifecycle confirmations", as
   try {
     await executeWorkTaskLifecycleAction({
       companyId: "ziho-co",
-      currentSession,
       workTaskId: "work-task-1",
       action: "archive",
       reason: "Hide from default Tasks.",
@@ -135,10 +120,6 @@ test("executeWorkTaskLifecycleAction posts WorkTask lifecycle confirmations", as
   assert.deepEqual(requests[0]?.init?.headers, {
     Accept: "application/json",
     "Content-Type": "application/json",
-    "x-tinyoffice-company-id": "ziho-co",
-    "x-tinyoffice-member-id": "xuziho",
-    "x-tinyoffice-member-display-name": "Xu",
-    "x-tinyoffice-member-role": "boss",
   });
   assert.deepEqual(JSON.parse(String(requests[0]?.init?.body)), {
     companyId: "ziho-co",

@@ -4,10 +4,9 @@ import type {
   TasksSortMode,
   TasksStatusFilter,
   TasksViewModel,
-  TinyOfficeCurrentSession,
 } from "tinyoffice/frontend-api-contracts";
 import { companyTasksPath, companyWorkTaskActionPath } from "./tinyofficePaths";
-import { currentSessionHeaders, requestJson, required } from "./tinyofficeRequest";
+import { requestJson, required } from "./tinyofficeRequest";
 
 export interface GetTasksViewModelInput {
   companyId: string;
@@ -21,7 +20,6 @@ export type WorkTaskLifecycleAction = "cancel" | "archive" | "restore";
 
 export interface ExecuteWorkTaskLifecycleActionInput {
   companyId: string;
-  currentSession?: TinyOfficeCurrentSession;
   workTaskId: string;
   action: WorkTaskLifecycleAction;
   reason?: string;
@@ -40,7 +38,6 @@ export async function getTasksViewModel(input: GetTasksViewModelInput): Promise<
 
 export async function executeTasksRunAction(input: {
   path: TasksAction["path"];
-  actorMemberId?: string;
   reason?: string;
 }): Promise<TasksRunActionResult> {
   return requestJson<TasksRunActionResult>(input.path, {
@@ -49,7 +46,6 @@ export async function executeTasksRunAction(input: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      ...(input.actorMemberId?.trim() ? { actorMemberId: input.actorMemberId.trim() } : {}),
       ...(input.reason?.trim() ? { reason: input.reason.trim() } : {}),
     }),
   });
@@ -62,7 +58,6 @@ export async function executeWorkTaskLifecycleAction(input: ExecuteWorkTaskLifec
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...currentSessionHeaders(input.currentSession, companyId),
     },
     body: JSON.stringify({
       companyId,

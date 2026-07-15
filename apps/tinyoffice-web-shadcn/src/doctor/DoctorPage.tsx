@@ -1,6 +1,7 @@
 import { getDoctorReport } from "@/api/doctorClient";
 import { chatQueryKeys } from "@/chat/chatQueryKeys";
 import { Badge } from "@/components/ui/badge";
+import { ProductState } from "@/components/product/ProductState";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -26,15 +27,15 @@ export function DoctorPage({ currentSession }: { currentSession?: TinyOfficeCurr
   return (
     <main className="h-full w-full overflow-hidden bg-background">
       {!companyId ? (
-        <StateBlock>Select a company before running diagnostics.</StateBlock>
+        <ProductState className="m-5" icon={Stethoscope} description="Select a company before running diagnostics." />
       ) : doctorQuery.isLoading ? (
-        <StateBlock>Loading diagnostics...</StateBlock>
+        <ProductState className="m-5" icon={Stethoscope} description="Loading diagnostics..." />
       ) : doctorQuery.isError ? (
-        <StateBlock>{doctorQuery.error instanceof Error ? doctorQuery.error.message : "Diagnostics could not load."}</StateBlock>
+        <ProductState className="m-5" icon={Stethoscope} tone="error" description={doctorQuery.error instanceof Error ? doctorQuery.error.message : "Diagnostics could not load."} />
       ) : doctorQuery.data ? (
         <DoctorReport report={doctorQuery.data} />
       ) : (
-        <StateBlock>No diagnostics are available.</StateBlock>
+        <ProductState className="m-5" icon={Stethoscope} description="No diagnostics are available." />
       )}
     </main>
   );
@@ -167,14 +168,6 @@ function StatusIcon({ status }: { status: TinyOfficeDoctorStatus }): ReactElemen
   return <Info className={className} aria-hidden="true" />;
 }
 
-function StateBlock({ children }: { children: string }): ReactElement {
-  return (
-    <div className="m-5 rounded-md border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
-      <Stethoscope className="mx-auto mb-2 size-5" aria-hidden="true" />
-      {children}
-    </div>
-  );
-}
 
 function statusLabel(status: TinyOfficeDoctorStatus): string {
   switch (status) {

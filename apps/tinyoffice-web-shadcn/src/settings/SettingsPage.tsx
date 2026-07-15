@@ -4,6 +4,7 @@ import type { TinyOfficeCurrentSession } from "tinyoffice/frontend-api-contracts
 import { KeyRound, LogOut, MonitorSmartphone, ShieldCheck } from "lucide-react";
 import { getMyProfile, saveMyProfile } from "@/api/profileClient";
 import { chatQueryKeys } from "@/chat/chatQueryKeys";
+import { ManagementPageHeader } from "@/components/product/ManagementPageHeader";
 import { SelectionList, SelectionRow } from "@/components/product/SelectionList";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,9 +38,9 @@ export function SettingsPage({ currentSession }: { currentSession?: TinyOfficeCu
   });
 
   return <main className="grid h-svh grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
-    <header className="tiny-room-header border-b"><div className="tiny-room-title">Settings</div></header>
+    <ManagementPageHeader title="Settings" />
     <section className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden md:grid-cols-[280px_minmax(0,1fr)] md:grid-rows-1">
-      <aside className="border-b bg-[var(--tiny-sidebar)] p-3 md:border-b-0 md:border-r"><SelectionList className="grid-cols-2 md:grid-cols-1"><SelectionRow selected={section === "profile"} onClick={() => setSection("profile")}>My Profile</SelectionRow><SelectionRow selected={section === "security"} onClick={() => setSection("security")}>Security</SelectionRow></SelectionList></aside>
+      <aside className="border-b bg-[var(--tiny-sidebar)] p-3 md:border-b-0 md:border-r"><SelectionList className="grid-cols-2 md:grid-cols-1"><SelectionRow selected={section === "profile"} title="My Profile" onClick={() => setSection("profile")} /><SelectionRow selected={section === "security"} title="Security" onClick={() => setSection("security")} /></SelectionList></aside>
       <div className="overflow-auto p-4 sm:p-6">{section === "profile" ? <ProfilePanel currentSession={currentSession} displayName={displayName} setDisplayName={setDisplayName} avatarSeed={avatarSeed} setAvatarSeed={setAvatarSeed} savePending={save.isPending} saveError={save.error} canSave={Boolean(query.data) && (displayName.trim() !== query.data?.displayName || avatarSeed !== query.data?.avatarSeed)} onSave={() => save.mutate()} /> : <SecurityPanel />}</div>
     </section>
   </main>;

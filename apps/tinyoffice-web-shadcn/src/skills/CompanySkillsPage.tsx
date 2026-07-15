@@ -6,6 +6,7 @@ import { Save } from "lucide-react";
 import { getCompanySkill, getCompanySkills, saveCompanySkill } from "@/api/skillsClient";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ProductState } from "@/components/product/ProductState";
 import { SelectionList, SelectionRow, SelectionRowTitle } from "@/components/product/SelectionList";
 import { Textarea } from "@/components/ui/textarea";
 import { useUnsavedChanges } from "@/config/unsavedChangesContext";
@@ -39,13 +40,8 @@ export function CompanySkillsPage({ currentSession }: { currentSession?: TinyOff
 
   return (
     <main className="h-full overflow-hidden bg-background">
-      {listQuery.isLoading ? <div className="grid place-items-center p-8 text-sm text-muted-foreground">Loading Company Skills...</div> : listQuery.error ? <div className="m-5 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">{listQuery.error instanceof Error ? listQuery.error.message : "Company Skills could not be loaded."}</div> : skills.length === 0 ? (
-        <div className="grid place-items-center overflow-auto p-6">
-          <section className="max-w-lg rounded-md border bg-card p-6 text-center shadow-sm">
-            <h2 className="font-semibold">No Company Skills yet</h2>
-            <p className="mt-2 text-sm text-muted-foreground">Company Skills capture reusable methods after an employee creates one in Chat with your confirmation. Once created, it will appear here for review and editing.</p>
-          </section>
-        </div>
+      {listQuery.isLoading ? <ProductState className="m-5" description="Loading Company Skills..." /> : listQuery.error ? <ProductState className="m-5" tone="error" description={listQuery.error instanceof Error ? listQuery.error.message : "Company Skills could not be loaded."} /> : skills.length === 0 ? (
+        <div className="grid place-items-center overflow-auto p-6"><ProductState title="No Company Skills yet" description="Company Skills capture reusable methods after an employee creates one in Chat with your confirmation. Once created, it will appear here for review and editing." /></div>
       ) : <section className="grid h-full min-h-0 grid-cols-[280px_minmax(0,1fr)] overflow-hidden">
         <aside className="overflow-auto border-r bg-muted/20 p-3">
           <p className="mb-3 text-xs text-muted-foreground">New Skills start in Chat after confirmation. This page edits Skills that already exist.</p>
@@ -58,7 +54,7 @@ export function CompanySkillsPage({ currentSession }: { currentSession?: TinyOff
             <div className="flex items-center justify-between gap-3"><div><div className="flex items-center gap-2"><h2 className="font-semibold">{skillQuery.data.name}</h2><Badge variant="secondary">Company-wide</Badge></div><p className="text-sm text-muted-foreground">{skillQuery.data.relativePath}</p></div><Button size="sm" disabled={content === baseline || saveMutation.isPending} onClick={() => saveMutation.mutate()}><Save />Save and reload</Button></div>
             <Textarea className="min-h-[620px] font-mono text-xs leading-5" value={content} onChange={(event) => setContent(event.currentTarget.value)} />
             {saveMutation.error ? <p className="text-sm text-destructive">{saveMutation.error instanceof Error ? saveMutation.error.message : "Save failed."}</p> : null}
-          </div> : <div className="rounded-md border p-4 text-sm text-muted-foreground">Select a Company Skill to inspect it.</div>}
+          </div> : <ProductState compact description="Select a Company Skill to inspect it." />}
         </div>
       </section>}
     </main>

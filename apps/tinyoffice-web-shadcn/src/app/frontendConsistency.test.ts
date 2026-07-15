@@ -57,3 +57,51 @@ test("shared product roles keep selection, danger, status, and scroll feedback s
   assert.match(css, /\.tiny-task-error/);
   assert.match(css, /::-webkit-scrollbar-thumb:hover/);
 });
+
+test("product pages use shared state and note compositions", () => {
+  const sources = productSourceFiles()
+    .filter((path) => !path.includes(`${join("components", "product")}`))
+    .map((path) => ({ path, source: readFileSync(path, "utf8") }));
+  const localStateComponents = sources.flatMap(({ path, source }) => {
+    const hits = source.match(/function (?:StateBlock|PanelNote)\b/g) ?? [];
+    return hits.map((hit) => `${path}: ${hit}`);
+  });
+  assert.deepEqual(localStateComponents, []);
+
+  const combined = sources.map(({ source }) => source).join("\n");
+  assert.match(combined, /from "@\/components\/product\/ProductState"/);
+  assert.match(combined, /from ["'](?:@\/|\.\.\/components\/)product\/PanelNote["']/);
+});
+
+test("audited selection rows expose the shared title contract", () => {
+  const selectionList = readFileSync(new URL("../components/product/SelectionList.tsx", import.meta.url), "utf8");
+  const settings = readFileSync(new URL("../settings/SettingsPage.tsx", import.meta.url), "utf8");
+  const employees = readFileSync(new URL("../employees/EmployeesPage.tsx", import.meta.url), "utf8");
+  const company = readFileSync(new URL("./CompanyLifecyclePage.tsx", import.meta.url), "utf8");
+
+  assert.match(selectionList, /title === undefined \? children : \([\s\S]*?<SelectionRowTitle/);
+  assert.match(settings, /<SelectionRow\b[^>]*title="My Profile"/);
+  assert.match(settings, /<SelectionRow\b[^>]*title="Security"/);
+  assert.match(employees, /selected=\{skill\.skillId === activeSkillId\}[\s\S]*?title=\{skill\.name\}/);
+  assert.match(company, /function CompanyRow[\s\S]*?<SelectionRowTitle/);
+});
+
+test("component CSS consumes semantic tokens instead of page-local color literals", () => {
+  const indexCss = readFileSync(new URL("../index.css", import.meta.url), "utf8");
+  const componentCss = indexCss.slice(indexCss.indexOf("@layer components {"));
+  const semanticCss = readFileSync(new URL("../styles/semantic-states.css", import.meta.url), "utf8");
+  assert.doesNotMatch(componentCss, /#[0-9a-f]{3,8}\b|rgba?\(/i);
+  assert.doesNotMatch(semanticCss, /#[0-9a-f]{3,8}\b|rgba?\(/i);
+});
+
+test("standalone management pages share one header composition", () => {
+  const paths = [
+    "../app/CompanyLifecyclePage.tsx",
+    "../integrations/IntegrationsPage.tsx",
+    "../settings/SettingsPage.tsx",
+  ];
+  for (const path of paths) {
+    const source = readFileSync(new URL(path, import.meta.url), "utf8");
+    assert.match(source, /<ManagementPageHeader\b/);
+  }
+});

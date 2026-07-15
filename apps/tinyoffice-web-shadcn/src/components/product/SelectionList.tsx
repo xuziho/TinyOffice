@@ -20,23 +20,33 @@ export function SelectionRowDescription({ children, className }: { children: Rea
 
 export function SelectionRow({
   selected,
+  title,
+  description,
   children,
   className,
   ...props
 }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "aria-pressed"> & {
   selected: boolean;
-  children: ReactNode;
+  title?: ReactNode;
+  description?: ReactNode;
+  children?: ReactNode;
 }): ReactElement {
+  const content = title === undefined ? children : (
+    <span className="min-w-0">
+      <SelectionRowTitle className="block truncate">{title}</SelectionRowTitle>
+      {description === undefined ? null : <SelectionRowDescription className="block truncate">{description}</SelectionRowDescription>}
+    </span>
+  );
   return (
     <Button
       type="button"
       variant="ghost"
       data-active={selected || undefined}
       aria-pressed={selected}
-      className={cn("tiny-selection-row h-auto w-full min-w-0 justify-start whitespace-normal text-left focus-visible:ring-0 focus-visible:ring-offset-0", className)}
+      className={cn("tiny-selection-row h-auto w-full min-w-0 justify-start whitespace-normal px-3 py-2 text-left focus-visible:ring-0 focus-visible:ring-offset-0", className)}
       {...props}
     >
-      {children}
+      {content}
     </Button>
   );
 }

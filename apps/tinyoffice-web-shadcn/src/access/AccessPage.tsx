@@ -3,6 +3,7 @@ import {
   saveAccessPolicy,
 } from "@/api/accessClient";
 import { Button } from "@/components/ui/button";
+import { PanelNote } from "@/components/product/PanelNote";
 import { SelectionList, SelectionRow, SelectionRowTitle } from "@/components/product/SelectionList";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
@@ -74,9 +75,6 @@ export function AccessPage({ currentSession }: { currentSession?: TinyOfficeCurr
     <div className="h-full w-full overflow-hidden">
       <section className="grid h-full min-h-0 grid-cols-[300px_minmax(0,1fr)] overflow-hidden">
         <aside className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] border-r border-[var(--tiny-line-soft)] bg-[var(--tiny-sidebar)]">
-          <div className="border-b border-[var(--tiny-line-faint)] px-4 py-3">
-            <div className="tiny-section-label">Rule groups</div>
-          </div>
           <ScrollArea className="min-h-0">
             <SelectionList className="p-2">
               {(model?.capabilityGroups ?? []).map((group) => (
@@ -224,10 +222,6 @@ function DecisionBadge({ decision, label }: { decision: ToolSafetyDecision; labe
       {label}
     </span>
   );
-}
-
-function PanelNote({ children }: { children: ReactNode }): ReactElement {
-  return <div className="rounded-md border border-[var(--tiny-line-soft)] bg-[var(--tiny-surface)] px-3 py-2 text-sm text-[var(--tiny-muted)]">{children}</div>;
 }
 
 function selectedAccessGroup(model: ToolSafetyViewModel | undefined, selectedGroupId: string): ToolSafetyCapabilityGroup | undefined {

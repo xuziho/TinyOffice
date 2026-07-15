@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { SelectionGroupLabel, SelectionRow, SelectionRowTitle } from "@/components/product/SelectionList";
+import { PanelNote } from "@/components/product/PanelNote";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { SaveStateBadge } from "@/config/SaveStateBadge";
@@ -122,9 +123,6 @@ export function PromptPolicyPage({ currentSession }: { currentSession?: TinyOffi
         : "grid h-full min-h-0 grid-cols-[300px_minmax(0,1fr)] overflow-hidden"}
       >
         <aside className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] border-r border-[var(--tiny-line-soft)] bg-[var(--tiny-sidebar)]">
-          <div className="border-b border-[var(--tiny-line-faint)] px-4 py-3">
-            <div className="tiny-section-label">Prompts</div>
-          </div>
           <ScrollArea className="min-h-0">
             <div className="grid gap-4 p-2">
               <PromptGroup title="Foundation prompts">
@@ -292,10 +290,6 @@ function MetaPanel({ title, children }: { title: string; children: ReactNode }):
       {children}
     </section>
   );
-}
-
-function PanelNote({ children }: { children: ReactNode }): ReactElement {
-  return <div className="rounded-md border border-[var(--tiny-line-soft)] bg-[var(--tiny-surface)] px-3 py-2 text-sm text-[var(--tiny-muted)]">{children}</div>;
 }
 
 function selectedPromptFor(model: PromptPolicyViewModel | undefined, selectedKey: string): PromptTarget | undefined {

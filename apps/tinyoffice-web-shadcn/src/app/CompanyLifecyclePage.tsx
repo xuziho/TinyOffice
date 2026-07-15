@@ -4,7 +4,9 @@ import { switchCurrentCompany } from "@/api/currentSessionClient";
 import { Badge } from "@/components/ui/badge";
 import { useUnsavedChangesNavigation } from "@/config/unsavedChangesContext";
 import { Button } from "@/components/ui/button";
-import { SelectionRow } from "@/components/product/SelectionList";
+import { ManagementPageHeader } from "@/components/product/ManagementPageHeader";
+import { ProductState } from "@/components/product/ProductState";
+import { SelectionRow, SelectionRowTitle } from "@/components/product/SelectionList";
 import {
   Dialog,
   DialogContent,
@@ -131,21 +133,17 @@ export function CompanyLifecyclePage({
 
   return (
     <main className="grid h-svh w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
-      <header className="tiny-room-header flex items-center justify-between gap-3 border-b">
-        <div className="min-w-0">
-          <div className="tiny-room-title truncate">
-            Organization
-          </div>
-          {isInitializing ? <div className="tiny-room-subtitle truncate">Set up a TinyOffice workspace</div> : null}
-        </div>
-        <NewCompanyDialog
+      <ManagementPageHeader
+        title="Organization"
+        context={isInitializing ? "Set up a TinyOffice workspace" : undefined}
+        actions={<NewCompanyDialog
           open={createDialogOpen}
           viewModel={viewModel}
           busy={busy}
           onOpenChange={setCreateDialogOpen}
           onCreate={(input) => createMutation.mutate(input)}
-        />
-      </header>
+        />}
+      />
 
       <section className="flex min-w-0 flex-col overflow-hidden bg-muted/20">
         {message || companiesQuery.isError ? <div className="grid gap-2 border-b border-[var(--tiny-line-soft)] bg-background px-5 py-3">
@@ -183,7 +181,7 @@ export function CompanyLifecyclePage({
               <Separator />
               <div className="grid gap-2 p-3">
                 {companiesQuery.isLoading ? (
-                  <StateBlock>Loading companies...</StateBlock>
+                  <ProductState compact description="Loading companies..." />
                 ) : visibleCompanies.length ? (
                   visibleCompanies.map((company) => (
                     <CompanyRow
@@ -195,7 +193,7 @@ export function CompanyLifecyclePage({
                     />
                   ))
                 ) : (
-                  <StateBlock>{companies.length ? "No company matches this search." : "No company has been initialized."}</StateBlock>
+                  <ProductState compact description={companies.length ? "No company matches this search." : "No company has been initialized."} />
                 )}
               </div>
             </section>
@@ -211,7 +209,7 @@ export function CompanyLifecyclePage({
                   onDelete={(confirmationText) => requestTransition(() => deleteMutation.mutate({ companyId: selectedCompany.companyId, confirmationText }))}
                 />
               ) : (
-                <StateBlock>Select a company to view settings.</StateBlock>
+                <ProductState description="Select a company to view settings." />
               )}
             </section>
           </div>
@@ -359,14 +357,6 @@ function CompanyBrandingPanel({ company }: { company: CompanyLifecycleRecordDto 
     <div className="flex size-16 items-center justify-center overflow-hidden rounded-xl bg-muted text-lg font-semibold">{query.data?.logoUrl ? <img src={`${query.data.logoUrl}?v=${encodeURIComponent(query.data.logoUrl)}`} alt={`${company.displayName} logo`} className="size-full object-cover" /> : company.displayName.slice(0, 2).toUpperCase()}</div>
     <div className="grid gap-2"><div><div className="text-sm font-medium">Company logo</div><div className="text-xs text-muted-foreground">PNG, JPEG, or WebP. Up to 5 MB.</div></div><div className="flex flex-wrap gap-2"><input ref={logoInputRef} className="hidden" type="file" accept="image/png,image/jpeg,image/webp" disabled={upload.isPending} tabIndex={-1} aria-hidden="true" onChange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ""; if (file) upload.mutate(file); }} /><Button type="button" variant="outline" size="sm" disabled={upload.isPending} onClick={() => logoInputRef.current?.click()}><Upload />{upload.isPending ? "Uploading..." : query.data?.logoUrl ? "Replace logo" : "Choose logo"}</Button>{query.data?.logoUrl ? <Button type="button" variant="outline" size="sm" disabled={remove.isPending} onClick={() => remove.mutate()}>Remove</Button> : null}</div></div>
   </div>{upload.error ? <p className="text-sm text-destructive">{upload.error instanceof Error ? upload.error.message : "Logo upload failed."}</p> : null}</section>;
-}
-
-function StateBlock({ children }: { children: string }): ReactElement {
-  return (
-    <div className="rounded-md border border-dashed px-3 py-8 text-center text-sm text-muted-foreground">
-      {children}
-    </div>
-  );
 }
 
 export function CreateCompanyPanel({
@@ -551,7 +541,7 @@ function CompanyRow({
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h3 className="truncate text-sm font-medium">{company.displayName}</h3>
+            <SelectionRowTitle className="truncate text-sm">{company.displayName}</SelectionRowTitle>
             {current ? <Badge variant="secondary">Current</Badge> : null}
           </div>
         </div>

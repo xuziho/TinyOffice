@@ -2,6 +2,7 @@ import { getSessionExplorerViewModel } from "@/api/sessionsClient";
 import { RuntimeActivityList } from "@/activity/RuntimeActivityList";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ProductState } from "@/components/product/ProductState";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -195,11 +196,11 @@ export function SessionsPage({
         <ScrollArea className="min-h-0">
           <div className="grid w-full gap-4 px-6 py-5">
             {sessionsQuery.isLoading ? (
-              <StateBlock>Loading sessions...</StateBlock>
+              <ProductState compact description="Loading sessions..." />
             ) : sessionsQuery.error ? (
-              <StateBlock>{sessionsQuery.error instanceof Error ? sessionsQuery.error.message : "Failed to load sessions."}</StateBlock>
+              <ProductState compact tone="error" description={sessionsQuery.error instanceof Error ? sessionsQuery.error.message : "Failed to load sessions."} />
             ) : !model ? (
-              <StateBlock>No company session is available.</StateBlock>
+              <ProductState compact description="No company session is available." />
             ) : detailSession && model.detail ? (
               <SessionDetailPanel detail={model.detail} />
             ) : (
@@ -358,7 +359,7 @@ function SessionListPanel({
             </TableBody>
           </Table>
         ) : (
-          <StateBlock>No sessions match this filter.</StateBlock>
+          <ProductState compact description="No sessions match this filter." />
         )}
       </div>
     </div>
@@ -731,13 +732,6 @@ function DetailsChevron(): ReactElement {
   return <ChevronDown aria-hidden="true" className="size-3 shrink-0 transition-transform group-open:rotate-180" />;
 }
 
-function StateBlock({ children }: { children: string }): ReactElement {
-  return (
-    <div className="rounded-lg border border-[var(--tiny-line-soft)] px-4 py-3 text-muted-foreground">
-      {children}
-    </div>
-  );
-}
 
 function EmptyLine({ children }: { children: string }): ReactElement {
   return <p className="text-sm text-muted-foreground">{children}</p>;

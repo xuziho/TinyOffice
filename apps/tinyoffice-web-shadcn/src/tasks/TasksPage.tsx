@@ -2,6 +2,7 @@ import { executeTasksRunAction, executeWorkTaskLifecycleAction, getTasksViewMode
 import { Badge } from "@/components/ui/badge";
 import { EmployeeAvatar } from "@/components/product/EmployeeAvatar";
 import { Button } from "@/components/ui/button";
+import { ProductState } from "@/components/product/ProductState";
 import {
   Dialog,
   DialogContent,
@@ -225,9 +226,9 @@ export function TasksPage({
         <ScrollArea className="min-h-0 min-w-0">
           <div className="grid w-full gap-4 bg-[var(--tiny-canvas)] px-6 py-5">
             {tasksQuery.isLoading ? (
-              <StateBlock>Loading Tasks...</StateBlock>
+              <ProductState compact description="Loading Tasks..." />
             ) : tasksQuery.error ? (
-              <StateBlock>{tasksQuery.error instanceof Error ? tasksQuery.error.message : "Failed to load Tasks."}</StateBlock>
+              <ProductState compact tone="error" description={tasksQuery.error instanceof Error ? tasksQuery.error.message : "Failed to load Tasks."} />
             ) : selectedTask ? (
               <TaskDetail
                 task={selectedTask}
@@ -875,13 +876,6 @@ function formatDateTime(value: string | undefined): string {
   return date.toLocaleString();
 }
 
-function StateBlock({ children }: { children: string }): ReactElement {
-  return (
-    <div className="tiny-task-state-block rounded-md border border-[var(--tiny-line-soft)] px-4 py-3 text-sm text-muted-foreground">
-      {children}
-    </div>
-  );
-}
 
 function EmptyLine({ children }: { children: string }): ReactElement {
   return <p className="text-sm text-muted-foreground">{children}</p>;

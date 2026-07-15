@@ -2,6 +2,7 @@ import { listCompanies, saveCompanySystemAiSettings } from "@/api/companyClient"
 import { chatQueryKeys } from "@/chat/chatQueryKeys";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ProductState } from "@/components/product/ProductState";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SaveStateBadge } from "@/config/SaveStateBadge";
 import { useUnsavedChanges } from "@/config/unsavedChangesContext";
@@ -34,9 +35,9 @@ export function SystemAiPage({ currentSession }: { currentSession?: TinyOfficeCu
             <Badge variant="secondary">Developer tool</Badge>
           </div>
           <div className="pt-5">
-            {companiesQuery.isLoading ? <StateBlock text="Loading System AI settings..." />
-              : companiesQuery.error ? <StateBlock text={companiesQuery.error instanceof Error ? companiesQuery.error.message : "Failed to load System AI settings."} />
-                : !companyId ? <StateBlock text="Select a Company before configuring System AI." />
+            {companiesQuery.isLoading ? <ProductState description="Loading System AI settings..." />
+              : companiesQuery.error ? <ProductState tone="error" description={companiesQuery.error instanceof Error ? companiesQuery.error.message : "Failed to load System AI settings."} />
+                : !companyId ? <ProductState description="Select a Company before configuring System AI." />
                   : <SystemAiSettingsForm companyId={companyId} viewModel={companiesQuery.data} busy={mutation.isPending} error={mutation.error} onSave={(input) => mutation.mutate(input)} />}
           </div>
         </section>
@@ -93,4 +94,3 @@ function settingFor(model: CompaniesAdminViewModel | undefined, companyId: strin
 
 function modelValue(setting: CompanySystemAiSettingDto | undefined): string { return setting?.configured && setting.modelProvider && setting.modelId ? `${setting.modelProvider}/${setting.modelId}` : ""; }
 function modelInput(value: string): SaveCompanySystemAiSettingsRequest["chatTitleGeneration"] { const [provider, ...id] = value.split("/"); return provider && id.length ? { modelProvider: provider, modelId: id.join("/") } : {}; }
-function StateBlock({ text }: { text: string }): ReactElement { return <div className="rounded-md border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">{text}</div>; }

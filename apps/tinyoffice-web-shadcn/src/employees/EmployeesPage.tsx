@@ -11,6 +11,7 @@ import {
 import { Button } from "../components/ui/button";
 import { EmployeeAvatar } from "../components/product/EmployeeAvatar";
 import { AvatarSeedEditor } from "../components/product/AvatarSeedEditor";
+import { PanelNote } from "../components/product/PanelNote";
 import { SelectionList, SelectionRow, SelectionRowDescription, SelectionRowTitle } from "../components/product/SelectionList";
 import { Badge } from "../components/ui/badge";
 import {
@@ -172,8 +173,7 @@ export function EmployeesPage({ currentSession }: { currentSession?: TinyOfficeC
       <section className="grid h-full min-h-0 grid-cols-[300px_minmax(0,1fr)] overflow-hidden">
         <aside className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] border-r border-[var(--tiny-line-soft)] bg-[var(--tiny-sidebar)]">
           <div className="grid gap-2 border-b border-[var(--tiny-line-faint)] px-3 py-3">
-            <div className="flex items-center justify-between gap-2 px-1">
-              <div className="tiny-section-label">Runtime-capable employees</div>
+            <div className="flex items-center justify-end gap-2 px-1">
               <CreateEmployeeDialog
                 companyId={companyId}
                 model={model}
@@ -480,11 +480,10 @@ function EmployeeSkillsPanel({ companyId, employee }: { companyId: string; emplo
             <SelectionRow
               key={skill.skillId}
               selected={skill.skillId === activeSkillId}
+              title={skill.name}
               className="min-w-0 truncate px-3 py-2.5 text-sm"
               onClick={() => requestTransition(() => setSelectedSkillId(skill.skillId))}
-            >
-              {skill.name}
-            </SelectionRow>
+            />
               ))}
               {skillsQuery.isLoading ? <PanelNote>Loading skills...</PanelNote> : null}
             </div>
@@ -622,10 +621,6 @@ function RuntimeValue({ label, value }: { label: string; value: string }): React
       <div className="truncate font-mono text-xs" title={value}>{value}</div>
     </div>
   );
-}
-
-function PanelNote({ children }: { children: ReactNode }): ReactElement {
-  return <div className="rounded-md border border-[var(--tiny-line-soft)] bg-[var(--tiny-surface)] px-3 py-2 text-sm text-[var(--tiny-muted)]">{children}</div>;
 }
 
 function selectedEmployeeFor(model: EmployeesAdminState | undefined, selectedEmployeeId: string): EmployeeAdminRecord | undefined {

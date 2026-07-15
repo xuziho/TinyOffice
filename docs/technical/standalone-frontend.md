@@ -17,6 +17,14 @@ New frontend UI work must use `shadcn/ui` primitives and app composition compone
 
 Do not use retired local primitive systems, old page-specific CSS systems, plugin shells, carrier-native ids, or deleted UI entrypoints as implementation sources.
 
+Shared product compositions own repeated page contracts:
+
+- `ProductState` composes the official shadcn `Alert` and `Empty` primitives for loading, empty, neutral, and error states. Pages must not add local `StateBlock` replacements.
+- `PanelNote` owns compact inline loading and error notes inside an existing panel.
+- `ManagementPageHeader` owns the standalone Organization, Integrations, and Settings page heading geometry.
+- `SelectionRow` receives simple row labels through its `title` and `description` contract. Complex rows compose `SelectionRowTitle` and `SelectionRowDescription` explicitly.
+- Palette values are declared in the root theme token layer. Product component CSS consumes semantic variables instead of literal colors or route-scoped theme islands.
+
 ## Navigation Boundary
 
 The shadcn app uses canonical navigation targets instead of page-pair return logic.

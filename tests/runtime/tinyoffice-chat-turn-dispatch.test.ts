@@ -625,7 +625,7 @@ test("TinyOffice Chat room context exposes handoff candidates without the curren
       {
         ...memberParticipant("acme", "conversation-visible-participants", "xuziho"),
         displayName: "Xuziho",
-        role: "boss",
+        role: "stale-owner-role",
       },
       {
         ...memberParticipant("acme", "conversation-visible-participants", "employee-hr"),
@@ -685,8 +685,9 @@ test("TinyOffice Chat room context exposes handoff candidates without the curren
       },
     },
     participantProfiles: [
-      { id: "employee-hr", runtimeCapable: true },
-      { id: "avery-webb", runtimeCapable: true },
+      { id: "xuziho", displayName: "Xuziho", role: "boss", runtimeCapable: false },
+      { id: "employee-hr", displayName: "Mira", role: "hr", runtimeCapable: true },
+      { id: "avery-webb", displayName: "Avery Webb", role: "admin", runtimeCapable: true },
     ],
   });
 
@@ -2737,6 +2738,10 @@ test("TinyOffice Chat runtime dispatch sink runs provider-neutral reply persiste
       return {
         companyId: "acme",
         employeeHomesById: new Map([["nora-automation", employeeHome()]]),
+        memberProfilesById: new Map([
+          ["iris-growth", { id: "iris-growth", displayName: "Iris", role: "growth", runtimeCapable: false }],
+          ["nora-automation", { id: "nora-automation", displayName: "Nora", role: "automation", runtimeCapable: true }],
+        ]),
         employeeIds: ["iris-growth", "nora-automation"],
         processTrace: {
           async publishProcessTrace(event) {
@@ -2971,6 +2976,11 @@ test("TinyOffice Chat runtime dispatch sink requests topic summary refresh after
           ["nora-automation", employeeHome()],
           ["iris-growth", employeeHome("iris-growth")],
         ]),
+        memberProfilesById: new Map([
+          ["xuziho", { id: "xuziho", displayName: "Xuziho", role: "boss", runtimeCapable: false }],
+          ["iris-growth", { id: "iris-growth", displayName: "Iris", role: "growth", runtimeCapable: true }],
+          ["nora-automation", { id: "nora-automation", displayName: "Nora", role: "automation", runtimeCapable: true }],
+        ]),
         employeeIds: ["iris-growth", "nora-automation"],
       };
     },
@@ -3082,6 +3092,11 @@ test("TinyOffice Chat runtime dispatch uses prior topic context cursor for repea
           ["nora-automation", employeeHome()],
           ["iris-growth", employeeHome("iris-growth")],
         ]),
+        memberProfilesById: new Map([
+          ["xuziho", { id: "xuziho", displayName: "Xuziho", role: "boss", runtimeCapable: false }],
+          ["nora-automation", { id: "nora-automation", displayName: "Nora", role: "automation", runtimeCapable: true }],
+          ["iris-growth", { id: "iris-growth", displayName: "Iris", role: "growth", runtimeCapable: true }],
+        ]),
         employeeIds: ["nora-automation", "iris-growth"],
       };
     },
@@ -3187,6 +3202,10 @@ test("TinyOffice Chat runtime dispatch sink publishes failed status when executi
       return {
         companyId: "acme",
         employeeHomesById: new Map([["nora-automation", employeeHome()]]),
+        memberProfilesById: new Map([
+          ["iris-growth", { id: "iris-growth", displayName: "Iris", role: "growth", runtimeCapable: false }],
+          ["nora-automation", { id: "nora-automation", displayName: "Nora", role: "automation", runtimeCapable: true }],
+        ]),
         employeeIds: ["iris-growth", "nora-automation"],
         processTrace: {
           async publishProcessTrace(event) {
@@ -3332,6 +3351,11 @@ test("TinyOffice Chat runtime dispatch sink can cancel the currently running han
         employeeHomesById: new Map([
           ["nora-automation", employeeHome("nora-automation")],
           ["iris-growth", employeeHome("iris-growth")],
+        ]),
+        memberProfilesById: new Map([
+          ["xuziho", { id: "xuziho", displayName: "Xuziho", role: "boss", runtimeCapable: false }],
+          ["nora-automation", { id: "nora-automation", displayName: "Nora", role: "automation", runtimeCapable: true }],
+          ["iris-growth", { id: "iris-growth", displayName: "Iris", role: "growth", runtimeCapable: true }],
         ]),
         employeeIds: ["nora-automation", "iris-growth"],
       };
@@ -3652,6 +3676,10 @@ test("TinyOffice Chat runtime dispatch sink suppresses late provider replies aft
       return {
         companyId: "acme",
         employeeHomesById: new Map([["aster", employeeHome("aster")]]),
+        memberProfilesById: new Map([
+          ["xuziho", { id: "xuziho", displayName: "Xuziho", role: "boss", runtimeCapable: false }],
+          ["aster", { id: "aster", displayName: "Aster", role: "automation", runtimeCapable: true }],
+        ]),
         employeeIds: ["aster"],
       };
     },
@@ -3760,7 +3788,7 @@ test("TinyOffice Chat retry rejects an inactive runtime target before acknowledg
     repoRoot: process.cwd(),
     serviceForCompany: async () => messageService,
     async runtimeForCompany() {
-      return { companyId: "acme", employeeHomesById: new Map(), employeeIds: [] };
+      return { companyId: "acme", employeeHomesById: new Map(), memberProfilesById: new Map(), employeeIds: [] };
     },
   });
 

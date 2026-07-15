@@ -386,8 +386,7 @@ function handoffCandidates(
     }
     const profile = profilesById.get(id);
     const runtimeCapable = Boolean(profile?.runtimeCapable) || runtimeParticipantIds.has(id);
-    const participantRole = participant.role?.trim();
-    const role = profile?.role || participantRole || undefined;
+    const role = profile?.role?.trim() || undefined;
     refs.push({
       id,
       participantKind: participant.participantKind,

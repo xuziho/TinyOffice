@@ -324,7 +324,7 @@ test("handoff_topic_turn rejects unreachable ids immediately and accepts a curre
   }, async () => {
     await assert.rejects(
       handoff.execute("tool-invalid", { toId: "xu-ziho" }),
-      /not a current Handoff candidate.*Xu Ziho \(owner\)/,
+      /not a current Handoff candidate[^]*id="owner"; displayName="Xu Ziho"/,
     );
     const result = await handoff.execute("tool-valid", { toId: "owner" });
     assert.deepEqual(result.details, {

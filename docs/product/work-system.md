@@ -13,6 +13,8 @@ This page defines TinyOffice's background-work product model. Live collaboration
 
 Implementation note: PostgreSQL, repository storage, WorkService, dispatch, execution, intake creation, evidence query, and Tasks use `WorkTask`, `WorkSchedule`, and `WorkRun` semantics with member identity fields such as `createdByMemberId`, `ownerMemberId`, `assigneeMemberId`, and `actorMemberId`. Chat employee context may surface compact current-work and attention signals, but Tasks remains the visible product contract for source, schedule, execution history, and WorkRun operations.
 
+Tasks Run mutations derive their human actor from the authenticated current Company Member session. Browser request bodies do not select or override `actorMemberId`, and the Work action layer requires an explicit resolved actor rather than inventing a synthetic operator identity.
+
 ## When To Create Work
 
 Create background Work only when:

@@ -1,5 +1,3 @@
-import type { TinyOfficeCurrentSession } from "tinyoffice/frontend-api-contracts";
-
 export class TinyOfficeApiError extends Error {
   status: number;
   detail?: unknown;
@@ -10,20 +8,6 @@ export class TinyOfficeApiError extends Error {
     this.status = status;
     this.detail = detail;
   }
-}
-
-export function currentSessionHeaders(session: TinyOfficeCurrentSession | undefined, companyId: string): Record<string, string> {
-  const sessionCompanyId = session?.companyId ?? session?.currentCompanyId;
-  const memberId = session?.member?.memberId;
-  if (!sessionCompanyId || !memberId || sessionCompanyId !== companyId) {
-    throw new Error("TinyOffice current member session is required");
-  }
-  return {
-    "x-tinyoffice-company-id": sessionCompanyId,
-    "x-tinyoffice-member-id": memberId,
-    ...(session.member?.displayName ? { "x-tinyoffice-member-display-name": session.member.displayName } : {}),
-    ...(session.member?.role ? { "x-tinyoffice-member-role": session.member.role } : {}),
-  };
 }
 
 export function required(value: string | undefined, label: string): string {

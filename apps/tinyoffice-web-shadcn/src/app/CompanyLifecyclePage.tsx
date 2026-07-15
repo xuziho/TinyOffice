@@ -136,13 +136,6 @@ export function CompanyLifecyclePage({
       <ManagementPageHeader
         title="Organization"
         context={isInitializing ? "Set up a TinyOffice workspace" : undefined}
-        actions={<NewCompanyDialog
-          open={createDialogOpen}
-          viewModel={viewModel}
-          busy={busy}
-          onOpenChange={setCreateDialogOpen}
-          onCreate={(input) => createMutation.mutate(input)}
-        />}
       />
 
       <section className="flex min-w-0 flex-col overflow-hidden bg-muted/20">
@@ -166,6 +159,13 @@ export function CompanyLifecyclePage({
                 <div className="min-w-0">
                   <h2 className="text-base font-semibold leading-tight">Companies</h2>
                 </div>
+                <NewCompanyDialog
+                  open={createDialogOpen}
+                  viewModel={viewModel}
+                  busy={busy}
+                  onOpenChange={setCreateDialogOpen}
+                  onCreate={(input) => createMutation.mutate(input)}
+                />
               </div>
               <div className="border-t px-3 py-3">
                 <label className="relative block">

@@ -505,6 +505,8 @@ test("shadcn Company page keeps company list and selected company settings in a 
   const companyPageSource = await readText("apps/tinyoffice-web-shadcn/src/app/CompanyLifecyclePage.tsx");
 
   assert.match(companyPageSource, /NewCompanyDialog/);
+  assert.doesNotMatch(companyPageSource, /<ManagementPageHeader[\s\S]*?actions=/);
+  assert.match(companyPageSource, /<h2 className="text-base font-semibold leading-tight">Companies<\/h2>[\s\S]*?<NewCompanyDialog/);
   assert.match(companyPageSource, /xl:grid-cols-\[minmax\(360px,440px\)_minmax\(0,1fr\)\]/);
   assert.match(companyPageSource, /<h2 className="text-base font-semibold leading-tight">Companies<\/h2>[\s\S]*<CompanySettingsPanel/);
   assert.match(companyPageSource, /<SectionHeading title="Identity" \/>[\s\S]*<DangerZone/);

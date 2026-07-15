@@ -27,7 +27,7 @@ Employee Config, Prompt Policy, Access, and member mapping belong in PostgreSQL-
 System AI, Employees (including existing employee-private skills), Prompt Policy, and Access use one shared unsaved-change contract in the standalone frontend:
 
 - Save is disabled until the draft differs from the authoritative loaded value.
-- The surface shows `Saved`, `Unsaved changes`, or `Saving` state explicitly.
+- Configuration surfaces stay quiet after a successful save and only surface actionable state such as `Unsaved changes` or `Saving`.
 - A failed save preserves the draft and error so the operator can retry.
 - Switching the edited local record, switching Company, changing top-level modules, using canonical cross-surface navigation, browser Back, or closing/reloading the tab asks before discarding a dirty draft.
 - A successful save resets the draft baseline from the server response. Employee configuration and employee-private skill saves keep their automatic runtime reload behavior.

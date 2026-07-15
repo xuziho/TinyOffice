@@ -170,10 +170,11 @@ export function EmployeesPage({ currentSession }: { currentSession?: TinyOfficeC
 
   return (
     <div className="h-full w-full overflow-hidden">
-      <section className="grid h-full min-h-0 grid-cols-[300px_minmax(0,1fr)] overflow-hidden">
+      <section className="grid h-full min-h-0 grid-cols-[330px_minmax(0,1fr)] overflow-hidden">
         <aside className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] border-r border-[var(--tiny-line-soft)] bg-[var(--tiny-sidebar)]">
           <div className="grid gap-2 border-b border-[var(--tiny-line-faint)] px-3 py-3">
-            <div className="flex items-center justify-end gap-2 px-1">
+            <div className="flex items-center justify-between gap-3 px-1">
+              <h2 className="text-base font-semibold leading-tight">Employees</h2>
               <CreateEmployeeDialog
                 companyId={companyId}
                 model={model}
@@ -277,9 +278,7 @@ function EmployeeEditor({
             <div className="flex min-w-0 items-center gap-2">
               <UserRound className="size-5 text-[var(--tiny-muted)]" />
               <h1 className="truncate text-xl font-semibold">{employeeLabel(employee)}</h1>
-              <Badge variant={employee.enabled === false ? "outline" : "secondary"}>
-                {employee.enabled === false ? "Disabled" : "Enabled"}
-              </Badge>
+              {employee.enabled === false ? <Badge variant="outline">Inactive</Badge> : null}
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -293,15 +292,14 @@ function EmployeeEditor({
         </div>
         {saveError ? <div className="text-sm text-destructive">{saveError}</div> : null}
       </section>
-      <Tabs defaultValue="profile" className="flex min-w-0 flex-col">
+      <Tabs defaultValue="general" className="flex min-w-0 flex-col">
         <TabsList variant="line" className="tiny-content-tabs w-fit max-w-full overflow-x-auto">
-          <TabsTrigger value="profile" className={employeeTabTriggerClassName}>Profile</TabsTrigger>
-          <TabsTrigger value="runtime" className={employeeTabTriggerClassName}>Runtime</TabsTrigger>
+          <TabsTrigger value="general" className={employeeTabTriggerClassName}>General</TabsTrigger>
           <TabsTrigger value="agents" className={employeeTabTriggerClassName}>AGENTS.md</TabsTrigger>
           <TabsTrigger value="skills" className={employeeTabTriggerClassName}>Skills</TabsTrigger>
           <TabsTrigger value="assets" className={employeeTabTriggerClassName}>Assets</TabsTrigger>
         </TabsList>
-        <TabsContent value="profile" className="grid gap-3 pt-3">
+        <TabsContent value="general" className="grid gap-3 pt-3">
           <AvatarSeedEditor memberId={employee.employeeId} displayName={draft.displayName || "Unnamed employee"} avatarSeed={draft.avatarSeed} disabled={saving} onChange={(avatarSeed) => onDraftChange({ ...draft, avatarSeed })} />
           <FieldGrid>
             <LabelledField label="Display name">
@@ -326,33 +324,32 @@ function EmployeeEditor({
               onChange={(event) => onDraftChange({ ...draft, sceneProfile: event.currentTarget.value })}
             />
           </LabelledField>
-        </TabsContent>
-        <TabsContent value="runtime" className="grid gap-3 pt-3">
-          <div className="grid divide-y border-y text-sm md:grid-cols-3 md:divide-x md:divide-y-0">
-            <RuntimeValue label="Provider" value={draft.modelProvider || "Not set"} />
-            <RuntimeValue label="Model" value={draft.modelId || "Not set"} />
-            <RuntimeValue label="Thinking" value={draft.thinkingLevel} />
-          </div>
-          <FieldGrid>
-            <LabelledField label="Runtime model">
-              <Select value={modelRefFromDraft(draft)} onValueChange={(value) => onDraftChange({ ...draft, ...draftModelFromRef(value) })}>
-                <SelectTrigger><SelectValue placeholder="Runtime model" /></SelectTrigger>
-                <SelectContent>
-                  {runtimeModelOptions(model, draft).map((option) => (
-                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </LabelledField>
-            <LabelledField label="Thinking">
-              <Select value={draft.thinkingLevel} onValueChange={(value) => onDraftChange({ ...draft, thinkingLevel: value as EmployeeThinkingLevel })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {(model?.thinkingLevels ?? ["off", "minimal", "low", "medium", "high", "xhigh"]).map((level) => <SelectItem key={level} value={level}>{level}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </LabelledField>
-          </FieldGrid>
+          <section className="grid gap-3 border-t border-[var(--tiny-line-soft)] pt-4">
+            <h2 className="text-sm font-semibold">Runtime</h2>
+            <div className="grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(180px,1fr)]">
+              <LabelledField label="Runtime model">
+                <div className="grid gap-1.5">
+                  <Select value={modelRefFromDraft(draft)} onValueChange={(value) => onDraftChange({ ...draft, ...draftModelFromRef(value) })}>
+                    <SelectTrigger className="w-full"><SelectValue placeholder="Runtime model" /></SelectTrigger>
+                    <SelectContent>
+                      {runtimeModelOptions(model, draft).map((option) => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-xs text-[var(--tiny-muted)]">Provider: {draft.modelProvider || "Not set"}</span>
+                </div>
+              </LabelledField>
+              <LabelledField label="Thinking level">
+                <Select value={draft.thinkingLevel} onValueChange={(value) => onDraftChange({ ...draft, thinkingLevel: value as EmployeeThinkingLevel })}>
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(model?.thinkingLevels ?? ["off", "minimal", "low", "medium", "high", "xhigh"]).map((level) => <SelectItem key={level} value={level}>{level}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </LabelledField>
+            </div>
+          </section>
         </TabsContent>
         <TabsContent value="agents" className="grid gap-3 pt-3">
           <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-[var(--tiny-muted)]">
@@ -555,8 +552,8 @@ function CreateEmployeeDialog({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button type="button" size="sm" className="h-8 px-2" disabled={disabled}>
-          <Plus className="mr-2 size-4" />
+        <Button type="button" size="sm" className="h-8 gap-1.5 px-2 text-sm" disabled={disabled}>
+          <Plus className="size-4" />
           New employee
         </Button>
       </DialogTrigger>
@@ -610,15 +607,6 @@ function PathRow({ label, value }: { label: string; value?: string }): ReactElem
     <div className="grid gap-1 rounded-md border border-[var(--tiny-line-soft)] px-3 py-2 md:grid-cols-[120px_minmax(0,1fr)]">
       <div className="text-xs font-semibold text-[var(--tiny-muted)]">{label}</div>
       <div className="min-w-0 truncate font-mono text-xs" title={value}>{value ?? "Not available"}</div>
-    </div>
-  );
-}
-
-function RuntimeValue({ label, value }: { label: string; value: string }): ReactElement {
-  return (
-    <div className="min-w-0">
-      <div className="text-xs font-semibold text-[var(--tiny-muted)]">{label}</div>
-      <div className="truncate font-mono text-xs" title={value}>{value}</div>
     </div>
   );
 }

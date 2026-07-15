@@ -46,9 +46,9 @@ Current ChannelTopic identity is moving toward owned room identity:
 - handoff owner rows inherit the topic's owned room ids.
 - handoff replay keys and recovered handoff action evidence prefer owned action/room identity.
 
-## Remaining Blockers
+## Deferred Capabilities
 
-- A dedicated owned Handoff action API and final-report notification renderer are still follow-up work.
+- A dedicated owned Handoff action API and final-report notification renderer are not required by the current Chat-integrated single-ball flow. Reconsider them only if a future accepted product scenario needs Handoff outside the current Topic runtime boundary.
 
 ## Technical Reference
 

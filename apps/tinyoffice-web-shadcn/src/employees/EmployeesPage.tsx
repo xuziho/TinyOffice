@@ -326,7 +326,7 @@ function EmployeeEditor({
           </LabelledField>
           <section className="grid gap-3 border-t border-[var(--tiny-line-soft)] pt-4">
             <h2 className="text-sm font-semibold">Runtime</h2>
-            <div className="grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(180px,1fr)]">
+            <div className="grid items-start gap-3 md:grid-cols-[minmax(0,2fr)_minmax(180px,1fr)]">
               <LabelledField label="Runtime model">
                 <div className="grid gap-1.5">
                   <Select value={modelRefFromDraft(draft)} onValueChange={(value) => onDraftChange({ ...draft, ...draftModelFromRef(value) })}>

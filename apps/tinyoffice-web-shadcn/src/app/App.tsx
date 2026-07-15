@@ -32,8 +32,9 @@ import { getCompanyBranding } from "@/api/brandingClient";
 import { getCurrentSession, switchCurrentCompany } from "@/api/currentSessionClient";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Archive, BotIcon, BriefcaseBusinessIcon, Boxes, FileTextIcon, ListChecks, MessageCircle, PlugZapIcon, ScrollText, SettingsIcon, ShieldCheck, Stethoscope, UsersRound, Wrench } from "lucide-react";
-import { lazy, Suspense, useCallback, useEffect, useRef, useState, type MouseEvent, type ReactElement } from "react";
+import { Fragment, lazy, Suspense, useCallback, useEffect, useRef, useState, type MouseEvent, type ReactElement } from "react";
 import type { CompaniesAdminViewModel, TinyOfficeCurrentSession } from "tinyoffice/frontend-api-contracts";
+import { adminNavigation, isAdminView, isWorkforceView, workforceNavigation, type NavigationGroup } from "./navigationStructure";
 
 const AccessPage = lazy(() => import("@/access/AccessPage").then((module) => ({ default: module.AccessPage })));
 const CompanyLifecyclePage = lazy(() => import("./CompanyLifecyclePage").then((module) => ({ default: module.CompanyLifecyclePage })));
@@ -214,12 +215,9 @@ export function App(): ReactElement {
             </div>
           </div>
           <div className="flex flex-col items-center gap-2">
-            <ViewButton view="sessions" label="Sessions" active={activeView === "sessions"} disabled={needsInitialization} onClick={() => selectView("sessions")}>
-              <FileTextIcon />
-            </ViewButton>
+            <WorkforceMenu activeView={activeView} disabled={needsInitialization} onSelect={selectView} />
+            <AdminMenu activeView={activeView} disabled={needsInitialization} onSelect={selectView} />
             <Separator className="w-8" />
-            <ManageMenu activeView={activeView} disabled={needsInitialization} onSelect={selectView} />
-            <DeveloperToolsMenu activeView={activeView} disabled={needsInitialization} onSelect={selectView} />
             <ViewButton view="settings" label="Settings" active={activeView === "settings"} onClick={() => selectView("settings")}>
               <SettingsIcon />
             </ViewButton>
@@ -284,16 +282,43 @@ export function App(): ReactElement {
   );
 }
 
-function DeveloperToolsMenu({
-  activeView,
+function WorkforceMenu({ activeView, disabled, onSelect }: { activeView: AppView; disabled?: boolean; onSelect(view: AppView): void }): ReactElement {
+  return (
+    <GroupedRailMenu
+      label="Workforce"
+      active={isWorkforceView(activeView)}
+      disabled={disabled}
+      groups={[{ label: "Workforce", items: workforceNavigation }]}
+      onSelect={onSelect}
+    >
+      <UsersRound />
+    </GroupedRailMenu>
+  );
+}
+
+function AdminMenu({ activeView, disabled, onSelect }: { activeView: AppView; disabled?: boolean; onSelect(view: AppView): void }): ReactElement {
+  return (
+    <GroupedRailMenu label="Admin" active={isAdminView(activeView)} disabled={disabled} groups={adminNavigation} onSelect={onSelect}>
+      <Wrench />
+    </GroupedRailMenu>
+  );
+}
+
+function GroupedRailMenu({
+  label,
+  active,
   disabled,
+  groups,
   onSelect,
+  children,
 }: {
-  activeView: AppView;
+  label: string;
+  active: boolean;
   disabled?: boolean;
+  groups: readonly NavigationGroup[];
   onSelect(view: AppView): void;
+  children: ReactElement;
 }): ReactElement {
-  const active = isDeveloperToolView(activeView);
   const hoverMenu = useRailHoverMenu(disabled);
   return (
     <DropdownMenu modal={false} open={hoverMenu.open} onOpenChange={hoverMenu.setOpen}>
@@ -303,61 +328,49 @@ function DeveloperToolsMenu({
           size="icon"
           variant={active ? "secondary" : "ghost"}
           disabled={disabled}
-          aria-label="Developer tools"
-          title="Developer tools"
+          aria-label={label}
+          title={label}
           className="tiny-rail-button"
           data-active={active || undefined}
           onMouseEnter={hoverMenu.openNow}
           onMouseLeave={hoverMenu.closeSoon}
         >
-          <Wrench />
+          {children}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent side="right" align="end" className="tiny-product-menu w-48" onMouseEnter={hoverMenu.cancelClose} onMouseLeave={hoverMenu.closeSoon}>
-        <DropdownMenuLabel>Developer tools</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => onSelect("system-ai")}>
-          <BotIcon />
-          System AI
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onSelect("prompt")}>
-          <ScrollText />
-          Prompt
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onSelect("access")}>
-          <ShieldCheck />
-          Access
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onSelect("capabilities")}>
-          <Boxes />
-          Capabilities
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onSelect("doctor")}>
-          <Stethoscope />
-          Doctor
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onSelect("backup")}>
-          <Archive />
-          Backup & Restore
-        </DropdownMenuItem>
+      <DropdownMenuContent side="right" align="end" className="tiny-product-menu w-56" onMouseEnter={hoverMenu.cancelClose} onMouseLeave={hoverMenu.closeSoon}>
+        {groups.map((group, groupIndex) => (
+          <Fragment key={group.label}>
+            {groupIndex > 0 ? <DropdownMenuSeparator /> : null}
+            <DropdownMenuLabel>{group.label}</DropdownMenuLabel>
+            {group.items.map((item) => (
+              <DropdownMenuItem key={item.view} onSelect={() => onSelect(item.view)}>
+                {navigationIcon(item.view)}
+                {item.label}
+              </DropdownMenuItem>
+            ))}
+          </Fragment>
+        ))}
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
-function ManageMenu({ activeView, disabled, onSelect }: { activeView: AppView; disabled?: boolean; onSelect(view: AppView): void }): ReactElement {
-  const active = activeView === "employees" || activeView === "skills" || activeView === "integrations" || activeView === "company";
-  const hoverMenu = useRailHoverMenu(disabled);
-  return <DropdownMenu modal={false} open={hoverMenu.open} onOpenChange={hoverMenu.setOpen}>
-    <DropdownMenuTrigger asChild><Button type="button" size="icon" variant={active ? "secondary" : "ghost"} disabled={disabled} aria-label="Manage" title="Manage" className="tiny-rail-button" data-active={active || undefined} onMouseEnter={hoverMenu.openNow} onMouseLeave={hoverMenu.closeSoon}><BriefcaseBusinessIcon /></Button></DropdownMenuTrigger>
-    <DropdownMenuContent side="right" align="end" className="tiny-product-menu w-52" onMouseEnter={hoverMenu.cancelClose} onMouseLeave={hoverMenu.closeSoon}>
-      <DropdownMenuLabel>Manage</DropdownMenuLabel><DropdownMenuSeparator />
-      <DropdownMenuItem onSelect={() => onSelect("employees")}><UsersRound />Employees</DropdownMenuItem>
-      <DropdownMenuItem onSelect={() => onSelect("skills")}><Boxes />Company Skills</DropdownMenuItem>
-      <DropdownMenuItem onSelect={() => onSelect("integrations")}><PlugZapIcon />Integrations</DropdownMenuItem>
-      <DropdownMenuItem onSelect={() => onSelect("company")}><BriefcaseBusinessIcon />Organization</DropdownMenuItem>
-    </DropdownMenuContent>
-  </DropdownMenu>;
+function navigationIcon(view: AppView): ReactElement {
+  switch (view) {
+    case "employees": return <UsersRound />;
+    case "skills": return <Boxes />;
+    case "company": return <BriefcaseBusinessIcon />;
+    case "integrations": return <PlugZapIcon />;
+    case "system-ai": return <BotIcon />;
+    case "prompt": return <ScrollText />;
+    case "access": return <ShieldCheck />;
+    case "capabilities": return <Boxes />;
+    case "sessions": return <FileTextIcon />;
+    case "doctor": return <Stethoscope />;
+    case "backup": return <Archive />;
+    default: return <FileTextIcon />;
+  }
 }
 
 function useRailHoverMenu(disabled = false): {
@@ -578,10 +591,6 @@ function initialViewFromLocation(): AppView {
     return "system-ai";
   }
   return "chat";
-}
-
-function isDeveloperToolView(view: AppView): boolean {
-  return view === "access" || view === "backup" || view === "capabilities" || view === "doctor" || view === "prompt" || view === "system-ai";
 }
 
 function RouteLoadingFallback(): ReactElement {

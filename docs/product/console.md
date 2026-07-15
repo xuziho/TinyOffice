@@ -1,6 +1,6 @@
 # Operations Surface
 
-TinyOffice Operations Surface is the product area for operations and configuration modules in the standalone React app under `apps/tinyoffice-web-shadcn`. Chat, Organization, Employee Runtime, Prompt Policy, Access, Sessions, Tasks, Settings, Doctor, and Backup & Restore use shadcn surfaces. Advanced runtime tools live in one permanent Developer Tools menu so daily collaboration navigation remains small without a separate mode switch.
+TinyOffice Operations Surface is the product area for operations and configuration modules in the standalone React app under `apps/tinyoffice-web-shadcn`. Chat, Organization, Employee Runtime, Prompt Policy, Access, Sessions, Tasks, Settings, Doctor, and Backup & Restore use shadcn surfaces. Lower-frequency Company, AI/runtime, and system destinations live in grouped Workforce and Admin menus so daily collaboration navigation remains small without hiding the product map behind implementation-oriented labels.
 
 Native HTML Console pages and `/console/...` routes are retired from current product/admin behavior. `/api/console/...` aliases are also retired. New product work must use company-scoped TinyOffice APIs directly.
 
@@ -20,7 +20,7 @@ Stable responsibilities:
 
 Company is the user-visible tenant boundary. Current product routes and APIs require explicit Company context.
 
-The global rail separates daily work from inspection and configuration. Only `Chat` and `Tasks` stay in the upper primary group. `Sessions` begins the lower group as a lower-frequency evidence surface. One `Manage` menu owns Employees, Company Skills, Integrations, and Organization. One permanent `Developer tools` menu owns System AI, Prompt, Access, read-only Capabilities, Doctor, and Backup & Restore. Settings owns the current account profile, local preferences, and the Update Center.
+The global rail separates daily work from workforce and administration. Only `Chat` and `Tasks` stay in the upper primary group. `Workforce` owns Employees and Company Skills. `Admin` groups Organization and Integrations under Company; System AI, Prompt, Access, and read-only Capabilities under AI & Runtime; and Sessions, Health, and Backup & Restore under System. Health opens the existing read-only Doctor route. Settings remains the account destination and owns the current account profile, local preferences, security, and the Update Center.
 
 ## Feature Map
 
@@ -28,16 +28,16 @@ The global rail separates daily work from inspection and configuration. Only `Ch
 | --- | --- | --- |
 | Standalone Frontend | `apps/tinyoffice-web-shadcn` | TinyOffice APIs under `/api/companies/:companyId/...` |
 | Chat | Current rebuilt shadcn surface | Chat Projection, Conversation, and Message APIs |
-| Company Lifecycle | Current `Company` rail module at `/company` | PostgreSQL `companies`, Prompt Policy defaults, Access defaults |
+| Company Lifecycle | Admin > Company > Organization at `/company` | PostgreSQL `companies`, Prompt Policy defaults, Access defaults |
 | Settings | Current bottom rail module at `/settings` | Account profile plus Update Center status from npm and the TinyOffice stable approval manifest |
 | Tasks | Current `Tasks` rail module at `/tasks` | Work repositories and Tasks view model |
-| Sessions | Current `Sessions` rail module at `/sessions` | Runtime session repositories and Sessions view model |
+| Sessions | Admin > System > Sessions at `/sessions` | Runtime session repositories and Sessions view model |
 | Status | Lightweight Chat employee context and rail status markers | Runtime status, WorkRun, Session, and dispatch evidence |
-| Employee Runtime | Current `Employees` rail module at `/employees` | PostgreSQL runtime-capable member config plus member-local guidance assets |
-| Prompt Policy | Developer tools destination at `/prompt`; hidden by default | PostgreSQL Prompt Policy tables |
-| Access | Developer tools destination at `/access`; hidden by default | PostgreSQL `tool_safety_policies` |
+| Employee Runtime | Workforce > Employees at `/employees` | PostgreSQL runtime-capable member config plus member-local guidance assets |
+| Prompt Policy | Admin > AI & Runtime > Prompt at `/prompt` | PostgreSQL Prompt Policy tables |
+| Access | Admin > AI & Runtime > Access at `/access` | PostgreSQL `tool_safety_policies` |
 | Members | Backend/API/tool capability; not a current rail page | `company_members` with explicit runtime binding |
-| Doctor | Developer tools destination at `/doctor`; hidden by default | `/api/companies/:companyId/doctor`, `agentco doctor` |
+| Doctor | Admin > System > Health at `/doctor` | `/api/companies/:companyId/doctor`, `agentco doctor` |
 
 During local development, Vite proxies `/api` to the TinyOffice runtime. There is no Vite `/console` product proxy.
 

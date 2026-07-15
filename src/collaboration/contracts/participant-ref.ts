@@ -9,3 +9,12 @@ export interface ParticipantRef {
   isFinalReportTarget?: boolean;
   isApprovalAuthority?: boolean;
 }
+
+export function formatHandoffCandidateForPrompt(participant: ParticipantRef): string {
+  return [
+    `id=${JSON.stringify(participant.id)}`,
+    participant.displayName ? `displayName=${JSON.stringify(participant.displayName)}` : undefined,
+    participant.role ? `role=${JSON.stringify(participant.role)}` : undefined,
+    participant.summary ? `summary=${JSON.stringify(participant.summary)}` : undefined,
+  ].filter((field): field is string => Boolean(field)).join("; ");
+}

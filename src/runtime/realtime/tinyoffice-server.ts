@@ -819,13 +819,24 @@ function createRuntimeChatDispatchSink(input: {
       },
     },
     async runtimeForCompany(companyId) {
-      const employeeHomes = await loadEmployeeHomes({
-        repoRoot: input.repoRoot,
-        companyId,
-      });
+      const [employeeHomes, memberDirectory] = await Promise.all([
+        loadEmployeeHomes({
+          repoRoot: input.repoRoot,
+          companyId,
+        }),
+        loadCompanyMemberDirectory(input.repoRoot, { companyId }),
+      ]);
+      const employeeHomesById = new Map(employeeHomes.map((home) => [home.employeeId, home]));
       return {
         companyId,
-        employeeHomesById: new Map(employeeHomes.map((home) => [home.employeeId, home])),
+        employeeHomesById,
+        memberProfilesById: new Map(memberDirectory.members.map((member) => [member.id, {
+          id: member.id,
+          ...(member.displayName ? { displayName: member.displayName } : {}),
+          ...(member.role ? { role: member.role } : {}),
+          ...(member.summary ? { summary: member.summary } : {}),
+          runtimeCapable: employeeHomesById.has(member.id),
+        }])),
         employeeIds: employeeHomes.map((home) => home.employeeId),
         processTrace: createRuntimeProcessTracePublisher(input.repoRoot, companyId, input.realtimePublisher),
       };

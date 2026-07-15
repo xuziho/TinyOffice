@@ -34,7 +34,10 @@ import {
   updateTinyOfficeChatExecutionDispatchStatus,
   type TinyOfficeChatTurnDispatchDecision,
 } from "../realtime/tinyoffice-chat-turn-dispatch.js";
-import type { TinyOfficeChatTopicContextCursor } from "../realtime/tinyoffice-chat-room-context.js";
+import type {
+  TinyOfficeChatParticipantProfile,
+  TinyOfficeChatTopicContextCursor,
+} from "../realtime/tinyoffice-chat-room-context.js";
 import {
   InMemoryChatTopicChainRepository,
   type ChatTopicChainRepository,
@@ -52,6 +55,7 @@ type TinyOfficeChatRuntimeProcessTraceEventInput =
 export interface TinyOfficeChatRuntimeDispatchContext {
   companyId: string;
   employeeHomesById: Map<string, EmployeeHome>;
+  memberProfilesById: Map<string, TinyOfficeChatParticipantProfile>;
   employeeIds: string[];
   processTrace?: TinyOfficeChatRuntimeProcessTracePublisher;
 }
@@ -556,12 +560,7 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
     const context = await assembleTinyOfficeChatRoomContext({
       decision,
       resolver: messageService,
-      participantProfiles: Array.from(runtime.employeeHomesById.values()).map((home) => ({
-        id: home.employeeId,
-        displayName: home.profile.displayName,
-        role: home.profile.role,
-        runtimeCapable: true,
-      })),
+      participantProfiles: runtime.memberProfilesById.values(),
       priorTopicContextCursor: decision.sceneType === "chat_topic_room"
         ? findPriorTopicContextCursor(repository, {
             sessionKey: decision.sessionKey,

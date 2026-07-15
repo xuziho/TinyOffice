@@ -12,7 +12,7 @@ The default TinyOffice visual direction is a Soft Neo-Retro operations workbench
 
 TinyOffice UI should feel like an operations workbench for repeated company work. It should favor scannable lists, compact controls, direct state labels, readable evidence, and small semantic emphasis. It should not feel like a marketing site, decorative dashboard, copied chat shell, or template demo.
 
-The product rail uses spatial priority without visible category headings. Chat and Tasks are the only upper daily-work destinations. The lower group begins with Sessions for occasional evidence review, followed by Manage, Developer Tools, and Settings. Manage groups Employees, Company Skills, Integrations, and Organization. Developer Tools is always available and groups System AI, Prompt, Access, Capabilities, and Doctor instead of adding permanent icons for each page.
+The product rail uses spatial priority without visible category headings. Chat and Tasks are the only upper daily-work destinations. The lower group contains Workforce and Admin, followed by Settings. Workforce groups Employees and Company Skills. Admin uses visible menu headings to group Company destinations (Organization and Integrations), AI & Runtime destinations (System AI, Prompt, Access, and Capabilities), and System destinations (Sessions, Health, and Backup & Restore). Grouping changes navigation only: the existing pages, routes, fields, and workflows keep their own product structures.
 
 ## Soft Neo-Retro Chat Language
 

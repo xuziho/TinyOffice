@@ -277,20 +277,19 @@ test("shadcn app shell keeps alerts on Chat and Tasks instead of a standalone At
 
 test("shadcn app shell exposes Employees as the runtime employee configuration surface", async () => {
   const appSource = await readText("apps/tinyoffice-web-shadcn/src/app/App.tsx");
+  const navigationStructureSource = await readText("apps/tinyoffice-web-shadcn/src/app/navigationStructure.ts");
   const navigationSource = await readText("apps/tinyoffice-web-shadcn/src/app/navigationRoutes.ts");
   const employeesPageSource = await readText("apps/tinyoffice-web-shadcn/src/employees/EmployeesPage.tsx");
   const employeesClientSource = await readText("apps/tinyoffice-web-shadcn/src/api/employeesClient.ts");
   const contractSource = await readText("src/api/contracts/tinyoffice-frontend-api-contracts.ts");
 
   assert.match(appSource, /import\("@\/employees\/EmployeesPage"\)/);
-  assert.match(appSource, />Employees<\/DropdownMenuItem>/);
-  const primaryRail = appSource.match(/<div className="flex flex-col items-center gap-2">[\s\S]*?<\/div>\s*<\/div>\s*<div className="flex flex-col items-center gap-2">/)?.[0] ?? "";
-  assert.doesNotMatch(primaryRail, /label="Employees"/);
-  assert.match(appSource, /view="chat"[\s\S]*view="tasks"[\s\S]*view="sessions"[\s\S]*ManageMenu[\s\S]*DeveloperToolsMenu[\s\S]*view="settings"/);
-  assert.match(appSource, /aria-label="Developer tools"/);
-  assert.match(appSource, /onSelect\(\("prompt"\)\)|onSelect\("prompt"\)/);
-  assert.match(appSource, /onSelect\(\("access"\)\)|onSelect\("access"\)/);
-  assert.match(appSource, /onSelect\(\("doctor"\)\)|onSelect\("doctor"\)/);
+  assert.match(appSource, /<WorkforceMenu/);
+  assert.match(appSource, /<AdminMenu/);
+  assert.match(navigationStructureSource, /view: "employees", label: "Employees"/);
+  assert.match(navigationStructureSource, /view: "prompt", label: "Prompt"/);
+  assert.match(navigationStructureSource, /view: "access", label: "Access"/);
+  assert.match(navigationStructureSource, /view: "doctor", label: "Health"/);
   assert.match(navigationSource, /return "\/employees"/);
   assert.match(employeesPageSource, /Employee configuration/);
   assert.match(employeesPageSource, /AGENTS\.md/);
@@ -314,13 +313,14 @@ test("shadcn app shell exposes Employees as the runtime employee configuration s
 
 test("shadcn app shell exposes Prompt as the company Prompt Policy surface", async () => {
   const appSource = await readText("apps/tinyoffice-web-shadcn/src/app/App.tsx");
+  const navigationStructureSource = await readText("apps/tinyoffice-web-shadcn/src/app/navigationStructure.ts");
   const navigationSource = await readText("apps/tinyoffice-web-shadcn/src/app/navigationRoutes.ts");
   const promptPageSource = await readText("apps/tinyoffice-web-shadcn/src/prompt/PromptPolicyPage.tsx");
   const promptClientSource = await readText("apps/tinyoffice-web-shadcn/src/api/promptPolicyClient.ts");
   const contractSource = await readText("src/api/contracts/tinyoffice-frontend-api-contracts.ts");
 
   assert.match(appSource, /import\("@\/prompt\/PromptPolicyPage"\)/);
-  assert.match(appSource, /onSelect\(\("prompt"\)\)|onSelect\("prompt"\)/);
+  assert.match(navigationStructureSource, /view: "prompt", label: "Prompt"/);
   assert.match(appSource, /activeView === "prompt"/);
   assert.match(navigationSource, /return "\/prompt"/);
   assert.match(promptPageSource, /Company prompt configuration/);
@@ -339,8 +339,9 @@ test("shadcn app shell exposes Prompt as the company Prompt Policy surface", asy
   assert.doesNotMatch(promptPageSource, /scene binding matrix/i);
 });
 
-test("shadcn app shell keeps one permanent Developer Tools menu with read-only Capabilities", async () => {
+test("shadcn app shell keeps read-only Capabilities and operational Health in Admin", async () => {
   const appSource = await readText("apps/tinyoffice-web-shadcn/src/app/App.tsx");
+  const navigationStructureSource = await readText("apps/tinyoffice-web-shadcn/src/app/navigationStructure.ts");
   const navigationSource = await readText("apps/tinyoffice-web-shadcn/src/app/navigationRoutes.ts");
   const capabilitiesPageSource = await readText("apps/tinyoffice-web-shadcn/src/capabilities/CapabilitiesPage.tsx");
   const accessPageSource = await readText("apps/tinyoffice-web-shadcn/src/access/AccessPage.tsx");
@@ -352,12 +353,12 @@ test("shadcn app shell keeps one permanent Developer Tools menu with read-only C
   assert.match(appSource, /import\("@\/access\/AccessPage"\)/);
   assert.match(appSource, /import\("@\/doctor\/DoctorPage"\)/);
   assert.doesNotMatch(appSource, /useDeveloperModePreference|developerMode\.enabled/);
-  assert.match(appSource, /onSelect\(\("access"\)\)|onSelect\("access"\)/);
-  assert.match(appSource, /onSelect\(\("doctor"\)\)|onSelect\("doctor"\)/);
-  assert.match(appSource, /isDeveloperToolView\(activeView\)/);
+  assert.match(navigationStructureSource, /view: "access", label: "Access"/);
+  assert.match(navigationStructureSource, /view: "doctor", label: "Health"/);
+  assert.match(appSource, /isAdminView\(activeView\)/);
   assert.match(appSource, /activeView === "access"/);
   assert.match(appSource, /activeView === "capabilities"/);
-  assert.match(appSource, /onSelect\("capabilities"\)/);
+  assert.match(navigationStructureSource, /view: "capabilities", label: "Capabilities"/);
   assert.match(capabilitiesPageSource, /Read only/);
   assert.match(navigationSource, /return "\/access"/);
   assert.match(navigationSource, /return "\/doctor"/);
@@ -450,14 +451,15 @@ test("shadcn Company creation exposes System AI model setup as a separate config
   assert.doesNotMatch(companyPageSource, /same model/i);
 });
 
-test("shadcn developer tools expose company-level System AI settings outside Company lifecycle", async () => {
+test("shadcn Admin exposes company-level System AI settings outside Company lifecycle", async () => {
   const appSource = await readText("apps/tinyoffice-web-shadcn/src/app/App.tsx");
+  const navigationStructureSource = await readText("apps/tinyoffice-web-shadcn/src/app/navigationStructure.ts");
   const companyPageSource = await readText("apps/tinyoffice-web-shadcn/src/app/CompanyLifecyclePage.tsx");
   const companyClientSource = await readText("apps/tinyoffice-web-shadcn/src/api/companyClient.ts");
   const systemAiSource = await readText("apps/tinyoffice-web-shadcn/src/system-ai/SystemAiPage.tsx");
 
   assert.match(companyClientSource, /saveCompanySystemAiSettings/);
-  assert.match(appSource, /onSelect\("system-ai"\)/);
+  assert.match(navigationStructureSource, /view: "system-ai", label: "System AI"/);
   assert.match(appSource, /activeView === "system-ai"/);
   assert.match(systemAiSource, /Chat title generation/);
   assert.match(systemAiSource, /Topic summaries/);
@@ -468,11 +470,12 @@ test("shadcn developer tools expose company-level System AI settings outside Com
 
 test("shadcn Integrations page exposes Intake discovery without an Intake operations queue", async () => {
   const appSource = await readText("apps/tinyoffice-web-shadcn/src/app/App.tsx");
+  const navigationStructureSource = await readText("apps/tinyoffice-web-shadcn/src/app/navigationStructure.ts");
   const navigationSource = await readText("apps/tinyoffice-web-shadcn/src/app/navigationRoutes.ts");
   const companySource = await readText("apps/tinyoffice-web-shadcn/src/app/CompanyLifecyclePage.tsx");
   const source = await readText("apps/tinyoffice-web-shadcn/src/integrations/IntegrationsPage.tsx");
 
-  assert.match(appSource, />Integrations<\/DropdownMenuItem>/);
+  assert.match(navigationStructureSource, /view: "integrations", label: "Integrations"/);
   assert.match(appSource, /activeView === "integrations"/);
   assert.match(navigationSource, /return "\/integrations"/);
   assert.match(source, /External Intake/);

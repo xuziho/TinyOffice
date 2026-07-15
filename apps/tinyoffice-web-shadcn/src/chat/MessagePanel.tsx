@@ -23,7 +23,7 @@ import {
 import type { AccessRequestDecision, AccessRequestDto, MessagePage } from "tinyoffice/frontend-api-contracts";
 import { ArrowLeftIcon, EditIcon } from "lucide-react";
 import { useEffect, useState, type FormEvent, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from "react";
-import { messagesWithoutReconciledReply, persistedMessageForDraftReply } from "./chatReplyReconciliation";
+import { reconciledTimelineRows } from "./chatReplyReconciliation";
 import ReactMarkdown from "react-markdown";
 import type { ChatShellModel } from "./chatShellModel";
 import type { ChatRunRecord, DraftReply } from "./chatRunState";
@@ -214,8 +214,7 @@ function EntryRoomSurface({
   composerNotice?: string;
 }): ReactElement {
   const draftDisplayName = draftReply ? memberDisplayNameFor(model, draftReply.targetMemberId) ?? "Unknown participant" : undefined;
-  const persistedDraftReply = persistedMessageForDraftReply(model.messages, draftReply);
-  const visibleMessages = messagesWithoutReconciledReply(model.messages, persistedDraftReply);
+  const timelineRows = reconciledTimelineRows(model.messages, draftReply);
   const streamStatus = messageStreamStatus({ status, error, messageCount: model.messages.length });
 
   return (
@@ -225,27 +224,26 @@ function EntryRoomSurface({
           <MessageScroller className="h-full min-w-0">
             <MessageScrollerViewport className="tiny-message-viewport overflow-x-hidden">
               <MessageStreamScrollerContent>
-                {visibleMessages.map((message) => (
+                {timelineRows.map((row) => row.kind === "message" ? (
                   <MessageRow
-                    key={message.messageId}
-                    message={message}
+                    key={row.message.messageId}
+                    message={row.message}
                     model={model}
                     onOpenMessageActivity={onOpenMessageActivity}
                     selectedActivitySourceMessageId={selectedActivitySourceMessageId}
                   />
-                ))}
-                {draftReply ? (
+                ) : draftReply ? (
                   <ReplyRunRow
                     key={`draft-${draftReply.runId}`}
                     draftReply={draftReply}
-                    persistedMessage={persistedDraftReply}
+                    persistedMessage={row.persistedMessage}
                     displayName={draftDisplayName || draftReply.targetMemberId}
                     avatarSeed={model.directoryMembers.find((member) => member.memberId === draftReply.targetMemberId)?.avatarSeed ?? draftReply.targetMemberId}
                     onRetryRun={onRetryRun}
                     onOpenMessageActivity={onOpenMessageActivity}
                     selectedActivitySourceMessageId={selectedActivitySourceMessageId}
                   />
-                ) : null}
+                ) : null)}
               </MessageStreamScrollerContent>
             </MessageScrollerViewport>
           </MessageScroller>

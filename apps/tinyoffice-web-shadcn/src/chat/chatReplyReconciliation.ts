@@ -22,11 +22,23 @@ export function persistedMessageForDraftReply(
   );
 }
 
-export function messagesWithoutReconciledReply(
+export type ReconciledTimelineRow =
+  | { kind: "message"; message: ChatMessage }
+  | { kind: "draft"; persistedMessage?: ChatMessage };
+
+export function reconciledTimelineRows(
   messages: ChatMessage[],
-  persistedReply: ChatMessage | undefined,
-): ChatMessage[] {
-  return persistedReply
-    ? messages.filter((message) => message.messageId !== persistedReply.messageId)
-    : messages;
+  draftReply: DraftReply | undefined,
+): ReconciledTimelineRow[] {
+  const persistedReply = persistedMessageForDraftReply(messages, draftReply);
+  const rows: ReconciledTimelineRow[] = messages.map((message) =>
+    message.messageId === persistedReply?.messageId
+      ? { kind: "draft", persistedMessage: message }
+      : { kind: "message", message }
+  );
+
+  if (draftReply && !persistedReply) {
+    rows.push({ kind: "draft" });
+  }
+  return rows;
 }

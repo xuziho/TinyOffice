@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { MessagePage } from "tinyoffice/frontend-api-contracts";
 import type { DraftReply } from "./chatRunState";
-import { messagesWithoutReconciledReply, persistedMessageForDraftReply } from "./chatReplyReconciliation";
+import { persistedMessageForDraftReply, reconciledTimelineRows } from "./chatReplyReconciliation";
 
 const draftReply: DraftReply = {
   companyId: "acme",
@@ -39,7 +39,26 @@ test("finds a persisted reply by source link before completed status arrives", (
   assert.equal(persistedMessageForDraftReply(messages, replyingDraft)?.messageId, "reply-1");
 });
 
-test("removes the reconciled persisted reply from the ordinary message rows", () => {
-  const persisted = persistedMessageForDraftReply(messages, draftReply);
-  assert.deepEqual(messagesWithoutReconciledReply(messages, persisted).map((message) => message.messageId), ["source-1"]);
+test("keeps a reconciled reply in canonical order when a newer user message exists", () => {
+  const newerMessage: MessagePage["messages"][number] = {
+    ...messages[0]!,
+    messageId: "source-2",
+    sender: { ...messages[0]!.sender, memberId: "xu", displayName: "Xu" },
+    body: "Follow-up",
+    runtimeLinks: [],
+  };
+
+  const rows = reconciledTimelineRows([...messages, newerMessage], draftReply);
+
+  assert.deepEqual(rows.map((row) => row.kind === "message" ? row.message.messageId : "draft"), [
+    "source-1",
+    "draft",
+    "source-2",
+  ]);
+  assert.equal(rows[1]?.kind === "draft" ? rows[1].persistedMessage?.messageId : undefined, "reply-1");
+});
+
+test("appends a draft that has not been persisted yet", () => {
+  const rows = reconciledTimelineRows(messages.slice(0, 1), { ...draftReply, replyMessageId: undefined, status: "streaming", isTerminal: false });
+  assert.deepEqual(rows.map((row) => row.kind === "message" ? row.message.messageId : "draft"), ["source-1", "draft"]);
 });

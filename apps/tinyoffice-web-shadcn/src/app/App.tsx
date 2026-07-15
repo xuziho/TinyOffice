@@ -2,7 +2,6 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -31,10 +30,10 @@ import { listCompanies } from "@/api/companyClient";
 import { getCompanyBranding } from "@/api/brandingClient";
 import { getCurrentSession, switchCurrentCompany } from "@/api/currentSessionClient";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Archive, BotIcon, BriefcaseBusinessIcon, Boxes, FileTextIcon, ListChecks, MessageCircle, PlugZapIcon, ScrollText, SettingsIcon, ShieldCheck, Stethoscope, UsersRound, Wrench } from "lucide-react";
-import { Fragment, lazy, Suspense, useCallback, useEffect, useRef, useState, type MouseEvent, type ReactElement } from "react";
+import { BotIcon, BriefcaseBusinessIcon, ListChecks, MessageCircle, PlugZapIcon, SettingsIcon, UsersRound, Wrench } from "lucide-react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type MouseEvent, type ReactElement } from "react";
 import type { CompaniesAdminViewModel, TinyOfficeCurrentSession } from "tinyoffice/frontend-api-contracts";
-import { adminNavigation, isAdminView, isWorkforceView, pageSectionForView, workforceNavigation, type NavigationGroup } from "./navigationStructure";
+import { isAiRuntimeView, isOperationsView, isWorkforceView, pageSectionForView } from "./navigationStructure";
 import { SectionNavigation } from "./SectionNavigation";
 
 const AccessPage = lazy(() => import("@/access/AccessPage").then((module) => ({ default: module.AccessPage })));
@@ -218,8 +217,21 @@ export function App(): ReactElement {
             </div>
           </div>
           <div className="flex flex-col items-center gap-2">
-            <WorkforceMenu activeView={activeView} disabled={needsInitialization} onSelect={selectView} />
-            <AdminMenu activeView={activeView} disabled={needsInitialization} onSelect={selectView} />
+            <ViewButton view="employees" label="Workforce" active={isWorkforceView(activeView)} disabled={needsInitialization} onClick={() => selectView("employees")}>
+              <UsersRound />
+            </ViewButton>
+            <ViewButton view="company" label="Organization" active={activeView === "company"} disabled={needsInitialization} onClick={() => selectView("company")}>
+              <BriefcaseBusinessIcon />
+            </ViewButton>
+            <ViewButton view="integrations" label="Integrations" active={activeView === "integrations"} disabled={needsInitialization} onClick={() => selectView("integrations")}>
+              <PlugZapIcon />
+            </ViewButton>
+            <ViewButton view="system-ai" label="AI & Runtime" active={isAiRuntimeView(activeView)} disabled={needsInitialization} onClick={() => selectView("system-ai")}>
+              <BotIcon />
+            </ViewButton>
+            <ViewButton view="sessions" label="Operations" active={isOperationsView(activeView)} disabled={needsInitialization} onClick={() => selectView("sessions")}>
+              <Wrench />
+            </ViewButton>
             <Separator className="w-8" />
             <ViewButton view="settings" label="Settings" active={activeView === "settings"} onClick={() => selectView("settings")}>
               <SettingsIcon />
@@ -290,132 +302,6 @@ export function App(): ReactElement {
       </main>
     </TooltipProvider>
   );
-}
-
-function WorkforceMenu({ activeView, disabled, onSelect }: { activeView: AppView; disabled?: boolean; onSelect(view: AppView): void }): ReactElement {
-  return (
-    <GroupedRailMenu
-      label="Workforce"
-      active={isWorkforceView(activeView)}
-      disabled={disabled}
-      groups={[{ label: "Workforce", items: workforceNavigation }]}
-      onSelect={onSelect}
-    >
-      <UsersRound />
-    </GroupedRailMenu>
-  );
-}
-
-function AdminMenu({ activeView, disabled, onSelect }: { activeView: AppView; disabled?: boolean; onSelect(view: AppView): void }): ReactElement {
-  return (
-    <GroupedRailMenu label="Admin" active={isAdminView(activeView)} disabled={disabled} groups={adminNavigation} onSelect={onSelect}>
-      <Wrench />
-    </GroupedRailMenu>
-  );
-}
-
-function GroupedRailMenu({
-  label,
-  active,
-  disabled,
-  groups,
-  onSelect,
-  children,
-}: {
-  label: string;
-  active: boolean;
-  disabled?: boolean;
-  groups: readonly NavigationGroup[];
-  onSelect(view: AppView): void;
-  children: ReactElement;
-}): ReactElement {
-  const hoverMenu = useRailHoverMenu(disabled);
-  return (
-    <DropdownMenu modal={false} open={hoverMenu.open} onOpenChange={hoverMenu.setOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          size="icon"
-          variant={active ? "secondary" : "ghost"}
-          disabled={disabled}
-          aria-label={label}
-          title={label}
-          className="tiny-rail-button"
-          data-active={active || undefined}
-          onMouseEnter={hoverMenu.openNow}
-          onMouseLeave={hoverMenu.closeSoon}
-        >
-          {children}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent side="right" align="end" className="tiny-product-menu w-56" onMouseEnter={hoverMenu.cancelClose} onMouseLeave={hoverMenu.closeSoon}>
-        {groups.map((group, groupIndex) => (
-          <Fragment key={group.label}>
-            {groupIndex > 0 ? <DropdownMenuSeparator /> : null}
-            <DropdownMenuLabel>{group.label}</DropdownMenuLabel>
-            {group.items.map((item) => (
-              <DropdownMenuItem key={item.view} onSelect={() => onSelect(item.view)}>
-                {navigationIcon(item.view)}
-                {item.label}
-              </DropdownMenuItem>
-            ))}
-          </Fragment>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-function navigationIcon(view: AppView): ReactElement {
-  switch (view) {
-    case "employees": return <UsersRound />;
-    case "skills": return <Boxes />;
-    case "company": return <BriefcaseBusinessIcon />;
-    case "integrations": return <PlugZapIcon />;
-    case "system-ai": return <BotIcon />;
-    case "prompt": return <ScrollText />;
-    case "access": return <ShieldCheck />;
-    case "capabilities": return <Boxes />;
-    case "sessions": return <FileTextIcon />;
-    case "doctor": return <Stethoscope />;
-    case "backup": return <Archive />;
-    default: return <FileTextIcon />;
-  }
-}
-
-function useRailHoverMenu(disabled = false): {
-  open: boolean;
-  setOpen(open: boolean): void;
-  openNow(): void;
-  closeSoon(): void;
-  cancelClose(): void;
-} {
-  const [open, setOpenState] = useState(false);
-  const closeTimerRef = useRef<number | undefined>(undefined);
-
-  const cancelClose = (): void => {
-    if (closeTimerRef.current !== undefined) {
-      window.clearTimeout(closeTimerRef.current);
-      closeTimerRef.current = undefined;
-    }
-  };
-  const setOpen = (nextOpen: boolean): void => {
-    cancelClose();
-    setOpenState(nextOpen);
-  };
-  const openNow = (): void => {
-    if (!disabled) {
-      setOpen(true);
-    }
-  };
-  const closeSoon = (): void => {
-    cancelClose();
-    closeTimerRef.current = window.setTimeout(() => setOpenState(false), 140);
-  };
-
-  useEffect(() => () => cancelClose(), []);
-
-  return { open, setOpen, openNow, closeSoon, cancelClose };
 }
 
 function currentCompanyDisplayName(

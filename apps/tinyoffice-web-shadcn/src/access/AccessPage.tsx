@@ -12,6 +12,7 @@ import { chatQueryKeys } from "@/chat/chatQueryKeys";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Save, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactElement, type ReactNode } from "react";
+import { SectionContentHeader } from "@/app/SectionContentHeader";
 import type {
   TinyOfficeCurrentSession,
   ToolGuardPolicy,
@@ -77,19 +78,16 @@ export function AccessPage({ currentSession }: { currentSession?: TinyOfficeCurr
 
   return (
     <div className="grid h-full w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
-      <header className="tiny-room-header flex items-center justify-between gap-3 border-b">
-        <div className="min-w-0">
-          <div className="tiny-room-title truncate">Access</div>
-          <div className="tiny-room-subtitle truncate">Company access policy - {companyId || "No company selected"}</div>
-        </div>
-        <div className="flex items-center gap-2">
+      <SectionContentHeader
+        description={<>Company access policy - {companyId || "No company selected"}</>}
+        actions={<>
           <Button type="button" size="sm" disabled={!parsedPolicy?.ok || !policyChanged || saveMutation.isPending} onClick={() => saveMutation.mutate()}>
             <Save className="mr-2 size-4" />
             Save changes
           </Button>
           <SaveStateBadge dirty={policyChanged} saving={saveMutation.isPending} />
-        </div>
-      </header>
+        </>}
+      />
       <section className="grid min-h-0 grid-cols-[300px_minmax(0,1fr)] overflow-hidden">
         <aside className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] border-r border-[var(--tiny-line-soft)] bg-[var(--tiny-sidebar)]">
           <div className="border-b border-[var(--tiny-line-faint)] px-4 py-3">

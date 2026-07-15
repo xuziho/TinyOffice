@@ -1205,6 +1205,12 @@
 .tiny-product-header { min-height: 86px; padding: 16px 28px; border-color: var(--tiny-line); background: #fffaf1; }
 .tiny-product-header .tiny-room-title { font-size: 24px; font-weight: 800; line-height: 1.15; letter-spacing: -.025em; }
 .tiny-product-header .tiny-room-subtitle { margin-top: 5px; color: var(--tiny-muted); font-size: 13px; }
+.tiny-section-navigation { border-color: var(--tiny-line); background: #fffaf1; }
+.tiny-section-tabs { border-color: var(--tiny-line-faint); scrollbar-width: thin; }
+.tiny-section-tab[data-slot="button"] { border: 0; background: transparent; box-shadow: none; }
+.tiny-section-tab[data-slot="button"]::after { content: ""; position: absolute; right: 0; bottom: -1px; left: 0; height: 4px; border: 1px solid transparent; border-bottom: 0; border-radius: 4px 4px 0 0; }
+.tiny-section-tab[data-slot="button"][data-active="true"]::after { border-color: var(--tiny-line); background: #f7b4d4; }
+.tiny-section-content-header { min-height: 54px; border-color: var(--tiny-line-faint); background: #fffaf1; }
 .tiny-soft-retro-product .tiny-room-header { min-height: 86px; padding: 16px 28px; border-color: var(--tiny-line); background: #fffaf1; }
 .tiny-soft-retro-product .tiny-room-header .tiny-room-title { font-size: 24px; font-weight: 800; line-height: 1.15; letter-spacing: -.025em; }
 .tiny-soft-retro-product .tiny-room-header .tiny-room-subtitle { margin-top: 5px; color: var(--tiny-muted); font-size: 13px; }

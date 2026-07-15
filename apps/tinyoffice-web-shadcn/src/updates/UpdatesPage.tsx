@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tan
 import { AlertTriangle, Check, Download, RefreshCw } from "lucide-react";
 import type { ReactElement } from "react";
 import type { TinyOfficeUpdateStatus } from "tinyoffice/frontend-api-contracts";
+import { SectionContentHeader } from "@/app/SectionContentHeader";
 
 export function UpdatesPage(): ReactElement {
   const queryClient = useQueryClient();
@@ -18,10 +19,7 @@ export function UpdatesPage(): ReactElement {
 
   return (
     <main className="grid h-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
-      <header className="tiny-room-header border-b">
-        <div className="tiny-room-title">Updates</div>
-        <div className="tiny-room-subtitle">Approved product maintenance and runtime compatibility</div>
-      </header>
+      <SectionContentHeader description="Approved product maintenance and runtime compatibility" />
       <div className="overflow-auto p-4 sm:p-6">
         <UpdatesPanel
           query={updates}

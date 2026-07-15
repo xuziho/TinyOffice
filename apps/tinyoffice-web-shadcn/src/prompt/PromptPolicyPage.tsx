@@ -24,6 +24,7 @@ import { chatQueryKeys } from "@/chat/chatQueryKeys";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RotateCcw, Save, ScrollText } from "lucide-react";
 import { useEffect, useRef, useState, type ReactElement, type ReactNode } from "react";
+import { SectionContentHeader } from "@/app/SectionContentHeader";
 import type {
   PromptPolicyBlockViewModel,
   PromptPolicyTemplateViewModel,
@@ -114,12 +115,9 @@ export function PromptPolicyPage({ currentSession }: { currentSession?: TinyOffi
 
   return (
     <div className="grid h-full w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
-      <header className="tiny-room-header flex items-center justify-between gap-3 border-b">
-        <div className="min-w-0">
-          <div className="tiny-room-title truncate">Prompt Policy</div>
-          <div className="tiny-room-subtitle truncate">Company prompt configuration - {companyId || "No company selected"}</div>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
+      <SectionContentHeader
+        description={<>Company prompt configuration - {companyId || "No company selected"}</>}
+        actions={<>
           <Button type="button" size="sm" disabled={!target || saveMutation.isPending || !dirty} onClick={() => saveMutation.mutate()}>
             <Save className="mr-2 size-4" />
             Save changes
@@ -129,8 +127,8 @@ export function PromptPolicyPage({ currentSession }: { currentSession?: TinyOffi
             <RotateCcw className="mr-2 size-4" />
             Reset to default
           </Button>
-        </div>
-      </header>
+        </>}
+      />
       <section className={showSidePanel
         ? "grid min-h-0 grid-cols-[300px_minmax(0,1fr)_300px] overflow-hidden"
         : "grid min-h-0 grid-cols-[300px_minmax(0,1fr)] overflow-hidden"}

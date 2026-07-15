@@ -14,18 +14,20 @@ export function SectionNavigation({
   onSelect(view: AppView): void;
 }): ReactElement {
   return (
-    <header className="flex min-w-0 flex-wrap items-center justify-between gap-3 border-b bg-background px-5 py-3">
-      <div className="min-w-0">
-        <div className="text-sm font-semibold">{section.title}</div>
-        <div className="truncate text-xs text-muted-foreground">{section.description}</div>
+    <header className="tiny-section-navigation min-w-0 border-b bg-background">
+      <div className="min-w-0 px-5 pb-2 pt-3 sm:px-7">
+        <h1 className="text-base font-semibold leading-tight">{section.title}</h1>
+        <div className="mt-0.5 truncate text-xs text-muted-foreground">{section.description}</div>
       </div>
-      <nav className="flex min-w-0 flex-wrap items-center gap-1" aria-label={`${section.title} pages`}>
+      <nav className="tiny-section-tabs flex min-w-0 items-stretch gap-5 overflow-x-auto border-t px-5 sm:px-7" aria-label={`${section.title} pages`}>
         {section.items.map((item) => (
           <Button
             key={item.view}
             asChild
             size="sm"
-            variant={item.view === activeView ? "default" : "ghost"}
+            variant="ghost"
+            className="tiny-section-tab relative h-10 shrink-0 rounded-none px-0 text-muted-foreground shadow-none hover:bg-transparent hover:text-foreground data-[active=true]:font-semibold data-[active=true]:text-foreground"
+            data-active={item.view === activeView}
           >
             <a
               href={appViewHref(item.view)}

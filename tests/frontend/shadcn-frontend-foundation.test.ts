@@ -284,8 +284,11 @@ test("shadcn app shell exposes Employees as the runtime employee configuration s
   const contractSource = await readText("src/api/contracts/tinyoffice-frontend-api-contracts.ts");
 
   assert.match(appSource, /import\("@\/employees\/EmployeesPage"\)/);
-  assert.match(appSource, /<WorkforceMenu/);
-  assert.match(appSource, /<AdminMenu/);
+  assert.match(appSource, /label="Workforce" active=\{isWorkforceView\(activeView\)\}/);
+  assert.match(appSource, /label="Organization" active=\{activeView === "company"\}/);
+  assert.match(appSource, /label="Integrations" active=\{activeView === "integrations"\}/);
+  assert.match(appSource, /label="AI & Runtime" active=\{isAiRuntimeView\(activeView\)\}/);
+  assert.match(appSource, /label="Operations" active=\{isOperationsView\(activeView\)\}/);
   assert.match(navigationStructureSource, /view: "employees", label: "Employees"/);
   assert.match(navigationStructureSource, /view: "prompt", label: "Prompt"/);
   assert.match(navigationStructureSource, /view: "access", label: "Access"/);
@@ -339,7 +342,7 @@ test("shadcn app shell exposes Prompt as the company Prompt Policy surface", asy
   assert.doesNotMatch(promptPageSource, /scene binding matrix/i);
 });
 
-test("shadcn app shell keeps read-only Capabilities and operational Health in Admin", async () => {
+test("shadcn app shell keeps read-only Capabilities and operational Health in explicit console sections", async () => {
   const appSource = await readText("apps/tinyoffice-web-shadcn/src/app/App.tsx");
   const navigationStructureSource = await readText("apps/tinyoffice-web-shadcn/src/app/navigationStructure.ts");
   const navigationSource = await readText("apps/tinyoffice-web-shadcn/src/app/navigationRoutes.ts");
@@ -355,7 +358,8 @@ test("shadcn app shell keeps read-only Capabilities and operational Health in Ad
   assert.doesNotMatch(appSource, /useDeveloperModePreference|developerMode\.enabled/);
   assert.match(navigationStructureSource, /view: "access", label: "Access"/);
   assert.match(navigationStructureSource, /view: "doctor", label: "Health"/);
-  assert.match(appSource, /isAdminView\(activeView\)/);
+  assert.match(appSource, /isAiRuntimeView\(activeView\)/);
+  assert.match(appSource, /isOperationsView\(activeView\)/);
   assert.match(appSource, /activeView === "access"/);
   assert.match(appSource, /activeView === "capabilities"/);
   assert.match(navigationStructureSource, /view: "capabilities", label: "Capabilities"/);
@@ -457,7 +461,7 @@ test("shadcn Company creation exposes System AI model setup as a separate config
   assert.doesNotMatch(companyPageSource, /same model/i);
 });
 
-test("shadcn Admin exposes company-level System AI settings outside Company lifecycle", async () => {
+test("shadcn AI and Runtime exposes company-level System AI settings outside Company lifecycle", async () => {
   const appSource = await readText("apps/tinyoffice-web-shadcn/src/app/App.tsx");
   const navigationStructureSource = await readText("apps/tinyoffice-web-shadcn/src/app/navigationStructure.ts");
   const companyPageSource = await readText("apps/tinyoffice-web-shadcn/src/app/CompanyLifecyclePage.tsx");
@@ -1052,7 +1056,7 @@ test("shadcn chat thread header hides internal room identifiers", async () => {
   assert.match(productSource, /return model\.selectedEntry\.title/);
 });
 
-test("management navigation uses one hierarchy language and hover-capable rail menus", async () => {
+test("management navigation uses direct rail sections and one shared tab hierarchy", async () => {
   const appSource = await readText("apps/tinyoffice-web-shadcn/src/app/App.tsx");
   const selectionSource = await readText("apps/tinyoffice-web-shadcn/src/components/product/SelectionList.tsx");
   const promptSource = await readText("apps/tinyoffice-web-shadcn/src/prompt/PromptPolicyPage.tsx");
@@ -1068,13 +1072,14 @@ test("management navigation uses one hierarchy language and hover-capable rail m
   assert.match(cssSource, /\[data-slot="dropdown-menu-item"\]:not\(\[data-disabled\]\):active/);
   assert.match(promptSource, /className="tiny-readonly-fact" role="listitem"/);
   assert.doesNotMatch(promptSource, /key=\{item\} className="rounded-md border[^\n]+bg-\[#fffdf7\]/);
-  assert.match(appSource, /function useRailHoverMenu/);
-  assert.match(appSource, /onMouseEnter=\{hoverMenu\.openNow\}/);
-  assert.match(appSource, /onMouseEnter=\{hoverMenu\.cancelClose\}/);
-  assert.match(appSource, /onMouseLeave=\{hoverMenu\.closeSoon\}/);
-  assert.match(appSource, /<DropdownMenu modal=\{false\} open=\{hoverMenu\.open\} onOpenChange=\{hoverMenu\.setOpen\}>/);
+  assert.doesNotMatch(appSource, /WorkforceMenu|AdminMenu|useRailHoverMenu/);
+  assert.match(appSource, /label="Workforce" active=\{isWorkforceView\(activeView\)\}/);
+  assert.match(appSource, /label="AI & Runtime" active=\{isAiRuntimeView\(activeView\)\}/);
+  assert.match(appSource, /label="Operations" active=\{isOperationsView\(activeView\)\}/);
   assert.match(appSource, /<SectionNavigation activeView=\{activeView\} section=\{pageSection\} onSelect=\{selectView\}/);
   assert.match(sectionNavigationSource, /aria-current=\{item\.view === activeView \? "page"/);
+  assert.match(sectionNavigationSource, /tiny-section-tabs/);
+  assert.match(sectionNavigationSource, /data-active=\{item\.view === activeView\}/);
   assert.match(navigationStructureSource, /title: "Workforce"[\s\S]*title: "AI & Runtime"[\s\S]*title: "Operations"/);
 });
 

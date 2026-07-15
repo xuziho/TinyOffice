@@ -12,7 +12,7 @@ The default TinyOffice visual direction is a Soft Neo-Retro operations workbench
 
 TinyOffice UI should feel like an operations workbench for repeated company work. It should favor scannable lists, compact controls, direct state labels, readable evidence, and small semantic emphasis. It should not feel like a marketing site, decorative dashboard, copied chat shell, or template demo.
 
-The product rail uses spatial priority without visible category headings. Chat and Tasks are the only upper daily-work destinations. The lower group contains Workforce and Admin, followed by Settings. Workforce groups Employees and Company Skills. Admin uses visible menu headings to group Company destinations (Organization and Integrations), AI & Runtime destinations (System AI, Prompt, Access, and Capabilities), and System destinations (Sessions, Health, and Backup & Restore). Grouping changes navigation only: the existing pages, routes, fields, and workflows keep their own product structures.
+The product rail uses spatial priority without visible category headings. Chat and Tasks are the only upper daily-work destinations. The lower group exposes Workforce, Organization, Integrations, AI & Runtime, and Operations directly, followed by Settings. Workforce groups Employees and Company Skills; AI & Runtime groups System AI, Prompt, Access, and Capabilities; Operations groups Runtime Sessions, Health, Backup & Restore, and Updates. Grouping changes navigation only: the existing pages, routes, fields, and workflows keep their own product structures.
 
 ## Soft Neo-Retro Chat Language
 
@@ -53,6 +53,8 @@ Visual migration applies to the complete Tasks page family rather than only the 
 All standalone product routes use the same Soft Neo-Retro shell as Chat and Tasks. The shared layer owns the Company mark, rail active/open states, warm-paper page background, product headers, ink boundaries, restrained offset shadows, compact operational typography, semantic accents, form controls, tabs, tables, dialogs, dropdown menus, and primary/quiet/destructive action roles.
 
 Shared visual treatment does not make every page structurally identical. Workforce, AI & Runtime, and Operations share page-level sibling navigation, while their pages keep separate routes and workflows. Sessions remains an evidence inspector; Employees and Company Skills remain configuration workspaces; Integrations remains an intake setup surface; System AI, Prompt, Access, Capabilities, and Health retain their technical workflows; Settings owns personal profile and security; Backup and Updates retain independent operational scope. The shared layer must never replace a route's fields, grouping, permissions, filters, actions, or runtime behavior.
+
+Within a grouped section, the section heading names the product area and the active tab names the page. The content header is deliberately lighter and contains only additional scope, object context, state, or actions. It does not repeat the active tab as another page title.
 
 Every page family must cover populated, empty, loading, error, success, disabled, menu, dialog, and destructive states that its real workflow exposes. New product pages should enter through the shared Soft Neo-Retro shell and semantic component roles rather than adding a page-local visual theme.
 

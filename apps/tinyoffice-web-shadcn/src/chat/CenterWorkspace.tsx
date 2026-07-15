@@ -8,6 +8,7 @@ import { MessagePanel } from "./MessagePanel";
 import { SystemMessage } from "./SystemMessage";
 import { centerWorkspaceMode } from "./centerWorkspaceMode";
 import type { ComposerSubmitValue } from "./mentionComposerModel";
+import { useTranslation } from "react-i18next";
 
 export function CenterWorkspace({
   model,
@@ -58,6 +59,7 @@ export function CenterWorkspace({
   isResolvingAccessRequest: boolean;
   composerNotice?: string;
 }): ReactElement {
+  const { t } = useTranslation();
   const mode = centerWorkspaceMode(model);
   if (mode === "entry-room") {
     return (
@@ -89,7 +91,7 @@ export function CenterWorkspace({
       <section className="flex h-full min-w-0 flex-col overflow-hidden">
         <div className="relative min-w-0 flex-1 overflow-hidden">
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-4">
-            <SystemMessage text="Loading conversation..." />
+            <SystemMessage text={t("chat.loadingConversation")} />
           </div>
         </div>
       </section>

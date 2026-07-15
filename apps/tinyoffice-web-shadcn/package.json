@@ -10,7 +10,7 @@
     "check": "tsc -b --noEmit",
     "check:ui-boundaries": "node scripts/check-ui-boundaries.mjs",
     "check:quality": "npm run check && npm run lint && npm run check:ui-boundaries",
-    "test": "node --import tsx --test \"src/**/*.test.ts\" \"src/**/*.test.tsx\"",
+    "test": "node --import tsx --import ./src/i18n/testSetup.ts --test \"src/**/*.test.ts\" \"src/**/*.test.tsx\"",
     "lint": "oxlint --deny-warnings",
     "analyze:bundle": "node scripts/report-bundle-size.mjs",
     "preview": "vite preview"
@@ -25,10 +25,12 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
+    "i18next": "^26.3.6",
     "lucide-react": "^1.22.0",
     "radix-ui": "^1.6.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "react-i18next": "^17.0.10",
     "react-markdown": "^10.1.0",
     "socket.io-client": "^4.8.3",
     "tailwind-merge": "^3.6.0"

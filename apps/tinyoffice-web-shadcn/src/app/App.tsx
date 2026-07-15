@@ -30,9 +30,12 @@ import {
 import { listCompanies } from "@/api/companyClient";
 import { getCompanyBranding } from "@/api/brandingClient";
 import { getCurrentSession, switchCurrentCompany } from "@/api/currentSessionClient";
+import { getMyProfile } from "@/api/profileClient";
+import { applyUiLocalePreference } from "@/i18n";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BotIcon, BriefcaseBusinessIcon, ListChecks, MessageCircle, PlugZapIcon, SettingsIcon, UsersRound, Wrench } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type MouseEvent, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import type { CompaniesAdminViewModel, TinyOfficeCurrentSession } from "tinyoffice/frontend-api-contracts";
 import { isAiRuntimeView, isOperationsView, isWorkforceView, pageSectionForView } from "./navigationStructure";
 import { SectionNavigation } from "./SectionNavigation";
@@ -55,6 +58,7 @@ const TasksPage = lazy(() => import("@/tasks/TasksPage").then((module) => ({ def
 const UpdatesPage = lazy(() => import("@/updates/UpdatesPage").then((module) => ({ default: module.UpdatesPage })));
 
 export function App(): ReactElement {
+  const { t } = useTranslation();
   const { hasUnsavedChanges, requestTransition } = useUnsavedChangesNavigation();
   const committedLocationRef = useRef(window.location.href);
   const queryClient = useQueryClient();
@@ -62,6 +66,7 @@ export function App(): ReactElement {
   const [chatFocus, setChatFocus] = useState<ChatRouteFocus>(() => chatFocusFromLocation());
   const sessionQuery = useQuery({ queryKey: chatQueryKeys.currentSession(), queryFn: getCurrentSession });
   const currentSession = sessionQuery.data;
+  const profileQuery = useQuery({ queryKey: chatQueryKeys.myProfile(), queryFn: getMyProfile });
   const [navigationAlerts, setNavigationAlerts] = useState<NavigationAlertState>({ chat: false, tasks: false });
   const [sessionFocus, setSessionFocus] = useState<SessionFocus>(() => sessionFocusFromLocation());
   const [taskFocus, setTaskFocus] = useState(() => taskFocusFromLocation());
@@ -77,6 +82,9 @@ export function App(): ReactElement {
   const currentCompanyId = currentSession?.companyId ?? currentSession?.currentCompanyId ?? "";
   const pageSection = pageSectionForView(activeView);
   const brandingQuery = useQuery({ queryKey: chatQueryKeys.branding(currentCompanyId), enabled: Boolean(currentCompanyId), queryFn: () => getCompanyBranding({ companyId: currentCompanyId }) });
+  useEffect(() => {
+    if (profileQuery.data) void applyUiLocalePreference(profileQuery.data.uiLocale);
+  }, [profileQuery.data]);
   const switchCompanyMutation = useMutation({
     mutationFn: switchCurrentCompany,
     onSuccess: async (session) => {
@@ -209,32 +217,32 @@ export function App(): ReactElement {
               <Separator className="w-8" />
             </div>
             <div className="flex flex-col items-center gap-2">
-              <ViewButton view="chat" label="Chat" active={activeView === "chat"} disabled={needsInitialization} indicator={navigationAlerts.chat} indicatorLabel="unread messages or requests" onClick={() => selectView("chat")}>
+              <ViewButton view="chat" label={t("nav.chat")} active={activeView === "chat"} disabled={needsInitialization} indicator={navigationAlerts.chat} indicatorLabel={t("nav.unreadMessages")} onClick={() => selectView("chat")}>
                 <MessageCircle />
               </ViewButton>
-              <ViewButton view="tasks" label="Tasks" active={activeView === "tasks"} disabled={needsInitialization} indicator={navigationAlerts.tasks} indicatorLabel="execution needs action" onClick={() => selectView("tasks")}>
+              <ViewButton view="tasks" label={t("nav.tasks")} active={activeView === "tasks"} disabled={needsInitialization} indicator={navigationAlerts.tasks} indicatorLabel={t("nav.executionNeedsAction")} onClick={() => selectView("tasks")}>
                 <ListChecks />
               </ViewButton>
             </div>
           </div>
           <div className="flex flex-col items-center gap-2">
-            <ViewButton view="employees" label="Workforce" active={isWorkforceView(activeView)} disabled={needsInitialization} onClick={() => selectView("employees")}>
+            <ViewButton view="employees" label={t("nav.workforce")} active={isWorkforceView(activeView)} disabled={needsInitialization} onClick={() => selectView("employees")}>
               <UsersRound />
             </ViewButton>
-            <ViewButton view="company" label="Organization" active={activeView === "company"} disabled={needsInitialization} onClick={() => selectView("company")}>
+            <ViewButton view="company" label={t("nav.organization")} active={activeView === "company"} disabled={needsInitialization} onClick={() => selectView("company")}>
               <BriefcaseBusinessIcon />
             </ViewButton>
-            <ViewButton view="integrations" label="Integrations" active={activeView === "integrations"} disabled={needsInitialization} onClick={() => selectView("integrations")}>
+            <ViewButton view="integrations" label={t("nav.integrations")} active={activeView === "integrations"} disabled={needsInitialization} onClick={() => selectView("integrations")}>
               <PlugZapIcon />
             </ViewButton>
-            <ViewButton view="system-ai" label="AI & Runtime" active={isAiRuntimeView(activeView)} disabled={needsInitialization} onClick={() => selectView("system-ai")}>
+            <ViewButton view="system-ai" label={t("nav.aiRuntime")} active={isAiRuntimeView(activeView)} disabled={needsInitialization} onClick={() => selectView("system-ai")}>
               <BotIcon />
             </ViewButton>
-            <ViewButton view="sessions" label="Operations" active={isOperationsView(activeView)} disabled={needsInitialization} onClick={() => selectView("sessions")}>
+            <ViewButton view="sessions" label={t("nav.operations")} active={isOperationsView(activeView)} disabled={needsInitialization} onClick={() => selectView("sessions")}>
               <Wrench />
             </ViewButton>
             <Separator className="w-8" />
-            <ViewButton view="settings" label="Settings" active={activeView === "settings"} onClick={() => selectView("settings")}>
+            <ViewButton view="settings" label={t("nav.settings")} active={activeView === "settings"} onClick={() => selectView("settings")}>
               <SettingsIcon />
             </ViewButton>
           </div>
@@ -331,6 +339,7 @@ function CompanySwitcher({
   disabled: boolean;
   onSwitch: (companyId: string) => void;
 }): ReactElement {
+  const { t } = useTranslation();
   const currentCompanyId = currentSession?.companyId ?? currentSession?.currentCompanyId ?? "";
   const companies = viewModel?.companies ?? [];
   const currentCompanyName = companies.find((company) => company.companyId === currentCompanyId)?.displayName ?? "Company";
@@ -343,14 +352,14 @@ function CompanySwitcher({
           variant="ghost"
           className="tiny-company-mark p-0 disabled:opacity-45"
           disabled={disabled || loading || companies.length === 0}
-          aria-label={currentCompanyName ? `Switch company: ${currentCompanyName}` : "Switch company"}
-          title={currentCompanyName ? `Company: ${currentCompanyName}` : "Company"}
+          aria-label={currentCompanyName ? t("nav.switchCompanyNamed", { name: currentCompanyName }) : t("nav.switchCompany")}
+          title={currentCompanyName ? t("nav.companyNamed", { name: currentCompanyName }) : t("common.company")}
         >
           {logoUrl ? <img src={logoUrl} alt="" className="size-full rounded-xl object-cover" /> : <CompanyAvatar name={currentCompanyName} />}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="start" side="right">
-        <DropdownMenuLabel>Company</DropdownMenuLabel>
+        <DropdownMenuLabel>{t("common.company")}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuRadioGroup
           value={currentCompanyId}
@@ -448,7 +457,8 @@ function ViewButton({
 }
 
 function RouteLoadingFallback(): ReactElement {
-  return <div className="flex h-full items-center justify-center text-sm text-muted-foreground" role="status">Loading workspace…</div>;
+  const { t } = useTranslation();
+  return <div className="flex h-full items-center justify-center text-sm text-muted-foreground" role="status">{t("nav.loadingWorkspace")}</div>;
 }
 
 function sessionFocusFromLocation(): SessionFocus {

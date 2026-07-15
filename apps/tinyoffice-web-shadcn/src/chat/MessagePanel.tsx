@@ -32,6 +32,8 @@ import { SystemMessage } from "./SystemMessage";
 import { formatMessageTime, memberDisplayNameFor, messageAlignFor, messageHeaderFor, messageStreamScrollKey } from "./chatUiUtils";
 import { activitySourceForMessage } from "./messageActivitySource";
 import type { ComposerSubmitValue } from "./mentionComposerModel";
+import { useTranslation } from "react-i18next";
+import { i18n } from "@/i18n";
 
 export function MessagePanel({
   model,
@@ -72,12 +74,13 @@ export function MessagePanel({
   isResolvingAccessRequest: boolean;
   composerNotice?: string;
 }): ReactElement {
+  const { t } = useTranslation();
   const header = messageHeaderFor(model);
 
   return (
     <section className="flex h-full min-w-0 flex-col overflow-hidden">
       <header className="tiny-room-header flex items-center gap-2 border-b">
-        <Button type="button" variant="ghost" size="icon" className="tiny-icon-quiet h-9 w-9 shrink-0 rounded-lg" onClick={onBackToList} aria-label="Back to list" title="Back to list">
+        <Button type="button" variant="ghost" size="icon" className="tiny-icon-quiet h-9 w-9 shrink-0 rounded-lg" onClick={onBackToList} aria-label={t("chat.backToList")} title={t("chat.backToList")}>
           <ArrowLeftIcon />
         </Button>
         <div className="min-w-0 flex-1">
@@ -117,6 +120,7 @@ function ThreadTitleEditor({
   title: string;
   onUpdateTitle(title: string): Promise<void>;
 }): ReactElement {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(title);
   const [isSaving, setIsSaving] = useState(false);
@@ -143,7 +147,7 @@ function ThreadTitleEditor({
       await onUpdateTitle(trimmed);
       setOpen(false);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Failed to update title.");
+      setError(caught instanceof Error ? caught.message : t("chat.updateTitleFailed"));
     } finally {
       setIsSaving(false);
     }
@@ -152,24 +156,24 @@ function ThreadTitleEditor({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button type="button" variant="ghost" size="icon-xs" className="tiny-icon-quiet opacity-0 transition-opacity group-hover/title:opacity-100 focus-visible:opacity-100" aria-label="Edit topic title">
+        <Button type="button" variant="ghost" size="icon-xs" className="tiny-icon-quiet opacity-0 transition-opacity group-hover/title:opacity-100 focus-visible:opacity-100" aria-label={t("chat.editTopicTitle")}>
           <EditIcon />
         </Button>
       </DialogTrigger>
       <DialogContent className="tiny-chat-dialog">
         <form onSubmit={submitTitle} className="contents">
           <DialogHeader>
-            <DialogTitle>Edit topic title</DialogTitle>
-            <DialogDescription>Rename this topic for everyone in the room.</DialogDescription>
+            <DialogTitle>{t("chat.editTopicTitle")}</DialogTitle>
+            <DialogDescription>{t("chat.editTopicDescription")}</DialogDescription>
           </DialogHeader>
           <Input value={draft} onChange={(event) => setDraft(event.target.value)} autoFocus />
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isSaving}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={!canSave}>
-              {isSaving ? "Saving..." : "Save"}
+              {isSaving ? t("common.saving") : t("common.save")}
             </Button>
           </DialogFooter>
         </form>
@@ -213,7 +217,8 @@ function EntryRoomSurface({
   isResolvingAccessRequest: boolean;
   composerNotice?: string;
 }): ReactElement {
-  const draftDisplayName = draftReply ? memberDisplayNameFor(model, draftReply.targetMemberId) ?? "Unknown participant" : undefined;
+  const { t } = useTranslation();
+  const draftDisplayName = draftReply ? memberDisplayNameFor(model, draftReply.targetMemberId) ?? t("chat.unknownParticipant") : undefined;
   const timelineRows = reconciledTimelineRows(model.messages, draftReply);
   const streamStatus = messageStreamStatus({ status, error, messageCount: model.messages.length });
 
@@ -256,7 +261,7 @@ function EntryRoomSurface({
         onResolveAccessRequest={onResolveAccessRequest}
       />
       <RoomReplyComposer
-        placeholder="Type a message..."
+        placeholder={t("chat.typeMessage")}
         onSendReply={onSendReply}
         notice={composerNotice}
         onClearNotice={onClearComposerNotice}
@@ -290,6 +295,7 @@ function ReplyRunRow({
   onOpenMessageActivity(input: { sourceMessageId: string }): void;
   selectedActivitySourceMessageId?: string;
 }): ReactElement {
+  const { t } = useTranslation();
   const activitySource = persistedMessage ? activitySourceForMessage(persistedMessage) : undefined;
   const isActivitySourceSelected = Boolean(activitySource && activitySource.sourceMessageId === selectedActivitySourceMessageId);
   const openActivity = () => {
@@ -326,7 +332,7 @@ function ReplyRunRow({
           className={contentClassName}
           role={activitySource ? "button" : undefined}
           tabIndex={activitySource ? 0 : undefined}
-          aria-label={persistedMessage && activitySource ? `Show activity for ${senderDisplayName}'s message from ${formatMessageTime(persistedMessage.createdAt)}` : undefined}
+          aria-label={persistedMessage && activitySource ? t("chat.showActivityFor", { name: senderDisplayName, time: formatMessageTime(persistedMessage.createdAt) }) : undefined}
           aria-pressed={activitySource ? isActivitySourceSelected : undefined}
           onClick={activitySource ? handleActivityClick : undefined}
           onKeyDown={activitySource ? handleActivityKeyDown : undefined}
@@ -408,7 +414,7 @@ function messageStreamStatus({
   if (messageCount > 0) {
     return undefined;
   }
-  return { text: status === "loading" ? "Loading messages..." : "No messages in this room yet.", tone: "default" };
+  return { text: status === "loading" ? i18n.t("chat.loadingMessages") : i18n.t("chat.noMessages"), tone: "default" };
 }
 
 function MessageStreamStatusOverlay({ text, tone }: { text: string; tone: "default" | "error" }): ReactElement {
@@ -430,6 +436,7 @@ function MessageRow({
   onOpenMessageActivity(input: { sourceMessageId: string }): void;
   selectedActivitySourceMessageId?: string;
 }): ReactElement {
+  const { t } = useTranslation();
   const activitySource = activitySourceForMessage(message);
   const align = messageAlignFor(message, model);
   const isActivitySourceSelected = Boolean(activitySource && activitySource.sourceMessageId === selectedActivitySourceMessageId);
@@ -471,7 +478,7 @@ function MessageRow({
             className={activityContentClassName}
             role={activitySource ? "button" : undefined}
             tabIndex={activitySource ? 0 : undefined}
-            aria-label={activitySource ? `Show activity for ${message.sender.displayName}'s message from ${formatMessageTime(message.createdAt)}` : undefined}
+            aria-label={activitySource ? t("chat.showActivityFor", { name: message.sender.displayName, time: formatMessageTime(message.createdAt) }) : undefined}
             aria-pressed={activitySource ? isActivitySourceSelected : undefined}
             onClick={activitySource ? handleActivityClick : undefined}
             onKeyDown={activitySource ? handleActivityKeyDown : undefined}

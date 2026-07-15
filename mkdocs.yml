@@ -37,6 +37,7 @@ nav:
       - Product Models: product/product-models.md
       - Frontend / Backend Capability Map: product/frontend-backend-capability-map.md
       - Frontend UI Foundation: product/frontend-ui-foundation.md
+      - Interface Localization: product/localization.md
       - Modular Monolith Direction: product/modular-monolith-architecture.md
       - Open-source Distribution: product/open-source-distribution.md
       - Glossary: product/glossary.md

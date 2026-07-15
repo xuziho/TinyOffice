@@ -9,6 +9,7 @@ import {
 import { chatRoomHref, shouldUseClientNavigation } from "@/app/navigationRoutes";
 import { ArchiveIcon, RotateCcwIcon } from "lucide-react";
 import { useEffect, useState, type ReactElement, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import type { ChatShellModel } from "./chatShellModel";
 import { StartEntryButton } from "./Composer";
 import { SystemMessage } from "./SystemMessage";
@@ -39,12 +40,13 @@ export function EntryListPanel({
   onArchiveEntry(entryId: string): Promise<void>;
   onRestoreEntry(entryId: string): Promise<void>;
 }): ReactElement {
+  const { t } = useTranslation();
   const [showArchived, setShowArchived] = useState(false);
   const header = entryListHeaderFor(model);
   const createLabel = startEntryLabelFor(model);
   const canCreateEntry = activeEntryContainerId(model) !== undefined;
   const isChannel = model.selectedContainer?.kind === "channel";
-  const archiveNoun = isChannel ? "topics" : "conversations";
+  const archiveNoun = isChannel ? t("chat.topics") : t("chat.conversations");
   useEffect(() => setShowArchived(false), [model.selectedContainer?.containerId]);
 
   return (
@@ -52,7 +54,7 @@ export function EntryListPanel({
       <header className="tiny-room-header flex items-center justify-between gap-3 border-b">
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-2">
-            <h1 className="tiny-room-title truncate">{showArchived ? `Archived ${archiveNoun}` : header.title}</h1>
+            <h1 className="tiny-room-title truncate">{showArchived ? t("chat.archivedItems", { noun: archiveNoun }) : header.title}</h1>
             <span className="tiny-room-subtitle min-w-0 truncate">{showArchived ? header.title : header.subtitle}</span>
           </div>
         </div>
@@ -63,11 +65,11 @@ export function EntryListPanel({
             variant="ghost"
             className={showArchived ? "h-8 px-2 text-xs" : "tiny-archived-toggle relative h-8 w-8"}
             onClick={() => setShowArchived((current) => !current)}
-            aria-label={showArchived ? "Back to topics" : `View archived ${archiveNoun}`}
-            title={showArchived ? "Back to topics" : `View archived ${archiveNoun}`}
+            aria-label={showArchived ? t("chat.backToTopics") : t("chat.viewArchived", { noun: archiveNoun })}
+            title={showArchived ? t("chat.backToTopics") : t("chat.viewArchived", { noun: archiveNoun })}
           >
             {showArchived ? (
-              <><RotateCcwIcon className="size-3.5" /> Back to topics</>
+              <><RotateCcwIcon className="size-3.5" /> {t("chat.backToTopics")}</>
             ) : (
               <ArchiveIcon className="size-4" />
             )}
@@ -100,6 +102,7 @@ function EntryListSurface({
   createLabel?: string;
   showArchived: boolean;
 }): ReactElement {
+  const { t } = useTranslation();
   const visibleEntries = showArchived ? model.archivedDirectoryEntries ?? [] : model.directoryEntries;
   return (
     <MessageScrollerProvider key={entryListScrollKey(model)} defaultScrollPosition="end">
@@ -113,7 +116,7 @@ function EntryListSurface({
             ) : null}
             {!error && visibleEntries.length === 0 ? (
               <MessageScrollerItem>
-                <SystemMessage text={status === "loading" ? "Loading entries..." : showArchived ? "Nothing archived here." : emptyEntriesTextFor(model)} />
+                <SystemMessage text={status === "loading" ? t("chat.loadingEntries") : showArchived ? t("chat.nothingArchived") : emptyEntriesTextFor(model)} />
               </MessageScrollerItem>
             ) : null}
             {visibleEntries.map((entry) => (
@@ -141,6 +144,7 @@ function ArchivedTopicRow({ entry, onRestoreEntry }: {
   entry: ChatShellModel["rooms"][number];
   onRestoreEntry(entryId: string): Promise<void>;
 }): ReactElement {
+  const { t } = useTranslation();
   return (
     <div className="tiny-topic-row flex min-w-0 items-center justify-between gap-3 px-2 py-2.5">
       <span className="min-w-0">
@@ -148,7 +152,7 @@ function ArchivedTopicRow({ entry, onRestoreEntry }: {
         {entry.summary ? <span className="tiny-topic-preview mt-0.5 block truncate font-normal">{entry.summary}</span> : null}
       </span>
       <Button type="button" size="sm" variant="outline" onClick={() => void onRestoreEntry(entry.entryId)}>
-        <RotateCcwIcon className="mr-2 size-3.5" /> Restore
+        <RotateCcwIcon className="mr-2 size-3.5" /> {t("chat.restore")}
       </Button>
     </div>
   );
@@ -225,16 +229,17 @@ function EntryUnreadBadge({
   mentionCount: number;
   unreadCount: number;
 }): ReactElement | null {
+  const { t } = useTranslation();
   if (mentionCount > 0) {
     return (
-      <span className="tiny-attention-badge tiny-attention-badge-mention" aria-label={`${mentionCount} mention${mentionCount === 1 ? "" : "s"}`}>
+      <span className="tiny-attention-badge tiny-attention-badge-mention" aria-label={t("chat.mentions", { count: mentionCount })}>
         {mentionCount}
       </span>
     );
   }
   if (unreadCount > 0) {
     return (
-      <span className="tiny-attention-badge tiny-attention-badge-unread" aria-label={`${unreadCount} unread message${unreadCount === 1 ? "" : "s"}`}>
+      <span className="tiny-attention-badge tiny-attention-badge-unread" aria-label={t("chat.unreadMessages", { count: unreadCount })}>
         {unreadCount}
       </span>
     );
@@ -265,6 +270,7 @@ function ArchiveEntryAction({
   onConfirmingChange(value: boolean): void;
   onArchiveEntry(entryId: string): Promise<void>;
 }): ReactElement {
+  const { t } = useTranslation();
   return (
     <Button
       type="button"
@@ -273,8 +279,8 @@ function ArchiveEntryAction({
       className={isConfirming
         ? "tiny-archive-confirm h-7 w-[4.5rem] justify-self-end px-2 text-xs"
         : "tiny-icon-quiet h-7 w-7 justify-self-end opacity-35 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"}
-      aria-label={isConfirming ? `Confirm archive ${title}` : `Archive ${title}`}
-      title={isConfirming ? "Confirm archive" : "Archive conversation"}
+      aria-label={isConfirming ? t("chat.confirmArchive", { title }) : t("chat.archiveItem", { title })}
+      title={isConfirming ? t("chat.archive") : t("chat.archiveItem", { title })}
       onBlur={() => onConfirmingChange(false)}
       onClick={(event) => {
         event.stopPropagation();
@@ -286,14 +292,15 @@ function ArchiveEntryAction({
       }}
       onKeyDown={(event) => event.stopPropagation()}
     >
-      {isConfirming ? "Archive" : <ArchiveIcon className="h-3.5 w-3.5" />}
+      {isConfirming ? t("chat.archive") : <ArchiveIcon className="h-3.5 w-3.5" />}
     </Button>
   );
 }
 
 function EntryUpdatedTime({ entry }: { entry: ChatShellModel["directoryEntries"][number] }): ReactElement {
+  const { t } = useTranslation();
   return (
-    <span className="shrink-0 text-xs text-muted-foreground" title={`Last updated ${formatMessageTime(entry.updatedAt)}`}>
+    <span className="shrink-0 text-xs text-muted-foreground" title={t("chat.lastUpdated", { time: formatMessageTime(entry.updatedAt) })}>
       {formatRelativeTime(entry.updatedAt)}
     </span>
   );

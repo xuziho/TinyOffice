@@ -10,6 +10,8 @@ import { navigationHref, shouldUseClientNavigation, tasksHref, type NavigationTa
 import type { ChatChannelMemberDto, CompanyDirectoryMemberEntryDto, EmployeeRuntimeSummaryCard, RuntimeActivityItem } from "tinyoffice/frontend-api-contracts";
 import { FileTextIcon, ListTodoIcon, SettingsIcon } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
+import { currentUiLocale, i18n } from "@/i18n";
 import type { ChatRelatedTask, ChatShellEvidence, ChatShellModel } from "./chatShellModel";
 import { contextPanelRuntimeMode } from "./contextPanelMode";
 import type { ActivitySourceSummary } from "./useChatWorkspace";
@@ -39,6 +41,7 @@ export function ContextPanel({
   onRemoveChannelMember?: (member: ChatChannelMemberDto) => Promise<void>;
   onDissolveChannel?: (confirmation: "DELETE") => Promise<void>;
 }): ReactElement {
+  const { t } = useTranslation();
   const runtimeMode = contextPanelRuntimeMode(model);
   const directMessageMember = directMessageMemberForContext(model);
   const shouldShowDirectMessageRuntimeSummary = model.surface.kind === "dm-directory";
@@ -84,9 +87,9 @@ export function ContextPanel({
           <RelatedTasksSection tasks={model.context.relatedTasks} onOpenNavigationTarget={onOpenNavigationTarget} />
           {shouldShowParticipants(model) ? <ParticipantsSection model={model} showSessions={runtimeMode.showParticipantSessions} onOpenSession={onOpenSession} /> : null}
           {runtimeMode.showActivityDock ? <ActivityDock activityItems={activityItems} hasActivitySource={hasActivitySource} activitySource={activitySource} activityIsPrevious={activityIsPrevious} /> : null}
-          <EvidenceSection title="Work runs" items={model.context.evidence.workRuns} />
-          <EvidenceSection title="Files" items={model.context.evidence.files} />
-          <EvidenceSection title="Other evidence" items={model.context.evidence.other} />
+          <EvidenceSection title={t("chat.workRuns")} items={model.context.evidence.workRuns} />
+          <EvidenceSection title={t("chat.files")} items={model.context.evidence.files} />
+          <EvidenceSection title={t("chat.otherEvidence")} items={model.context.evidence.other} />
         </div>
       </ScrollArea>
     </aside>
@@ -94,13 +97,14 @@ export function ContextPanel({
 }
 
 function ChannelContextHeader({ model }: { model: ChatShellModel }): ReactElement {
+  const { t } = useTranslation();
   return (
     <section className="grid min-w-0 gap-2">
-      <div className="tiny-context-section-label">Purpose</div>
+      <div className="tiny-context-section-label">{t("chat.purpose")}</div>
       {model.context.room.subtitle ? (
         <ContextText className="tiny-context-note">{model.context.room.subtitle}</ContextText>
       ) : (
-        <ContextText className="tiny-context-note">No purpose set.</ContextText>
+        <ContextText className="tiny-context-note">{t("chat.noPurpose")}</ContextText>
       )}
     </section>
   );
@@ -117,10 +121,11 @@ function DirectMessageContextHeader({
   model: ChatShellModel;
   onOpenSession?: (input: { employeeId?: string; sessionId?: string; query?: string }) => void;
 }): ReactElement {
+  const { t } = useTranslation();
   const sessions = showSessions ? directMessageSessionsForMember(model, member.memberId) : [];
   return (
     <section className="grid min-w-0 gap-3">
-      <div className="tiny-context-section-label">Direct message</div>
+      <div className="tiny-context-section-label">{t("chat.directMessage")}</div>
       <div className="tiny-context-row group grid min-w-0 grid-cols-[24px_minmax(0,1fr)_auto] items-center gap-2 overflow-hidden p-[5px]">
         <EmployeeAvatar memberId={member.memberId} avatarSeed={member.avatarSeed} displayName={member.displayName} className="size-6" />
         <div className="min-w-0 overflow-hidden">
@@ -138,10 +143,10 @@ function DirectMessageContextHeader({
               sessionId: sessions[0]?.targetId,
               query: sessions[0]?.targetId ? undefined : member.displayName,
             })}
-            title={sessions[0]?.targetId ? `Open session ${sessions[0].targetId}` : `Show sessions for ${member.displayName}`}
+            title={sessions[0]?.targetId ? t("chat.openSessionNamed", { id: sessions[0].targetId }) : t("chat.showSessionsFor", { name: member.displayName })}
           >
             <FileTextIcon className="size-3.5" aria-hidden="true" />
-            {sessions.length > 0 ? "Open session" : "Find session"}
+            {sessions.length > 0 ? t("chat.openSession") : t("chat.findSession")}
           </Button>
         ) : null}
       </div>
@@ -150,9 +155,10 @@ function DirectMessageContextHeader({
 }
 
 function SummarySection({ summary }: { summary: string }): ReactElement {
+  const { t } = useTranslation();
   return (
     <section className="grid min-w-0 gap-2">
-      <div className="tiny-context-section-label">Summary</div>
+      <div className="tiny-context-section-label">{t("chat.summary")}</div>
       <ContextText className="tiny-context-note">{summary}</ContextText>
     </section>
   );
@@ -165,6 +171,7 @@ function DirectMessageWorkSummary({
   summary: EmployeeRuntimeSummaryCard;
   onOpenNavigationTarget?: (target: NavigationTarget) => void;
 }): ReactElement | null {
+  const { t } = useTranslation();
   const current = compactCurrentWorkItems(summary.current).slice(0, 2);
   const issues = summary.issues.slice(0, 1);
   if (summary.status.kind === "idle" && current.length === 0 && issues.length === 0) {
@@ -172,7 +179,7 @@ function DirectMessageWorkSummary({
   }
   return (
     <section className="grid min-w-0 gap-2">
-      <div className="tiny-context-section-label">{issues.length ? "Blocked work" : "Current work"}</div>
+      <div className="tiny-context-section-label">{issues.length ? t("chat.blockedWork") : t("chat.currentWork")}</div>
       <div className="grid gap-1">
         {summary.status.kind !== "idle" && issues.length === 0 && current.length === 0 ? (
           <div className="tiny-runtime-work-row tiny-runtime-work-row-active">
@@ -198,7 +205,7 @@ function DirectMessageWorkSummary({
                       onOpenNavigationTarget({ kind: "task", taskId: relatedTaskId });
                     }}
                   >
-                    Open task
+                    {t("chat.openTask")}
                   </a>
                 </Button>
               ) : null}
@@ -223,7 +230,7 @@ function DirectMessageWorkSummary({
                     onOpenNavigationTarget(target);
                   }}
                 >
-                  Open
+                  {t("chat.open")}
                 </a>
               </Button>
             ) : null}
@@ -252,12 +259,12 @@ function workItemRank(kind: EmployeeRuntimeSummaryCard["current"][number]["kind"
 
 function workItemLabel(item: EmployeeRuntimeSummaryCard["current"][number]): string {
   if (item.kind === "work-run") {
-    return item.status === "blocked" ? "WorkRun blocked" : "WorkRun in progress";
+    return item.status === "blocked" ? i18n.t("chat.workRunBlocked") : i18n.t("chat.workRunInProgress");
   }
   if (item.kind === "work-task") {
-    return item.status === "active" ? "Task active" : `Task ${item.status}`;
+    return item.status === "active" ? i18n.t("chat.taskActive") : i18n.t("chat.taskStatus", { status: item.status });
   }
-  return item.status === "running" ? "Session running" : `Session ${item.status}`;
+  return item.status === "running" ? i18n.t("chat.sessionRunning") : i18n.t("chat.sessionStatus", { status: item.status });
 }
 
 function runtimeWorkHref(item: EmployeeRuntimeSummaryCard["current"][number]): string | undefined {
@@ -272,12 +279,13 @@ function RelatedTasksSection({
   tasks: ChatRelatedTask[];
   onOpenNavigationTarget?: (target: NavigationTarget) => void;
 }): ReactElement | null {
+  const { t } = useTranslation();
   if (tasks.length === 0) {
     return null;
   }
   return (
     <section className="grid min-w-0 gap-2">
-      <div className="tiny-context-section-label">Related tasks</div>
+      <div className="tiny-context-section-label">{t("chat.relatedTasks")}</div>
       <div className="grid gap-1">
         {tasks.slice(0, 4).map((task) => (
           <div key={task.taskId} className="tiny-runtime-work-row tiny-related-task-row">
@@ -286,7 +294,7 @@ function RelatedTasksSection({
               <div className="min-w-0 flex-1">
                 <div className="tiny-runtime-work-title" title={task.title}>{task.title}</div>
                 <ContextText className="tiny-runtime-work-meta">
-                  {`${statusLabel(task.status)} - ${task.ownerDisplayName ?? "Unknown owner"}`}
+                  {`${statusLabel(task.status)} - ${task.ownerDisplayName ?? t("chat.unknownOwner")}`}
                 </ContextText>
               </div>
             </div>
@@ -301,7 +309,7 @@ function RelatedTasksSection({
                   onOpenNavigationTarget({ kind: "task", taskId: task.taskId });
                 }}
               >
-                Open task
+                {t("chat.openTask")}
               </a>
             </Button>
           </div>
@@ -350,12 +358,13 @@ function ActivityDock({
   activitySource?: ActivitySourceSummary;
   activityIsPrevious?: boolean;
 }): ReactElement {
+  const { t } = useTranslation();
   return (
     <section className="tiny-trace-dock grid min-w-0 gap-2">
       <div className="flex min-w-0 items-baseline justify-between gap-2">
         <div className="flex items-center gap-2">
-          <div className="tiny-context-section-label">Activity</div>
-          {activityIsPrevious ? <Badge variant="outline">Previous reply</Badge> : null}
+          <div className="tiny-context-section-label">{t("chat.activity")}</div>
+          {activityIsPrevious ? <Badge variant="outline">{t("chat.previousReply")}</Badge> : null}
         </div>
         {activitySource ? (
           <div className="min-w-0 truncate text-[11px] font-normal text-muted-foreground/70" title={`${activitySource.senderName} - ${formatActivitySourceTime(activitySource.createdAt)}`}>
@@ -366,7 +375,7 @@ function ActivityDock({
       <RuntimeActivityList
         items={activityItems}
         density="summary"
-        emptyText={hasActivitySource ? "No activity recorded for this reply." : "Select a reply to inspect activity."}
+        emptyText={hasActivitySource ? t("chat.noReplyActivity") : t("chat.selectReplyActivity")}
         followLatest
       />
     </section>
@@ -378,7 +387,7 @@ function formatActivitySourceTime(value: string): string {
   if (Number.isNaN(date.getTime())) {
     return value;
   }
-  return date.toLocaleString(undefined, {
+  return date.toLocaleString(currentUiLocale(), {
     year: "numeric",
     month: "numeric",
     day: "numeric",
@@ -400,6 +409,7 @@ function ChannelSettingsDialog({
   onRemoveChannelMember?: (member: ChatChannelMemberDto) => Promise<void>;
   onDissolveChannel?: (confirmation: "DELETE") => Promise<void>;
 }): ReactElement | null {
+  const { t } = useTranslation();
   const channel = model.selectedContainer;
   const [open, setOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -477,27 +487,27 @@ function ChannelSettingsDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="tiny-icon-quiet h-8 w-8 shrink-0 rounded-md" size="icon" variant="ghost" aria-label="Manage channel" title="Manage channel">
+        <Button className="tiny-icon-quiet h-8 w-8 shrink-0 rounded-md" size="icon" variant="ghost" aria-label={t("chat.manageChannel")} title={t("chat.manageChannel")}>
           <SettingsIcon className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="tiny-chat-dialog max-h-[90svh] overflow-hidden sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Channel settings</DialogTitle>
-          <DialogDescription>Edit channel details and members.</DialogDescription>
+          <DialogTitle>{t("chat.channelSettings")}</DialogTitle>
+          <DialogDescription>{t("chat.channelSettingsDescription")}</DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[68svh] pr-3">
           <div className="grid gap-5">
             <section className="grid gap-2">
-              <div className="text-xs font-medium text-muted-foreground">Channel profile</div>
+              <div className="text-xs font-medium text-muted-foreground">{t("chat.channelProfile")}</div>
               <Input value={title} disabled={isSaving} onChange={(event) => setTitle(event.currentTarget.value)} />
               <Textarea value={summary} disabled={isSaving} onChange={(event) => setSummary(event.currentTarget.value)} />
               <Button className="w-fit" size="sm" disabled={isSaving || !title.trim()} onClick={() => void saveDetails()}>
-                Save details
+                {t("chat.saveDetails")}
               </Button>
             </section>
             <section className="grid gap-2">
-              <div className="text-xs font-medium text-muted-foreground">Members</div>
+              <div className="text-xs font-medium text-muted-foreground">{t("chat.members")}</div>
               {(channel.members ?? []).map((member) => {
                 return (
                   <div key={channelMemberKey(member)} className="grid min-w-0 gap-2 rounded-md border px-3 py-2 text-sm">
@@ -505,14 +515,14 @@ function ChannelSettingsDialog({
                       <span className="min-w-0 break-words font-medium [overflow-wrap:anywhere]">{member.displayName}</span>
                     </div>
                     <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-                      <span className="text-xs text-muted-foreground">{member.hasRuntimeProfile ? "Runtime-capable" : "Company member"}</span>
+                      <span className="text-xs text-muted-foreground">{member.hasRuntimeProfile ? t("chat.runtimeCapable") : t("chat.companyMember")}</span>
                       <Button
                         size="xs"
                         variant="destructive"
                         disabled={isSaving || (channel.members ?? []).length <= 1}
                         onClick={() => void removeMember(member)}
                       >
-                        Remove
+                        {t("common.remove")}
                       </Button>
                     </div>
                   </div>
@@ -520,9 +530,9 @@ function ChannelSettingsDialog({
               })}
             </section>
             <section className="grid gap-2">
-              <div className="text-xs font-medium text-muted-foreground">Add members</div>
+              <div className="text-xs font-medium text-muted-foreground">{t("chat.addMembers")}</div>
               {availableMembers.length === 0 ? (
-                <ContextText className="text-xs text-muted-foreground">All directory members are already in this channel.</ContextText>
+                <ContextText className="text-xs text-muted-foreground">{t("chat.allMembersAdded")}</ContextText>
               ) : (
                 <div className="grid gap-2">
                   {availableMembers.map((member) => {
@@ -543,13 +553,13 @@ function ChannelSettingsDialog({
                       >
                         <span className="grid min-w-0 gap-1">
                           <span className="break-words [overflow-wrap:anywhere]">{member.displayName}</span>
-                          <span className="text-xs text-muted-foreground">{member.role ?? (member.hasRuntimeProfile ? "Runtime-capable" : "Company member")}</span>
+                          <span className="text-xs text-muted-foreground">{member.role ?? (member.hasRuntimeProfile ? t("chat.runtimeCapable") : t("chat.companyMember"))}</span>
                         </span>
                       </Button>
                     );
                   })}
                   <Button className="w-fit" size="sm" disabled={isSaving || selectedMembers.length === 0} onClick={() => void addSelectedMembers()}>
-                    Add selected
+                    {t("chat.addSelected")}
                   </Button>
                 </div>
               )}
@@ -585,11 +595,12 @@ function DissolveChannelDialog({
   onConfirmOpenChange(value: boolean): void;
   onDissolve(): void;
 }): ReactElement {
+  const { t } = useTranslation();
   return (
     <section className="grid gap-2 rounded-md border border-destructive/40 px-3 py-3">
-      <div className="text-xs font-medium text-destructive">Dissolve channel</div>
+      <div className="text-xs font-medium text-destructive">{t("chat.dissolveChannel")}</div>
       <ContextText className="text-xs text-muted-foreground">
-        Permanently deletes this channel, its members, topics, and message history.
+        {t("chat.dissolveDescription")}
       </ContextText>
       <Input
         value={confirmation}
@@ -605,22 +616,22 @@ function DissolveChannelDialog({
             variant="destructive"
             disabled={isSaving || confirmation !== "DELETE"}
           >
-            Dissolve permanently
+            {t("chat.dissolvePermanently")}
           </Button>
         </DialogTrigger>
         <DialogContent className="tiny-chat-dialog">
           <DialogHeader>
-            <DialogTitle>Dissolve channel permanently?</DialogTitle>
+            <DialogTitle>{t("chat.dissolveTitle")}</DialogTitle>
             <DialogDescription>
-              This will delete the channel, its members, topics, and message history. This action cannot be undone.
+              {t("chat.dissolveConfirmation")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button type="button" variant="outline" disabled={isSaving} onClick={() => onConfirmOpenChange(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="button" variant="destructive" disabled={isSaving} onClick={onDissolve}>
-              I understand, dissolve Channel
+              {t("chat.understandDissolve")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -681,11 +692,12 @@ function ParticipantsSection({
   showSessions: boolean;
   onOpenSession?: (input: { employeeId?: string; sessionId?: string; query?: string }) => void;
 }): ReactElement {
+  const { t } = useTranslation();
   const sessionsByMemberId = participantSessionsByMemberId(model);
 
   return (
     <section className="grid min-w-0 max-w-full gap-2 overflow-hidden">
-      <div className="tiny-context-section-label">Participants</div>
+      <div className="tiny-context-section-label">{t("chat.participants")}</div>
       {model.context.participants.map((participant) => {
         const sessions = sessionsByMemberId.get(participant.id) ?? [];
         const hasSessionAction = showSessions && participant.hasRuntimeProfile;
@@ -802,19 +814,21 @@ function EvidenceTarget({ children }: { children: string }): ReactElement {
 }
 
 function statusLabel(status: string): string {
-  return status.replaceAll("_", " ");
+  const normalized = status.trim().toLowerCase();
+  const key = ({ completed: "completed", running: "running", pending: "pending", blocked: "blocked", queued: "queued", done: "done", in_progress: "inProgress", active: "active", canceled: "canceled", archived: "archived" } as const)[normalized as "completed" | "running" | "pending" | "blocked" | "queued" | "done" | "in_progress" | "active" | "canceled" | "archived"];
+  return key ? i18n.t(`enums.${key}`) : normalized.replaceAll("_", " ");
 }
 
 function contextKindLabel(kind: ChatShellModel["context"]["room"]["kind"]): string {
   switch (kind) {
     case "channel":
-      return "Channel";
+      return i18n.t("sessionsPage.channel");
     case "member-dm":
-      return "Direct message";
+      return i18n.t("chat.directMessage");
     case "thread":
-      return "Topic";
+      return i18n.t("chat.topic");
     case "workspace":
-      return "Workspace";
+      return i18n.t("chat.workspace");
   }
 }
 

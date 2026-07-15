@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { CheckIcon, MessageSquareTextIcon, ShieldAlertIcon, XIcon } from "lucide-react";
 import { useEffect, useState, type ReactElement } from "react";
 import type { AccessRequestDecision, AccessRequestDto } from "tinyoffice/frontend-api-contracts";
+import { useTranslation } from "react-i18next";
 
 export function AccessRequestCards({
   requests,
@@ -14,6 +15,7 @@ export function AccessRequestCards({
   busy: boolean;
   onResolveAccessRequest(input: { request: AccessRequestDto; decision: AccessRequestDecision; note?: string }): Promise<void>;
 }): ReactElement | null {
+  const { t } = useTranslation();
   const [notesByRequestId, setNotesByRequestId] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | undefined>();
 
@@ -42,7 +44,7 @@ export function AccessRequestCards({
         return rest;
       });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Failed to resolve access request.");
+      setError(caught instanceof Error ? caught.message : t("admin.resolveAccessFailed"));
     }
   }
 
@@ -59,7 +61,7 @@ export function AccessRequestCards({
               </div>
               <div className="grid min-w-0 flex-1 gap-1">
                 <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="font-semibold text-foreground">Access approval required</span>
+                  <span className="font-semibold text-foreground">{t("admin.approvalRequired")}</span>
                   <Badge variant="outline" className="h-5 border-[var(--tiny-line-soft)] bg-[var(--tiny-surface)] px-1.5 text-[11px] text-[var(--tiny-text)]">{request.requestedAction}</Badge>
                   {resource ? (
                     <span className="min-w-0 truncate font-mono text-xs text-foreground" title={resource}>
@@ -79,8 +81,8 @@ export function AccessRequestCards({
                 </span>
                 <Input
                   value={note}
-                  aria-label="Optional note"
-                  placeholder="Optional note"
+                  aria-label={t("admin.optionalNote")}
+                  placeholder={t("admin.optionalNote")}
                   className="h-8 bg-[var(--tiny-surface)] pl-7 text-sm"
                   disabled={busy}
                   onChange={(event) => {
@@ -93,19 +95,19 @@ export function AccessRequestCards({
                 {request.actions.includes("reject") ? (
                   <Button type="button" size="sm" variant="outline" className="h-8 border-destructive/30 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive" disabled={busy} onClick={() => void resolve(request, "reject", note)}>
                     <XIcon className="size-3.5" />
-                    Reject
+                    {t("admin.reject")}
                   </Button>
                 ) : null}
                 {request.actions.includes("allow_in_context") ? (
                   <Button type="button" size="sm" variant="outline" className="h-8 px-2" disabled={busy} onClick={() => void resolve(request, "allow_in_context", note)}>
                     <CheckIcon className="size-3.5" />
-                    {request.contextKind === "work_run" ? "This WorkRun" : "This conversation"}
+                    {request.contextKind === "work_run" ? t("admin.thisWorkRun") : t("admin.thisConversation")}
                   </Button>
                 ) : null}
                 {request.actions.includes("allow_once") ? (
                   <Button type="button" size="sm" className="h-8 px-2" disabled={busy} onClick={() => void resolve(request, "allow_once", note)}>
                     <CheckIcon className="size-3.5" />
-                    Allow once
+                    {t("admin.allowOnce")}
                   </Button>
                 ) : null}
               </div>

@@ -8,6 +8,7 @@ import type { NavigationAlertState } from "@/chat/navigationAlertState";
 import type { NavigationReturnContext, NavigationTarget } from "@/app/navigationRoutes";
 import { useEffect, type ReactElement } from "react";
 import type { TinyOfficeCurrentSession } from "tinyoffice/frontend-api-contracts";
+import { i18n } from "@/i18n";
 
 export function ChatWorkspaceRoute({
   currentSession,
@@ -142,7 +143,7 @@ function chatReturnContextForModel(model: ReturnType<typeof useChatWorkspace>["m
     return undefined;
   }
   return {
-    label: `Back to ${model.context.room.title}`,
+    label: i18n.t("chat.backToRoom", { title: model.context.room.title }),
     target: { kind: "chat-room", roomId: focus.roomId, surface: focus.surface },
   };
 }

@@ -10,10 +10,10 @@ test("section navigation renders one integrated active tab with canonical links"
     <SectionNavigation
       activeView="sessions"
       section={{
-        title: "Operations",
+        titleKey: "nav.operations",
         items: [
-          { view: "sessions", label: "Runtime Sessions" },
-          { view: "doctor", label: "Health" },
+          { view: "sessions", labelKey: "nav.runtimeSessions" },
+          { view: "doctor", labelKey: "nav.health" },
         ],
       }}
       onSelect={() => undefined}

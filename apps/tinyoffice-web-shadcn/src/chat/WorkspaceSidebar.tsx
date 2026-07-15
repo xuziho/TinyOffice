@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { EmployeeAvatar } from "@/components/product/EmployeeAvatar";
 import { HashIcon, PlusIcon } from "lucide-react";
 import { useEffect, useMemo, useState, type CSSProperties, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import type { CompanyDirectoryMemberEntryDto } from "tinyoffice/frontend-api-contracts";
 import {
   isDirectMessageNavigationItemSelected,
@@ -38,6 +39,7 @@ export function WorkspaceSidebar({
   onSelectSurface(surface: ChatShellSurface): void;
   onCreateChannel?(input: { title: string; summary?: string; members: CompanyDirectoryMemberEntryDto[] }): Promise<void>;
 }): ReactElement {
+  const { t } = useTranslation();
   return (
     <SidebarProvider
       defaultOpen
@@ -48,23 +50,23 @@ export function WorkspaceSidebar({
         <SidebarHeader className="tiny-sidebar-header border-b">
           <div className="truncate text-base font-semibold">{companyName ?? "TinyOffice"}</div>
           <div className="truncate text-xs text-muted-foreground">
-            {model.companyId ? model.viewerLabel : "Waiting for Company context"}
+            {model.companyId ? model.viewerLabel : t("nav.loadingWorkspace")}
           </div>
         </SidebarHeader>
         <SidebarContent className="gap-3 px-2 py-1.5">
           <NavigationGroup
-            title="Channels"
+            title={t("chat.channels")}
             items={model.channels}
-            emptyText="No channels loaded"
+            emptyText={t("chat.noChannels")}
             icon="channel"
             action={onCreateChannel ? <CreateChannelDialog model={model} onCreateChannel={onCreateChannel} /> : undefined}
             isSelected={(item) => model.selectedContainer?.containerId === item.id}
             onSelect={(item) => onSelectSurface({ kind: "container-directory", containerId: item.id })}
           />
           <NavigationGroup
-            title="Direct messages"
+            title={t("chat.directMessages")}
             items={model.directMessages}
-            emptyText="No AI employee DMs"
+            emptyText={t("chat.noDirectMessages")}
             icon="dm"
             isSelected={(item) => isDirectMessageNavigationItemSelected({
               surface: model.surface,
@@ -162,8 +164,9 @@ function NavigationUnreadBadge({
   mentionCount: number;
   unreadCount: number;
 }): ReactElement | null {
+  const { t } = useTranslation();
   if (mentionCount > 0) {
-    const label = `${mentionCount} mention${mentionCount === 1 ? "" : "s"}`;
+    const label = t("chat.mentions", { count: mentionCount });
     return (
       <SidebarMenuBadge className="tiny-attention-badge tiny-attention-badge-mention right-2 !top-1/2 !-translate-y-1/2" aria-label={label} title={label}>
         {mentionCount}
@@ -171,7 +174,7 @@ function NavigationUnreadBadge({
     );
   }
   if (unreadCount > 0) {
-    const label = `${unreadCount} unread message${unreadCount === 1 ? "" : "s"}`;
+    const label = t("chat.unreadMessages", { count: unreadCount });
     return (
       <SidebarMenuBadge className="tiny-attention-badge tiny-attention-badge-unread right-2 !top-1/2 !-translate-y-1/2" aria-label={label} title={label}>
         {unreadCount}
@@ -201,6 +204,7 @@ function CreateChannelDialog({
   model: ChatShellModel;
   onCreateChannel(input: { title: string; summary?: string; members: CompanyDirectoryMemberEntryDto[] }): Promise<void>;
 }): ReactElement {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
@@ -236,26 +240,26 @@ function CreateChannelDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button type="button" size="icon-xs" variant="ghost" aria-label="Create channel">
+        <Button type="button" size="icon-xs" variant="ghost" aria-label={t("chat.createChannel")}>
           <PlusIcon />
         </Button>
       </DialogTrigger>
       <DialogContent className="tiny-chat-dialog max-h-[90svh] overflow-hidden sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Create channel</DialogTitle>
-          <DialogDescription>Create a shared workspace with selected members.</DialogDescription>
+          <DialogTitle>{t("chat.createChannel")}</DialogTitle>
+          <DialogDescription>{t("chat.createChannelDescription")}</DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[64svh] pr-3">
           <div className="grid gap-4">
             <section className="grid gap-2">
-              <div className="text-xs font-medium text-muted-foreground">Channel profile</div>
-              <Input value={title} disabled={isSaving} placeholder="Channel name" onChange={(event) => setTitle(event.currentTarget.value)} />
-              <Textarea value={summary} disabled={isSaving} placeholder="Purpose" onChange={(event) => setSummary(event.currentTarget.value)} />
+              <div className="text-xs font-medium text-muted-foreground">{t("chat.channelProfile")}</div>
+              <Input value={title} disabled={isSaving} placeholder={t("chat.channelName")} onChange={(event) => setTitle(event.currentTarget.value)} />
+              <Textarea value={summary} disabled={isSaving} placeholder={t("chat.purpose")} onChange={(event) => setSummary(event.currentTarget.value)} />
             </section>
             <section className="grid gap-2">
-              <div className="text-xs font-medium text-muted-foreground">Members</div>
+              <div className="text-xs font-medium text-muted-foreground">{t("chat.members")}</div>
               {model.directoryMembers.length === 0 ? (
-                <div className="text-xs text-muted-foreground">No directory members available.</div>
+                <div className="text-xs text-muted-foreground">{t("chat.noDirectoryMembers")}</div>
               ) : (
                 <div className="grid gap-2">
                   {model.directoryMembers.map((member) => {
@@ -276,7 +280,7 @@ function CreateChannelDialog({
                       >
                         <span className="grid min-w-0 gap-1">
                           <span className="break-words [overflow-wrap:anywhere]">{member.displayName}</span>
-                          <span className="text-xs text-muted-foreground">{member.role ?? (member.hasRuntimeProfile ? "Runtime-capable" : "Company member")}</span>
+                          <span className="text-xs text-muted-foreground">{member.role ?? (member.hasRuntimeProfile ? t("chat.runtimeCapable") : t("chat.companyMember"))}</span>
                         </span>
                       </Button>
                     );
@@ -288,7 +292,7 @@ function CreateChannelDialog({
         </ScrollArea>
         <DialogFooter>
           <Button type="button" disabled={isSaving || !title.trim()} onClick={() => void createChannel()}>
-            Create channel
+            {t("chat.createChannel")}
           </Button>
         </DialogFooter>
       </DialogContent>

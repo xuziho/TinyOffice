@@ -2,48 +2,48 @@ import type { AppView } from "./navigationRoutes";
 
 export type NavigationItem = {
   view: AppView;
-  label: string;
+  labelKey: string;
 };
 
 export type PageSection = {
-  title: string;
+  titleKey: string;
   items: readonly NavigationItem[];
 };
 
 export const workforceNavigation: readonly NavigationItem[] = [
-  { view: "employees", label: "Employees" },
-  { view: "skills", label: "Company Skills" },
+  { view: "employees", labelKey: "nav.employees" },
+  { view: "skills", labelKey: "nav.companySkills" },
 ];
 
-export const organizationNavigation: readonly NavigationItem[] = [{ view: "company", label: "Organization" }];
+export const organizationNavigation: readonly NavigationItem[] = [{ view: "company", labelKey: "nav.organization" }];
 
-export const integrationsNavigation: readonly NavigationItem[] = [{ view: "integrations", label: "Integrations" }];
+export const integrationsNavigation: readonly NavigationItem[] = [{ view: "integrations", labelKey: "nav.integrations" }];
 
 export const aiRuntimeNavigation: readonly NavigationItem[] = [
-  { view: "system-ai", label: "System AI" },
-  { view: "prompt", label: "Prompt" },
-  { view: "access", label: "Access" },
-  { view: "capabilities", label: "Capabilities" },
+  { view: "system-ai", labelKey: "nav.systemAi" },
+  { view: "prompt", labelKey: "nav.prompt" },
+  { view: "access", labelKey: "nav.access" },
+  { view: "capabilities", labelKey: "nav.capabilities" },
 ];
 
 export const operationsNavigation: readonly NavigationItem[] = [
-  { view: "sessions", label: "Runtime Sessions" },
-  { view: "doctor", label: "Health" },
-  { view: "backup", label: "Backup & Restore" },
-  { view: "updates", label: "Updates" },
+  { view: "sessions", labelKey: "nav.runtimeSessions" },
+  { view: "doctor", labelKey: "nav.health" },
+  { view: "backup", labelKey: "nav.backupRestore" },
+  { view: "updates", labelKey: "nav.updates" },
 ];
 
 export const pageSections: readonly PageSection[] = [
   {
-    title: "Workforce",
+    titleKey: "nav.workforce",
     items: workforceNavigation,
   },
   {
-    title: "AI & Runtime",
+    titleKey: "nav.aiRuntime",
     items: aiRuntimeNavigation,
   },
   {
-    title: "Operations",
+    titleKey: "nav.operations",
     items: operationsNavigation,
   },
 ];

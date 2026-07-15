@@ -39,12 +39,13 @@ import {
   sessionPreview,
   sessionSceneLabel,
   sessionListPresentation,
-  sessionTokenLabel,
   visibleSessionsFor,
   chatReturnTargetForSession,
   type SessionListPresentation,
 } from "./sessionExplorerModel";
 import { sessionQueryPlaceholderData } from "./sessionQueryModel";
+import { useTranslation } from "react-i18next";
+import { currentUiLocale, i18n } from "@/i18n";
 
 export interface SessionFocus {
   employeeId?: string;
@@ -85,6 +86,7 @@ export function SessionsPage({
   onClearReturnContext?: () => void;
   onOpenChatTarget?: (target: SessionChatReturnTarget) => void;
 }): ReactElement {
+  const { t } = useTranslation();
   const companyId = currentSession?.companyId ?? currentSession?.currentCompanyId ?? "";
   const [query, setQuery] = useState(focus?.query ?? "");
   const [employeeIdFilter, setEmployeeIdFilter] = useState(focus?.employeeId ?? "");
@@ -146,7 +148,7 @@ export function SessionsPage({
     <div className={`tiny-soft-retro-sessions grid h-full w-full overflow-hidden ${detailSession ? "grid-rows-[auto_minmax(0,1fr)]" : "grid-rows-[minmax(0,1fr)]"}`}>
       {detailSession ? <SectionContentHeader
         title={detailSession.displayName}
-        description={`${sessionSceneLabel(detailSession.sceneType)} - ${detailSession.role || detailSession.employeeId}`}
+        description={`${localizedSessionSceneLabel(detailSession.sceneType)} - ${detailSession.role || detailSession.employeeId}`}
         actions={detailSession && model?.detail ? (
           <div className="flex shrink-0 items-center gap-2">
             {returnContext && onOpenNavigationTarget ? (
@@ -179,14 +181,14 @@ export function SessionsPage({
                   }}
                 >
                   <ArrowLeft className="mr-2 size-4" />
-                  Back to session list
+                  {t("sessionsPage.backToList")}
                 </a>
               </Button>
             ) : null}
             {shouldShowRelatedChat && activeChatReturnTarget && onOpenChatTarget ? (
               <Button type="button" variant="secondary" size="sm" className="h-8 px-3" onClick={() => onOpenChatTarget(activeChatReturnTarget)}>
                 <MessageSquare className="mr-2 size-4" />
-                Open related chat
+                {t("sessionsPage.openRelatedChat")}
               </Button>
             ) : null}
           </div>
@@ -196,11 +198,11 @@ export function SessionsPage({
         <ScrollArea className="min-h-0">
           <div className="grid w-full gap-4 px-6 py-5">
             {sessionsQuery.isLoading ? (
-              <ProductState compact description="Loading sessions..." />
+              <ProductState compact description={t("sessionsPage.loading")} />
             ) : sessionsQuery.error ? (
-              <ProductState compact tone="error" description={sessionsQuery.error instanceof Error ? sessionsQuery.error.message : "Failed to load sessions."} />
+              <ProductState compact tone="error" description={sessionsQuery.error instanceof Error ? sessionsQuery.error.message : t("sessionsPage.loadFailed")} />
             ) : !model ? (
-              <ProductState compact description="No company session is available." />
+              <ProductState compact description={t("sessionsPage.noCompanySession")} />
             ) : detailSession && model.detail ? (
               <SessionDetailPanel detail={model.detail} />
             ) : (
@@ -278,6 +280,7 @@ function SessionListPanel({
   onTimeFilterChange(value: SessionTimeFilter): void;
   onSelectSession(session: SessionExplorerSessionSummary): void;
 }): ReactElement {
+  const { t } = useTranslation();
   const list = presentation ?? sessionListPresentation(model, sessions);
   return (
     <div className="grid gap-3">
@@ -299,11 +302,11 @@ function SessionListPanel({
           <Table className="table-fixed">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                {list.showEmployeeColumn ? <TableHead className="h-8 w-[180px] px-3 text-[11px] uppercase text-muted-foreground">Employee</TableHead> : null}
-                {list.showSceneColumn ? <TableHead className="h-8 w-[132px] px-3 text-[11px] uppercase text-muted-foreground">Scene</TableHead> : null}
-                <TableHead className="h-8 w-[112px] px-3 text-right text-[11px] uppercase text-muted-foreground">Usage</TableHead>
-                <TableHead className="h-8 w-[178px] px-3 text-right text-[11px] uppercase text-muted-foreground">Last active</TableHead>
-                <TableHead className="h-8 px-3 text-[11px] uppercase text-muted-foreground">Preview</TableHead>
+                {list.showEmployeeColumn ? <TableHead className="h-8 w-[180px] px-3 text-[11px] uppercase text-muted-foreground">{t("sessionsPage.employee")}</TableHead> : null}
+                {list.showSceneColumn ? <TableHead className="h-8 w-[132px] px-3 text-[11px] uppercase text-muted-foreground">{t("sessionsPage.scene")}</TableHead> : null}
+                <TableHead className="h-8 w-[112px] px-3 text-right text-[11px] uppercase text-muted-foreground">{t("sessionsPage.usage")}</TableHead>
+                <TableHead className="h-8 w-[178px] px-3 text-right text-[11px] uppercase text-muted-foreground">{t("sessionsPage.lastActive")}</TableHead>
+                <TableHead className="h-8 px-3 text-[11px] uppercase text-muted-foreground">{t("sessionsPage.preview")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -335,8 +338,8 @@ function SessionListPanel({
                       </div>
                     </TableCell>
                   ) : null}
-                  {list.showSceneColumn ? <TableCell className="px-3 py-2 text-xs text-muted-foreground">{sessionSceneLabel(session.sceneType)}</TableCell> : null}
-                  <TableCell className="px-3 py-2 text-right text-xs text-muted-foreground">{sessionTokenLabel(session)}</TableCell>
+                  {list.showSceneColumn ? <TableCell className="px-3 py-2 text-xs text-muted-foreground">{localizedSessionSceneLabel(session.sceneType)}</TableCell> : null}
+                  <TableCell className="px-3 py-2 text-right text-xs text-muted-foreground">{localizedSessionTokenLabel(session)}</TableCell>
                   <TableCell className="px-3 py-2 text-right text-xs text-muted-foreground">{formatDateTime(session.lastActivityAt ?? session.startedAt)}</TableCell>
                   <TableCell className="max-w-0 px-3 py-2">
                     <a
@@ -359,7 +362,7 @@ function SessionListPanel({
             </TableBody>
           </Table>
         ) : (
-          <ProductState compact description="No sessions match this filter." />
+          <ProductState compact description={t("sessionsPage.noMatch")} />
         )}
       </div>
     </div>
@@ -391,18 +394,19 @@ function SessionFilterBar({
   onSceneFilterChange(value: SessionSceneFilter): void;
   onTimeFilterChange(value: SessionTimeFilter): void;
 }): ReactElement {
+  const { t } = useTranslation();
   return (
     <div className="tiny-session-filters grid gap-2 rounded-lg border px-4 py-3">
       <Input
         value={query}
-        placeholder="Search sessions..."
+        placeholder={t("sessionsPage.search")}
         disabled={disabled}
         className="h-8 max-w-xl bg-[var(--tiny-surface)]"
         onChange={(event) => onQueryChange(event.currentTarget.value)}
       />
-      <FilterGroup label="People">
+      <FilterGroup label={t("sessionsPage.people")}>
         <FilterChip active={!employeeIdFilter} disabled={disabled} onClick={() => onEmployeeFilterChange("")}>
-          All people
+          {t("sessionsPage.allPeople")}
         </FilterChip>
         {model.list.employeeFilters.map((filter) => (
           <FilterChip
@@ -416,7 +420,7 @@ function SessionFilterBar({
           </FilterChip>
         ))}
       </FilterGroup>
-      <FilterGroup label="Scene">
+      <FilterGroup label={t("sessionsPage.scene")}>
         {SESSION_SCENE_FILTERS.map((filter) => (
           <FilterChip
             key={filter.value || "all-scenes"}
@@ -424,11 +428,11 @@ function SessionFilterBar({
             disabled={disabled}
             onClick={() => onSceneFilterChange(filter.value)}
           >
-            {filter.label}
+            {t(`sessionsPage.${filter.value === "" ? "allScenes" : filter.value}`)}
           </FilterChip>
         ))}
       </FilterGroup>
-      <FilterGroup label="Time">
+      <FilterGroup label={t("sessionsPage.time")}>
         {SESSION_TIME_FILTERS.map((filter) => (
           <FilterChip
             key={filter.value || "any-time"}
@@ -436,12 +440,12 @@ function SessionFilterBar({
             disabled={disabled}
             onClick={() => onTimeFilterChange(filter.value)}
           >
-            {filter.label}
+            {t(`sessionsPage.${filter.value === "" ? "anyTime" : filter.value === "24h" ? "hours24" : filter.value === "3d" ? "days3" : "days7"}`)}
           </FilterChip>
         ))}
       </FilterGroup>
       {updating ? (
-        <div className="text-[11px] text-muted-foreground">Updating sessions...</div>
+        <div className="text-[11px] text-muted-foreground">{t("sessionsPage.updating")}</div>
       ) : null}
     </div>
   );
@@ -487,30 +491,32 @@ function SessionDetailPanel({
 }: {
   detail: SessionExplorerSessionDetail;
 }): ReactElement {
+  const hasModel = Boolean(detail.overview.model || detail.summary.modelProvider || detail.summary.modelId);
+  const { t } = useTranslation();
   const modelLabel = detail.overview.model ?? modelDisplay(detail.summary);
   return (
     <div className="grid gap-4">
       <section className="grid gap-2 rounded-md border border-[var(--tiny-line-soft)] bg-[var(--tiny-fill)] px-3 py-2">
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-base font-semibold leading-tight">Session summary</h2>
+          <h2 className="text-base font-semibold leading-tight">{t("sessionsPage.summary")}</h2>
           <SessionStatusBadge status={detail.overview.status} />
-          {modelLabel === "No model recorded" ? null : (
+          {!hasModel ? null : (
             <Badge variant="secondary">{modelLabel}</Badge>
           )}
         </div>
         <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
-          <Metric label="Turns" value={String(detail.overview.turns)} />
-          <Metric label="Tokens" value={formatUsage(detail.usage.total)} />
-          <Metric label="Last active" value={formatDateTime(detail.summary.lastActivityAt ?? detail.summary.startedAt)} />
+          <Metric label={t("sessionsPage.turns")} value={String(detail.overview.turns)} />
+          <Metric label={t("sessionsPage.tokensLabel")} value={formatUsage(detail.usage.total)} />
+          <Metric label={t("sessionsPage.lastActive")} value={formatDateTime(detail.summary.lastActivityAt ?? detail.summary.startedAt)} />
         </div>
       </section>
-      <Section title="Runtime turns">
+      <Section title={t("sessionsPage.runtimeTurns")}>
         {detail.runtimeTurns.length ? (
           <div className="grid gap-4">
             {detail.runtimeTurns.map((turn) => <RuntimeTurnCard key={turn.turnId} turn={turn} />)}
           </div>
         ) : (
-          <EmptyLine>No runtime turns recorded.</EmptyLine>
+          <EmptyLine>{t("sessionsPage.noTurns")}</EmptyLine>
         )}
       </Section>
     </div>
@@ -518,12 +524,13 @@ function SessionDetailPanel({
 }
 
 function RuntimeTurnCard({ turn }: { turn: SessionExplorerRuntimeTurn }): ReactElement {
+  const { t } = useTranslation();
   return (
     <details open className="tiny-session-turn group grid gap-3 rounded-md border border-[var(--tiny-line-soft)] bg-[var(--tiny-surface)] px-3 py-2">
       <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 text-sm">
         <span className="flex min-w-0 items-center gap-2">
           <DetailsChevron />
-          <span className="font-semibold">Turn {turn.index}</span>
+          <span className="font-semibold">{t("sessionsPage.turn", { index: turn.index })}</span>
         </span>
         <span className="text-xs text-muted-foreground">{formatUsage(turn.usage)}</span>
       </summary>
@@ -547,26 +554,27 @@ function MessageExcerpt({ label, text, timestamp }: { label: string; text: strin
 }
 
 function InputPackageDetails({ prompt }: { prompt: SessionExplorerPromptInputPackage }): ReactElement {
+  const { t } = useTranslation();
   const facts = inputPackageReadableFacts(prompt);
   const groups = groupInputPackageFacts(facts);
   return (
     <details className="tiny-session-disclosure group rounded-md bg-[var(--tiny-fill)] px-3 py-2">
       <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 text-[11px] font-semibold uppercase text-muted-foreground">
         <DetailsChevron />
-        <span>Prompt input</span>
-        <SessionCount icon={<Wrench />} count={prompt.tools.length} label="tools" tone="cyan" />
-        <SessionCount icon={<Sparkles />} count={prompt.skills.length} label="loaded skills" tone="yellow" />
+        <span>{t("sessionsPage.promptInput")}</span>
+        <SessionCount icon={<Wrench />} count={prompt.tools.length} label={t("sessionsPage.tools")} tone="cyan" />
+        <SessionCount icon={<Sparkles />} count={prompt.skills.length} label={t("sessionsPage.loadedSkills")} tone="yellow" />
       </summary>
       <div className="mt-3 grid gap-2 text-xs">
         {groups.visible.map((group) => (
-          <PromptFactGroup key={group.label} label={group.label} facts={group.facts} />
+          <PromptFactGroup key={group.label} label={localizedPromptGroupLabel(group.label)} facts={group.facts} />
         ))}
         <ToolsAndSkillsDetails tools={prompt.tools} skills={prompt.skills} />
         {groups.diagnostics.length ? (
           <details className="tiny-session-disclosure group rounded-md border border-[var(--tiny-line-soft)] bg-[var(--tiny-surface)] px-2 py-1.5">
             <summary className="flex cursor-pointer list-none items-center gap-2 text-[11px] font-semibold uppercase text-muted-foreground">
               <DetailsChevron />
-              Diagnostics
+              {t("sessionsPage.diagnostics")}
             </summary>
             <div className="mt-2 grid gap-2">
               {groups.diagnostics.map((fact) => (
@@ -581,15 +589,16 @@ function InputPackageDetails({ prompt }: { prompt: SessionExplorerPromptInputPac
 }
 
 function RuntimeActivity({ turn }: { turn: SessionExplorerRuntimeTurn }): ReactElement {
+  const { t } = useTranslation();
   if (turn.activity.items.length === 0) {
-    return <EmptyLine>No activity recorded.</EmptyLine>;
+    return <EmptyLine>{t("sessionsPage.noActivity")}</EmptyLine>;
   }
   return (
     <details className="tiny-session-disclosure group rounded-md border border-[var(--tiny-line-soft)] bg-[var(--tiny-fill)] px-3 py-2">
       <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 text-[11px] font-semibold uppercase text-muted-foreground">
         <DetailsChevron />
-        <span>Activity</span>
-        <SessionCount icon={<Activity />} count={turn.activity.items.length} label={turn.activity.items.length === 1 ? "activity" : "activities"} tone="mint" />
+        <span>{t("sessionsPage.activity")}</span>
+        <SessionCount icon={<Activity />} count={turn.activity.items.length} label={turn.activity.items.length === 1 ? t("sessionsPage.activity") : t("sessionsPage.activities")} tone="mint" />
       </summary>
       <div className="mt-3">
         <RuntimeActivityList items={turn.activity.items} density="full" />
@@ -617,11 +626,18 @@ function groupInputPackageFacts(facts: SessionExplorerInputPackageFact[]): {
   };
 }
 
+function localizedPromptGroupLabel(label: SessionExplorerInputPackageFact["group"]): string {
+  if (label === "Prompt input") return i18n.t("sessionsPage.promptInput");
+  if (label === "Context input") return i18n.t("sessionsPage.contextInput");
+  if (label === "Diagnostics") return i18n.t("sessionsPage.diagnostics");
+  return label;
+}
+
 function PromptFactGroup({
   label,
   facts,
 }: {
-  label: SessionExplorerInputPackageFact["group"];
+  label: string;
   facts: SessionExplorerInputPackageFact[];
 }): ReactElement {
   return (
@@ -635,6 +651,7 @@ function PromptFactGroup({
 }
 
 function ToolsAndSkillsDetails({ tools, skills }: { tools: string[]; skills: string[] }): ReactElement | null {
+  const { t } = useTranslation();
   if (tools.length === 0 && skills.length === 0) {
     return null;
   }
@@ -642,19 +659,20 @@ function ToolsAndSkillsDetails({ tools, skills }: { tools: string[]; skills: str
     <details className="tiny-session-disclosure group rounded-md border border-[var(--tiny-line-soft)] bg-[var(--tiny-surface)] px-2 py-1.5">
       <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 text-[11px] font-semibold uppercase text-muted-foreground">
         <DetailsChevron />
-        <span>Tools and skills</span>
-        <SessionCount icon={<Wrench />} count={tools.length} label="tools" tone="cyan" />
-        <SessionCount icon={<Sparkles />} count={skills.length} label="loaded skills" tone="yellow" />
+        <span>{t("sessionsPage.toolsSkills")}</span>
+        <SessionCount icon={<Wrench />} count={tools.length} label={t("sessionsPage.tools")} tone="cyan" />
+        <SessionCount icon={<Sparkles />} count={skills.length} label={t("sessionsPage.loadedSkills")} tone="yellow" />
       </summary>
       <div className="mt-2 grid gap-3 md:grid-cols-2">
-        <ToolSkillList label="Tools" items={tools} />
-        <ToolSkillList label="Skills" items={skills} />
+        <ToolSkillList label={t("sessionsPage.tools")} items={tools} />
+        <ToolSkillList label={t("sessionsPage.skills")} items={skills} />
       </div>
     </details>
   );
 }
 
 function ToolSkillList({ label, items }: { label: string; items: string[] }): ReactElement {
+  const { t } = useTranslation();
   return (
     <div className="grid gap-1">
       <div className="text-[11px] font-semibold uppercase text-muted-foreground">{label}</div>
@@ -667,7 +685,7 @@ function ToolSkillList({ label, items }: { label: string; items: string[] }): Re
           ))}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">No {label.toLowerCase()} recorded.</p>
+        <p className="text-sm text-muted-foreground">{t("sessionsPage.noItemsRecorded", { label })}</p>
       )}
     </div>
   );
@@ -707,7 +725,8 @@ function SessionCount({
 }
 
 function statusLabel(status: string): string {
-  return status ? `${status.charAt(0).toUpperCase()}${status.slice(1).replaceAll("_", " ")}` : "Unknown";
+  const key = ({ completed: "completed", running: "running", pending: "pending", blocked: "blocked", queued: "queued", done: "done", in_progress: "inProgress", active: "active", canceled: "canceled", archived: "archived" } as const)[status as "completed" | "running" | "pending" | "blocked" | "queued" | "done" | "in_progress" | "active" | "canceled" | "archived"];
+  return key ? i18n.t(`enums.${key}`) : status ? `${status.charAt(0).toUpperCase()}${status.slice(1).replaceAll("_", " ")}` : i18n.t("common.unknown");
 }
 
 function Section({ title, children }: { title: string; children: ReactElement }): ReactElement {
@@ -723,7 +742,7 @@ function PromptFact({ label, value }: { label: string; value: string }): ReactEl
   return (
     <div className="grid gap-1 rounded-md bg-[var(--tiny-fill)] px-2 py-1.5">
       <span className="text-[11px] font-semibold uppercase text-muted-foreground">{label}</span>
-      <span className="max-h-80 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-5 [overflow-wrap:anywhere]">{value || "Not recorded."}</span>
+      <span className="max-h-80 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-5 [overflow-wrap:anywhere]">{value || i18n.t("sessionsPage.notRecorded")}</span>
     </div>
   );
 }
@@ -739,20 +758,31 @@ function EmptyLine({ children }: { children: string }): ReactElement {
 
 function formatUsage(usage: SessionExplorerUsageTotals): string {
   const total = usage.inputTokens + usage.outputTokens + usage.cacheTokens;
-  return total > 0 ? `${total.toLocaleString()} tokens` : "No usage";
+  return total > 0 ? i18n.t("common.tokens", { count: total.toLocaleString(currentUiLocale()) }) : i18n.t("common.noUsage");
+}
+
+function localizedSessionSceneLabel(sceneType?: string): string {
+  const label = sessionSceneLabel(sceneType);
+  const key = ({ "Direct message": "direct_message", "Channel topic": "channel_topic", "Work run": "work_run", Intake: "intake", Session: "session" } as const)[label as "Direct message" | "Channel topic" | "Work run" | "Intake" | "Session"];
+  return key ? i18n.t(`enums.${key}`) : label;
+}
+
+function localizedSessionTokenLabel(session: SessionExplorerSessionSummary): string {
+  const total = session.tokenInputTotal + session.tokenOutputTotal + session.tokenCacheTotal;
+  return total > 0 ? i18n.t("common.tokens", { count: total.toLocaleString(currentUiLocale()) }) : i18n.t("common.noUsage");
 }
 
 function formatDateTime(value: string | undefined): string {
   if (!value) {
-    return "No timestamp";
+    return i18n.t("sessionsPage.noTimestamp");
   }
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return value;
   }
-  return date.toLocaleString();
+  return date.toLocaleString(currentUiLocale());
 }
 
 function modelDisplay(session: SessionExplorerSessionSummary): string {
-  return [session.modelProvider, session.modelId].filter(Boolean).join(" / ") || "No model recorded";
+  return [session.modelProvider, session.modelId].filter(Boolean).join(" / ") || i18n.t("sessionsPage.noModel");
 }

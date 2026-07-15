@@ -5,6 +5,7 @@ import { once } from "node:events";
 
 import { createTinyOfficeServer } from "../../src/runtime/realtime/tinyoffice-server.js";
 import { defaultRuntimeProvider } from "../../src/runtime/provider/pi-runtime-provider.js";
+import { createRuntimeShutdownCoordinator } from "./runtime-shutdown-coordinator.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const runtimePort = Number(process.env.TINYOFFICE_RUNTIME_PORT || "8095");
@@ -55,13 +56,18 @@ if (runtime.bootstrapToken) {
 
 const web = spawnWeb();
 
-function shutdown(): void {
-  web.kill();
-  runtime.server.close(() => process.exit(0));
-}
-
-process.on("SIGINT", shutdown);
-process.on("SIGTERM", shutdown);
-web.on("exit", (code) => {
-  runtime.server.close(() => process.exit(code ?? 0));
+const shutdownCoordinator = createRuntimeShutdownCoordinator({
+  terminateWeb: () => {
+    web.kill();
+  },
+  closeRuntime: (onClosed) => {
+    runtime.server.close(onClosed);
+  },
+  exit: (exitCode) => {
+    process.exit(exitCode);
+  },
 });
+
+process.once("SIGINT", () => shutdownCoordinator.shutdown({ exitCode: 0, terminateWeb: true }));
+process.once("SIGTERM", () => shutdownCoordinator.shutdown({ exitCode: 0, terminateWeb: true }));
+web.once("exit", (code) => shutdownCoordinator.shutdown({ exitCode: code ?? 0, terminateWeb: false }));

@@ -251,7 +251,7 @@ export function App(): ReactElement {
           ) : activeView === "skills" ? (
             <CompanySkillsPage currentSession={currentSession} />
           ) : activeView === "integrations" ? (
-            <IntegrationsPage currentSession={currentSession} />
+            <IntegrationsPage />
           ) : activeView === "prompt" ? (
             <PromptPolicyPage currentSession={currentSession} />
           ) : activeView === "system-ai" ? (

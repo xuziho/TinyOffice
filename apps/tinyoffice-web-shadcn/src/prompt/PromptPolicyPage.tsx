@@ -24,7 +24,6 @@ import { chatQueryKeys } from "@/chat/chatQueryKeys";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RotateCcw, Save, ScrollText } from "lucide-react";
 import { useEffect, useState, type ReactElement, type ReactNode } from "react";
-import { SectionContentHeader } from "@/app/SectionContentHeader";
 import {
   editPromptDraft,
   emptyPromptDraft,
@@ -117,23 +116,10 @@ export function PromptPolicyPage({ currentSession }: { currentSession?: TinyOffi
   const showSidePanel = diagnostics.length > 0 || usageItems.length > 0;
 
   return (
-    <div className="grid h-full w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
-      <SectionContentHeader
-        actions={<>
-          <Button type="button" size="sm" disabled={!target || saveMutation.isPending || !dirty} onClick={() => saveMutation.mutate()}>
-            <Save className="mr-2 size-4" />
-            Save changes
-          </Button>
-          <SaveStateBadge dirty={dirty} saving={saveMutation.isPending} />
-          <Button type="button" size="sm" variant="outline" disabled={!target || resetMutation.isPending} onClick={() => setResetDialogOpen(true)}>
-            <RotateCcw className="mr-2 size-4" />
-            Reset to default
-          </Button>
-        </>}
-      />
+    <div className="h-full w-full overflow-hidden">
       <section className={showSidePanel
-        ? "grid min-h-0 grid-cols-[300px_minmax(0,1fr)_300px] overflow-hidden"
-        : "grid min-h-0 grid-cols-[300px_minmax(0,1fr)] overflow-hidden"}
+        ? "grid h-full min-h-0 grid-cols-[300px_minmax(0,1fr)_300px] overflow-hidden"
+        : "grid h-full min-h-0 grid-cols-[300px_minmax(0,1fr)] overflow-hidden"}
       >
         <aside className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] border-r border-[var(--tiny-line-soft)] bg-[var(--tiny-sidebar)]">
           <div className="border-b border-[var(--tiny-line-faint)] px-4 py-3">
@@ -178,6 +164,17 @@ export function PromptPolicyPage({ currentSession }: { currentSession?: TinyOffi
                         <h1 className="truncate text-xl font-semibold">{targetTitle(target)}</h1>
                       </div>
                       <div className="mt-1 text-sm text-[var(--tiny-muted)]">{targetDescription(target)}</div>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                      <Button type="button" size="sm" disabled={saveMutation.isPending || !dirty} onClick={() => saveMutation.mutate()}>
+                        <Save className="mr-2 size-4" />
+                        Save changes
+                      </Button>
+                      <SaveStateBadge dirty={dirty} saving={saveMutation.isPending} />
+                      <Button type="button" size="sm" variant="outline" disabled={resetMutation.isPending} onClick={() => setResetDialogOpen(true)}>
+                        <RotateCcw className="mr-2 size-4" />
+                        Reset to default
+                      </Button>
                     </div>
                   </div>
                   {saveMutation.error ? <div className="text-sm text-destructive">{errorText(saveMutation.error, "Failed to save Prompt Policy.")}</div> : null}

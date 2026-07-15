@@ -1107,3 +1107,29 @@ test("product actions share one button lifecycle and file uploads use the Button
   assert.match(backupSource, /<Button disabled=\{creating\}/);
   assert.doesNotMatch(productSource.replace(await readText("apps/tinyoffice-web-shadcn/src/components/ui/sidebar.tsx"), ""), /<button\b/);
 });
+
+test("management pages avoid empty action strips and decorative nested surfaces", async () => {
+  const companySource = await readText("apps/tinyoffice-web-shadcn/src/app/CompanyLifecyclePage.tsx");
+  const integrationsSource = await readText("apps/tinyoffice-web-shadcn/src/integrations/IntegrationsPage.tsx");
+  const settingsSource = await readText("apps/tinyoffice-web-shadcn/src/settings/SettingsPage.tsx");
+  const backupSource = await readText("apps/tinyoffice-web-shadcn/src/backup/BackupPage.tsx");
+  const actionPageSources = await Promise.all([
+    "apps/tinyoffice-web-shadcn/src/access/AccessPage.tsx",
+    "apps/tinyoffice-web-shadcn/src/backup/BackupPage.tsx",
+    "apps/tinyoffice-web-shadcn/src/capabilities/CapabilitiesPage.tsx",
+    "apps/tinyoffice-web-shadcn/src/employees/EmployeesPage.tsx",
+    "apps/tinyoffice-web-shadcn/src/prompt/PromptPolicyPage.tsx",
+    "apps/tinyoffice-web-shadcn/src/skills/CompanySkillsPage.tsx",
+  ].map(readText));
+
+  for (const source of actionPageSources) {
+    assert.doesNotMatch(source, /SectionContentHeader/);
+  }
+  assert.match(companySource, /message \|\| companiesQuery\.isError \? <div/);
+  assert.match(companySource, /grid overflow-hidden rounded-md border bg-background xl:grid-cols/);
+  assert.doesNotMatch(companySource, /profile and lifecycle/);
+  assert.match(integrationsSource, /grid divide-y border-y md:grid-cols-3/);
+  assert.doesNotMatch(integrationsSource, /tiny-room-subtitle/);
+  assert.doesNotMatch(settingsSource, /tiny-settings-primary-surface/);
+  assert.match(backupSource, /<h2 className="text-lg font-semibold">Backups<\/h2><Button/);
+});

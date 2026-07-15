@@ -146,6 +146,22 @@ Selecting an employee Message as the source for the right-side Activity panel mu
 
 Avoid large gradients, decorative blobs, large rounded cards, heavy soft shadows, excessive whitespace, marketing hero layouts, one-off styling per page, childish stationery styling, and copied native-chat-shell styling.
 
+## Product Surface Hierarchy
+
+Pages use the fewest visible containers that still explain interaction and ownership. A page shell or split-pane workspace is already a surface; its ordinary sections should be separated with spacing, headings, dividers, or quiet background changes instead of wrapping every section in another rounded bordered card.
+
+Use visible borders and elevation for real interaction boundaries:
+
+- inputs, editors, dialogs, menus, and other controls
+- selected navigation rows and independently actionable list items
+- Chat messages, attachments, task records, runtime turns, and other durable product objects
+- destructive, warning, error, confirmation, and security-sensitive callouts
+- one intentional workspace frame when multiple panes belong to the same management object
+
+Do not reserve full-width rows for absent subtitles, status text, or page-level actions. A status row renders only when it has content. A create, save, reset, or lifecycle action sits beside the heading or object it changes. Generic subtitles that only restate the page name are omitted; explanatory copy remains when it communicates scope, risk, prerequisites, or a non-obvious product contract.
+
+Nested cards are allowed only when the inner object has an independent interaction or lifecycle. Decorative card-on-card grouping is not a product boundary and should be flattened into the parent surface.
+
 ## Employee Avatar Direction
 
 Runtime-capable employees and human users use DiceBear `Adventurer Neutral` generated locally from an authoritative persisted `avatarSeed`. The default upstream colors and expression distribution remain intact. Existing identities are migrated with their immutable id as the initial seed, preserving the avatar they had before avatar editing shipped.

@@ -12,7 +12,6 @@ import { chatQueryKeys } from "@/chat/chatQueryKeys";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Save, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactElement, type ReactNode } from "react";
-import { SectionContentHeader } from "@/app/SectionContentHeader";
 import { reconcileAccessPolicyEditor, type AccessPolicyEditorState } from "./accessPolicyEditorModel";
 import type {
   TinyOfficeCurrentSession,
@@ -72,17 +71,8 @@ export function AccessPage({ currentSession }: { currentSession?: TinyOfficeCurr
   });
 
   return (
-    <div className="grid h-full w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
-      <SectionContentHeader
-        actions={<>
-          <Button type="button" size="sm" disabled={!parsedPolicy?.ok || !policyChanged || saveMutation.isPending} onClick={() => saveMutation.mutate()}>
-            <Save className="mr-2 size-4" />
-            Save changes
-          </Button>
-          <SaveStateBadge dirty={policyChanged} saving={saveMutation.isPending} />
-        </>}
-      />
-      <section className="grid min-h-0 grid-cols-[300px_minmax(0,1fr)] overflow-hidden">
+    <div className="h-full w-full overflow-hidden">
+      <section className="grid h-full min-h-0 grid-cols-[300px_minmax(0,1fr)] overflow-hidden">
         <aside className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] border-r border-[var(--tiny-line-soft)] bg-[var(--tiny-sidebar)]">
           <div className="border-b border-[var(--tiny-line-faint)] px-4 py-3">
             <div className="tiny-section-label">Rule groups</div>
@@ -114,11 +104,22 @@ export function AccessPage({ currentSession }: { currentSession?: TinyOfficeCurr
             {model ? (
               <>
                 <section className="grid gap-3 border-b border-[var(--tiny-line-soft)] pb-4">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <ShieldCheck className="size-5 text-[var(--tiny-muted)]" />
-                    <h1 className="truncate text-xl font-semibold">{selectedGroup?.label ?? "Runtime guard"}</h1>
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <ShieldCheck className="size-5 text-[var(--tiny-muted)]" />
+                        <h1 className="truncate text-xl font-semibold">{selectedGroup?.label ?? "Runtime guard"}</h1>
+                      </div>
+                      {selectedGroup ? <p className="mt-1 text-sm text-[var(--tiny-muted)]">{selectedGroup.summary}</p> : null}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Button type="button" size="sm" disabled={!parsedPolicy?.ok || !policyChanged || saveMutation.isPending} onClick={() => saveMutation.mutate()}>
+                        <Save className="mr-2 size-4" />
+                        Save changes
+                      </Button>
+                      <SaveStateBadge dirty={policyChanged} saving={saveMutation.isPending} />
+                    </div>
                   </div>
-                  {selectedGroup ? <p className="text-sm text-[var(--tiny-muted)]">{selectedGroup.summary}</p> : null}
                   {saveMutation.error ? <div className="text-sm text-destructive">{errorText(saveMutation.error, "Failed to save Access policy.")}</div> : null}
                   {parsedPolicy && !parsedPolicy.ok ? <div className="text-sm text-destructive">{parsedPolicy.message}</div> : null}
                 </section>
@@ -182,11 +183,11 @@ function GuardBoundary(): ReactElement {
   return (
     <section className="grid gap-3">
       <SectionTitle>Runtime boundary</SectionTitle>
-      <div className="grid gap-2 text-sm text-[var(--tiny-muted)]">
-        <div className="rounded-md border border-[var(--tiny-line-soft)] bg-[var(--tiny-surface)] px-3 py-2">
+      <div className="grid divide-y border-y text-sm text-[var(--tiny-muted)]">
+        <div className="py-2">
           Access guards tool calls for sensitive paths and high-risk commands. It is not a sandbox and not a full business permission system.
         </div>
-        <div className="rounded-md border border-[var(--tiny-line-soft)] bg-[var(--tiny-surface)] px-3 py-2">
+        <div className="py-2">
           Foreground approvals belong in the Chat room that raised them. This page edits the company guard policy.
         </div>
       </div>

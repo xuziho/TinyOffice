@@ -144,29 +144,20 @@ function memberEntryFromMember(
   availableModels: readonly AvailablePiModel[] = [],
 ): CompanyDirectoryMemberEntryDto {
   const employee = employeeById.get(member.id);
-  const role = member.role || employee?.profile.role;
   const hasRuntimeProfile = Boolean(employee);
   return {
     schema: COMPANY_DIRECTORY_MEMBER_ENTRY_SCHEMA,
     version: COMPANY_DIRECTORY_CONTRACT_VERSION,
     companyId,
     memberId: member.id,
-    avatarSeed: member.avatarSeed ?? member.id,
+    avatarSeed: member.avatarSeed,
     selector: { kind: "member", memberId: member.id },
-    displayName: requiredMemberDisplayName(member),
-    ...(role ? { role } : {}),
+    displayName: member.displayName,
+    role: member.role,
     ...(member.summary ? { summary: member.summary } : {}),
     hasRuntimeProfile,
     ...(employee ? { runtimeCapability: runtimeCapabilityDto(employee, availableModels) } : {}),
   };
-}
-
-function requiredMemberDisplayName(member: CompanyMemberProfile): string {
-  const displayName = member.displayName?.trim();
-  if (!displayName) {
-    throw new Error(`displayName is required for Company member ${member.id}`);
-  }
-  return displayName;
 }
 
 export function projectCompanyDirectoryMembers(

@@ -60,8 +60,8 @@ function normalizeRuntime(value: unknown): EmployeeRuntimeConfig {
 interface EmployeeDirectoryRow {
   member_id: string;
   avatar_seed: string;
-  display_name: string | null;
-  role: string | null;
+  display_name: string;
+  role: string;
   summary: string | null;
   presence_mode: PresenceMode;
   model_provider: string | null;
@@ -72,11 +72,14 @@ interface EmployeeDirectoryRow {
 }
 
 function recordFromRow(row: EmployeeDirectoryRow): CompanyDirectoryEmployeeRecord {
+  const displayName = requiredMemberIdentityText(row.display_name, "displayName", row.member_id);
+  const role = requiredMemberIdentityText(row.role, "role", row.member_id);
+  const avatarSeed = requiredMemberIdentityText(row.avatar_seed, "avatarSeed", row.member_id);
   const profile: EmployeeHomeProfile = {
     employeeId: row.member_id,
-    avatarSeed: row.avatar_seed || row.member_id,
-    role: row.role || "member",
-    displayName: row.display_name || undefined,
+    avatarSeed,
+    role,
+    displayName,
     presenceMode: row.presence_mode,
     sceneProfile: row.summary || undefined,
   };
@@ -92,6 +95,14 @@ function recordFromRow(row: EmployeeDirectoryRow): CompanyDirectoryEmployeeRecor
       thinkingLevel: row.thinking_level || "minimal",
     }),
   };
+}
+
+function requiredMemberIdentityText(value: string | null | undefined, field: string, memberId: string): string {
+  const normalized = value?.trim();
+  if (!normalized) {
+    throw new Error(`${field} is required for Company member ${memberId}`);
+  }
+  return normalized;
 }
 
 export class CompanyDirectoryRepository {
@@ -175,6 +186,9 @@ WHERE company_id = $1 AND member_id = $2`,
 
   async upsertEmployee(record: CompanyDirectoryEmployeeRecord): Promise<void> {
     const timestamp = new Date().toISOString();
+    const displayName = requiredMemberIdentityText(record.profile.displayName, "displayName", record.employeeId);
+    const role = requiredMemberIdentityText(record.profile.role, "role", record.employeeId);
+    const avatarSeed = record.profile.avatarSeed?.trim() || record.employeeId;
     await this.client.query("BEGIN");
     try {
       await this.client.query(
@@ -191,10 +205,10 @@ ON CONFLICT (company_id, id) DO UPDATE SET
         [
           this.companyId,
           record.employeeId,
-          record.profile.displayName ?? null,
-          record.profile.role,
+          displayName,
+          role,
           record.profile.sceneProfile ?? null,
-          record.profile.avatarSeed || record.employeeId,
+          avatarSeed,
           timestamp,
         ],
       );

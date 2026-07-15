@@ -31,10 +31,10 @@ ${buildSystemAiProviderConfigAuditSql()}
 CREATE TABLE IF NOT EXISTS company_members (
   company_id text NOT NULL REFERENCES companies(company_id) ON DELETE CASCADE,
   id text NOT NULL,
-  display_name text,
-  role text,
+  display_name text NOT NULL CHECK (btrim(display_name) <> ''),
+  role text NOT NULL CHECK (btrim(role) <> ''),
   summary text,
-  avatar_seed text,
+  avatar_seed text NOT NULL CHECK (btrim(avatar_seed) <> ''),
   created_at timestamptz NOT NULL,
   updated_at timestamptz NOT NULL,
   PRIMARY KEY (company_id, id)
@@ -1069,6 +1069,24 @@ ALTER TABLE user_profiles
 UPDATE user_profiles
 SET profile_initialized_at = COALESCE(profile_initialized_at, updated_at, now())
 WHERE profile_initialized_at IS NULL;
+`,
+  },
+  {
+    id: "pg_015_company_member_identity_integrity_20260715",
+    sql: `
+ALTER TABLE company_members
+  ALTER COLUMN display_name SET NOT NULL,
+  ALTER COLUMN role SET NOT NULL;
+
+ALTER TABLE company_members
+  DROP CONSTRAINT IF EXISTS company_members_display_name_nonempty,
+  DROP CONSTRAINT IF EXISTS company_members_role_nonempty,
+  DROP CONSTRAINT IF EXISTS company_members_avatar_seed_nonempty;
+
+ALTER TABLE company_members
+  ADD CONSTRAINT company_members_display_name_nonempty CHECK (btrim(display_name) <> ''),
+  ADD CONSTRAINT company_members_role_nonempty CHECK (btrim(role) <> ''),
+  ADD CONSTRAINT company_members_avatar_seed_nonempty CHECK (btrim(avatar_seed) <> '');
 `,
   },
 ];

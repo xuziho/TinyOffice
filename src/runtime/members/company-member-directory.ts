@@ -8,9 +8,9 @@ import { normalizeCompanyId } from "../company-config/company-paths.js";
 
 export interface CompanyMemberProfile {
   id: string;
-  avatarSeed?: string;
-  displayName?: string;
-  role?: string;
+  avatarSeed: string;
+  displayName: string;
+  role: string;
   summary?: string;
 }
 
@@ -37,19 +37,27 @@ export interface CreateCompanyMemberProfileOptions extends CompanyPostgresOpenOp
 interface CompanyMemberRow {
   id: string;
   avatar_seed: string;
-  display_name: string | null;
-  role: string | null;
+  display_name: string;
+  role: string;
   summary: string | null;
 }
 
 function memberFromRow(row: CompanyMemberRow): CompanyMemberProfile {
   return {
     id: row.id,
-    ...(row.avatar_seed ? { avatarSeed: row.avatar_seed } : {}),
-    displayName: row.display_name || undefined,
-    role: row.role || undefined,
+    avatarSeed: requiredIdentityText(row.avatar_seed, "avatarSeed", row.id),
+    displayName: requiredIdentityText(row.display_name, "displayName", row.id),
+    role: requiredIdentityText(row.role, "role", row.id),
     summary: row.summary || undefined,
   };
+}
+
+function requiredIdentityText(value: string | null | undefined, field: string, memberId: string): string {
+  const normalized = value?.trim();
+  if (!normalized) {
+    throw new Error(`${field} is required for Company member ${memberId}`);
+  }
+  return normalized;
 }
 
 export async function loadCompanyMemberDirectory(
@@ -85,11 +93,15 @@ export async function createCompanyMemberProfile(
   const companyId = normalizeCompanyId(options.companyId);
   const memberId = options.memberId.trim();
   const displayName = options.displayName.trim();
+  const role = options.role.trim();
   if (!memberId) {
     throw new Error("memberId is required");
   }
   if (!displayName) {
     throw new Error("displayName is required");
+  }
+  if (!role) {
+    throw new Error("role is required");
   }
   const postgres = await openConfiguredPostgresConnection(repoRoot, options);
   if (!postgres) {
@@ -107,7 +119,7 @@ RETURNING *
       companyId,
       memberId,
       displayName,
-      options.role.trim() || null,
+      role,
       options.summary.trim() || null,
     ]);
     return memberFromRow(rows.rows[0]!);
@@ -125,6 +137,10 @@ export async function saveCompanyMemberProfile(
   const memberId = options.memberId.trim();
   if (!memberId) {
     throw new Error("memberId is required");
+  }
+  const role = options.role.trim();
+  if (!role) {
+    throw new Error("role is required");
   }
   const postgres = await openConfiguredPostgresConnection(repoRoot, options);
   if (!postgres) {
@@ -144,7 +160,7 @@ RETURNING *
 `, [
       companyId,
       memberId,
-      options.role.trim() || null,
+      role,
       options.summary.trim() || null,
       options.avatarSeed?.trim() || memberId,
     ]);
@@ -171,13 +187,9 @@ export function findCompanyMemberProfile(
 export function projectCompanyMemberRef(profile: CompanyMemberProfile): ParticipantRef {
   const ref: ParticipantRef = {
     id: profile.id,
+    displayName: profile.displayName,
+    role: profile.role,
   };
-  if (profile.displayName) {
-    ref.displayName = profile.displayName;
-  }
-  if (profile.role) {
-    ref.role = profile.role;
-  }
   if (profile.summary) {
     ref.summary = profile.summary;
   }

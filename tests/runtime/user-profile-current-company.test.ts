@@ -14,6 +14,7 @@ import {
   saveUserProfile,
   saveUserPreferredCompanyId,
 } from "../../src/runtime/company-config/user-profile.js";
+import { createCompanyWithoutCarrier } from "../../src/runtime/company-config/companies-admin.js";
 import { resetRuntimePostgresTables } from "./postgres-test-utils.js";
 
 beforeEach(resetRuntimePostgresTables);
@@ -27,6 +28,41 @@ test("a clean Owner profile remains explicitly uninitialized until it is saved",
   const saved = await saveUserProfile({ repoRoot, userId: "owner-1", displayName: "Xu Ziho", avatarSeed: "owner-avatar" });
   assert.equal(saved.initialized, true);
   assert.equal((await loadUserProfile({ repoRoot, userId: "owner-1" })).displayName, "Xu Ziho");
+});
+
+test("first Company creation inherits the initialized Owner profile identity", async () => {
+  const repoRoot = await mkdtemp(path.join(os.tmpdir(), "tinyoffice-owner-company-"));
+  await saveUserProfile({
+    repoRoot,
+    userId: "owner-1",
+    displayName: "Xu Ziho",
+    avatarSeed: "chosen-owner-avatar",
+  });
+
+  const created = await createCompanyWithoutCarrier({
+    repoRoot,
+    companyId: "acme",
+    displayName: "Acme",
+    ownerMemberId: "owner-1",
+    ownerDisplayName: "Stale Auth Name",
+    hrEmployeeDisplayName: "Mira",
+  });
+
+  assert.equal(created.owner?.displayName, "Xu Ziho");
+  const postgres = await openConfiguredPostgresConnection(repoRoot);
+  assert.ok(postgres);
+  try {
+    const member = await postgres.client.query<{ display_name: string; avatar_seed: string }>(
+      "SELECT display_name, avatar_seed FROM company_members WHERE company_id = 'acme' AND id = 'owner-1'",
+    );
+    assert.deepEqual(member.rows[0], {
+      display_name: "Xu Ziho",
+      avatar_seed: "chosen-owner-avatar",
+    });
+  } finally {
+    postgres.client.release();
+    await endCompanyPostgresPool(postgres.pool);
+  }
 });
 
 test("current Company selection persists in the user profile and clears when the Company is deleted", async () => {

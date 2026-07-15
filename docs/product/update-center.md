@@ -1,6 +1,6 @@
 # Update Center
 
-Settings / Updates is the product surface for controlled TinyOffice dependency updates. It separates upstream discovery from installation approval.
+Operations / Updates at `/updates` is the product surface for controlled TinyOffice dependency updates. It separates upstream discovery from installation approval and keeps instance maintenance out of the Owner's personal Settings.
 
 ## Product Contract
 

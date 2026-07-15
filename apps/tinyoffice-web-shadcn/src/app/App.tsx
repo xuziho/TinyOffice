@@ -34,7 +34,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Archive, BotIcon, BriefcaseBusinessIcon, Boxes, FileTextIcon, ListChecks, MessageCircle, PlugZapIcon, ScrollText, SettingsIcon, ShieldCheck, Stethoscope, UsersRound, Wrench } from "lucide-react";
 import { Fragment, lazy, Suspense, useCallback, useEffect, useRef, useState, type MouseEvent, type ReactElement } from "react";
 import type { CompaniesAdminViewModel, TinyOfficeCurrentSession } from "tinyoffice/frontend-api-contracts";
-import { adminNavigation, isAdminView, isWorkforceView, workforceNavigation, type NavigationGroup } from "./navigationStructure";
+import { adminNavigation, isAdminView, isWorkforceView, pageSectionForView, workforceNavigation, type NavigationGroup } from "./navigationStructure";
+import { SectionNavigation } from "./SectionNavigation";
 
 const AccessPage = lazy(() => import("@/access/AccessPage").then((module) => ({ default: module.AccessPage })));
 const CompanyLifecyclePage = lazy(() => import("./CompanyLifecyclePage").then((module) => ({ default: module.CompanyLifecyclePage })));
@@ -51,6 +52,7 @@ const SettingsPage = lazy(() => import("@/settings/SettingsPage").then((module) 
 const CompanySkillsPage = lazy(() => import("@/skills/CompanySkillsPage").then((module) => ({ default: module.CompanySkillsPage })));
 const SystemAiPage = lazy(() => import("@/system-ai/SystemAiPage").then((module) => ({ default: module.SystemAiPage })));
 const TasksPage = lazy(() => import("@/tasks/TasksPage").then((module) => ({ default: module.TasksPage })));
+const UpdatesPage = lazy(() => import("@/updates/UpdatesPage").then((module) => ({ default: module.UpdatesPage })));
 
 export function App(): ReactElement {
   const { hasUnsavedChanges, requestTransition } = useUnsavedChangesNavigation();
@@ -73,6 +75,7 @@ export function App(): ReactElement {
   });
   const currentCompanyName = currentCompanyDisplayName(currentSession, companiesQuery.data);
   const currentCompanyId = currentSession?.companyId ?? currentSession?.currentCompanyId ?? "";
+  const pageSection = pageSectionForView(activeView);
   const brandingQuery = useQuery({ queryKey: ["company-branding", currentCompanyId], enabled: Boolean(currentCompanyId), queryFn: () => getCompanyBranding({ companyId: currentCompanyId }) });
   const switchCompanyMutation = useMutation({
     mutationFn: switchCurrentCompany,
@@ -224,6 +227,9 @@ export function App(): ReactElement {
           </div>
         </nav>
         <section className={`min-w-0 flex-1 overflow-hidden ${activeView === "chat" || activeView === "tasks" ? "" : "tiny-soft-retro-product"}`}>
+          <div className={pageSection ? "grid h-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden" : "h-full overflow-hidden"}>
+          {pageSection ? <SectionNavigation activeView={activeView} section={pageSection} onSelect={selectView} /> : null}
+          <div className="min-h-0 overflow-hidden">
           <Suspense fallback={<RouteLoadingFallback />}>
           {activeView === "company" ? (
             <CompanyLifecyclePage currentSession={currentSession} />
@@ -264,6 +270,8 @@ export function App(): ReactElement {
             />
           ) : activeView === "settings" ? (
             <SettingsPage currentSession={currentSession} />
+          ) : activeView === "updates" ? (
+            <UpdatesPage />
           ) : (
             <ChatWorkspaceRoute
               currentSession={currentSession}
@@ -276,6 +284,8 @@ export function App(): ReactElement {
             />
           )}
           </Suspense>
+          </div>
+          </div>
         </section>
       </main>
     </TooltipProvider>
@@ -586,6 +596,9 @@ function initialViewFromLocation(): AppView {
   }
   if (window.location.pathname.includes("settings")) {
     return "settings";
+  }
+  if (window.location.pathname.includes("updates")) {
+    return "updates";
   }
   if (window.location.pathname.includes("system-ai")) {
     return "system-ai";

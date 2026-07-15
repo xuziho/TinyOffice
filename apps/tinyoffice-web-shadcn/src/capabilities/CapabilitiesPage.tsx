@@ -12,7 +12,7 @@ export function CapabilitiesPage({ currentSession }: { currentSession?: TinyOffi
   const [selected, setSelected] = useState("");
   const query = useQuery({ queryKey: ["capabilities", companyId], enabled: Boolean(companyId), queryFn: () => getCapabilities({ companyId }) });
   const active = query.data?.capabilities.find((item) => item.id === selected) ?? query.data?.capabilities[0];
-  return <main className="grid h-svh grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
+  return <main className="grid h-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
     <header className="tiny-room-header flex items-center justify-between border-b"><div><div className="tiny-room-title">Capabilities</div><div className="tiny-room-subtitle">System-owned runtime contracts</div></div><Badge className="tiny-page-attribute" variant="secondary"><LockKeyhole />Read only</Badge></header>
     <section className="grid min-h-0 grid-cols-[300px_minmax(0,1fr)] overflow-hidden">
       <aside className="overflow-y-auto overflow-x-hidden border-r bg-muted/20 p-2"><SelectionList>{(query.data?.capabilities ?? []).map((item) => <SelectionRow key={item.id} selected={item.id === active?.id} className="px-3 py-2.5" onClick={() => setSelected(item.id)}><span className="min-w-0"><SelectionRowTitle className="block truncate">{item.title}</SelectionRowTitle><SelectionRowDescription className="block truncate text-xs">{item.id}</SelectionRowDescription></span></SelectionRow>)}</SelectionList></aside>

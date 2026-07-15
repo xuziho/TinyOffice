@@ -16,11 +16,14 @@ Stable responsibilities:
 - inspect member runtime sessions, conversation turns, work evidence, usage, and model input packages
 - run read-only Doctor diagnostics for current Company setup, employee runtime configuration, PI model availability, and Access policy loading
 - create and download verified full-instance backups while keeping scheduled transfer and retention in the operator CLI boundary
-- manage the current account profile, runtime prerequisites, and controlled product update status through Settings
+- manage the current account profile and security through Settings
+- inspect runtime prerequisites and controlled product update status through Operations > Updates
 
 Company is the user-visible tenant boundary. Current product routes and APIs require explicit Company context.
 
-The global rail separates daily work from workforce and administration. Only `Chat` and `Tasks` stay in the upper primary group. `Workforce` owns Employees and Company Skills. `Admin` groups Organization and Integrations under Company; System AI, Prompt, Access, and read-only Capabilities under AI & Runtime; and Sessions, Health, and Backup & Restore under System. Health opens the existing read-only Doctor route. Settings remains the account destination and owns the current account profile, local preferences, security, and the Update Center.
+The global rail separates daily work from workforce and administration. Only `Chat` and `Tasks` stay in the upper primary group. `Workforce` owns Employees and Company Skills. `Admin` keeps Organization and Automation as separate responsibilities, groups System AI, Prompt, Access, and read-only Capabilities under AI & Runtime, and groups Runtime Sessions, Health, Backup & Restore, and Updates under Operations. Health opens the existing read-only Doctor route. Settings remains the account destination and owns only the current account profile and security.
+
+Workforce, AI & Runtime, and Operations expose their sibling pages in a shared page-level navigation strip. This common shell does not merge their routes, APIs, forms, permissions, or data ownership. Organization and Integrations remain independent pages because Company lifecycle and external intake setup are different responsibilities.
 
 ## Feature Map
 
@@ -28,16 +31,18 @@ The global rail separates daily work from workforce and administration. Only `Ch
 | --- | --- | --- |
 | Standalone Frontend | `apps/tinyoffice-web-shadcn` | TinyOffice APIs under `/api/companies/:companyId/...` |
 | Chat | Current rebuilt shadcn surface | Chat Projection, Conversation, and Message APIs |
-| Company Lifecycle | Admin > Company > Organization at `/company` | PostgreSQL `companies`, Prompt Policy defaults, Access defaults |
-| Settings | Current bottom rail module at `/settings` | Account profile plus Update Center status from npm and the TinyOffice stable approval manifest |
+| Company Lifecycle | Admin > Organization at `/company` | PostgreSQL `companies`, Prompt Policy defaults, Access defaults |
+| Integrations | Admin > Automation at `/integrations` | External Intake setup guidance |
+| Settings | Current bottom rail module at `/settings` | Account profile and Owner security |
+| Updates | Admin > Operations > Updates at `/updates` | Update status from npm and the TinyOffice stable approval manifest |
 | Tasks | Current `Tasks` rail module at `/tasks` | Work repositories and Tasks view model |
-| Sessions | Admin > System > Sessions at `/sessions` | Runtime session repositories and Sessions view model |
+| Sessions | Admin > Operations > Runtime Sessions at `/sessions` | Runtime session repositories and Sessions view model |
 | Status | Lightweight Chat employee context and rail status markers | Runtime status, WorkRun, Session, and dispatch evidence |
 | Employee Runtime | Workforce > Employees at `/employees` | PostgreSQL runtime-capable member config plus member-local guidance assets |
 | Prompt Policy | Admin > AI & Runtime > Prompt at `/prompt` | PostgreSQL Prompt Policy tables |
 | Access | Admin > AI & Runtime > Access at `/access` | PostgreSQL `tool_safety_policies` |
 | Members | Backend/API/tool capability; not a current rail page | `company_members` with explicit runtime binding |
-| Doctor | Admin > System > Health at `/doctor` | `/api/companies/:companyId/doctor`, `agentco doctor` |
+| Doctor | Admin > Operations > Health at `/doctor` | `/api/companies/:companyId/doctor`, `agentco doctor` |
 
 During local development, Vite proxies `/api` to the TinyOffice runtime. There is no Vite `/console` product proxy.
 

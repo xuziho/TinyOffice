@@ -146,7 +146,7 @@ export function SessionsPage({
   }
 
   return (
-    <div className="tiny-soft-retro-sessions grid h-svh w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
+    <div className="tiny-soft-retro-sessions grid h-full w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
       <header className="tiny-product-header flex items-center justify-between gap-3 border-b">
         <div className="min-w-0">
           <div className="tiny-room-title truncate">{detailSession?.displayName ?? listPresentation?.title ?? "Sessions"}</div>

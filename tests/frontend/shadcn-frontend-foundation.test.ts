@@ -385,10 +385,12 @@ test("shadcn app shell keeps read-only Capabilities and operational Health in Ad
   assert.doesNotMatch(accessPageSource, /RBAC|Role matrix|Channel permissions|Employee permissions|Approval grants/);
 });
 
-test("shadcn Settings owns account profile without a developer mode switch", async () => {
+test("shadcn Settings owns account identity and security while Operations owns Updates", async () => {
   const appSource = await readText("apps/tinyoffice-web-shadcn/src/app/App.tsx");
   const companyPageSource = await readText("apps/tinyoffice-web-shadcn/src/app/CompanyLifecyclePage.tsx");
   const settingsPageSource = await readText("apps/tinyoffice-web-shadcn/src/settings/SettingsPage.tsx");
+  const updatesPageSource = await readText("apps/tinyoffice-web-shadcn/src/updates/UpdatesPage.tsx");
+  const navigationStructureSource = await readText("apps/tinyoffice-web-shadcn/src/app/navigationStructure.ts");
   const navigationSource = await readText("apps/tinyoffice-web-shadcn/src/app/navigationRoutes.ts");
 
   assert.match(appSource, /import\("@\/settings\/SettingsPage"\)/);
@@ -400,10 +402,14 @@ test("shadcn Settings owns account profile without a developer mode switch", asy
   assert.match(settingsPageSource, /Display name/);
   assert.match(settingsPageSource, /Company role/);
   assert.match(settingsPageSource, /saveMyProfile/);
-  assert.match(settingsPageSource, /Updates/);
-  assert.match(settingsPageSource, /Check for updates/);
-  assert.match(settingsPageSource, /Back up and install/);
-  assert.match(settingsPageSource, /installApprovedUpdate/);
+  assert.match(settingsPageSource, /Owner security/);
+  assert.doesNotMatch(settingsPageSource, /Check for updates|installApprovedUpdate/);
+  assert.match(appSource, /import\("@\/updates\/UpdatesPage"\)/);
+  assert.match(navigationStructureSource, /view: "updates", label: "Updates"/);
+  assert.match(navigationSource, /return "\/updates"/);
+  assert.match(updatesPageSource, /Check for updates/);
+  assert.match(updatesPageSource, /Back up and install/);
+  assert.match(updatesPageSource, /installApprovedUpdate/);
   assert.doesNotMatch(settingsPageSource, /Developer mode|Developer tools menu|aria-pressed/);
   assert.doesNotMatch(companyPageSource, /SectionHeading title="Developer mode"/);
   assert.doesNotMatch(companyPageSource, /DeveloperModePanel/);
@@ -1050,6 +1056,8 @@ test("management navigation uses one hierarchy language and hover-capable rail m
   const appSource = await readText("apps/tinyoffice-web-shadcn/src/app/App.tsx");
   const selectionSource = await readText("apps/tinyoffice-web-shadcn/src/components/product/SelectionList.tsx");
   const promptSource = await readText("apps/tinyoffice-web-shadcn/src/prompt/PromptPolicyPage.tsx");
+  const sectionNavigationSource = await readText("apps/tinyoffice-web-shadcn/src/app/SectionNavigation.tsx");
+  const navigationStructureSource = await readText("apps/tinyoffice-web-shadcn/src/app/navigationStructure.ts");
   const cssSource = await readText("apps/tinyoffice-web-shadcn/src/index.css");
 
   assert.match(selectionSource, /SelectionGroupLabel/);
@@ -1065,6 +1073,9 @@ test("management navigation uses one hierarchy language and hover-capable rail m
   assert.match(appSource, /onMouseEnter=\{hoverMenu\.cancelClose\}/);
   assert.match(appSource, /onMouseLeave=\{hoverMenu\.closeSoon\}/);
   assert.match(appSource, /<DropdownMenu modal=\{false\} open=\{hoverMenu\.open\} onOpenChange=\{hoverMenu\.setOpen\}>/);
+  assert.match(appSource, /<SectionNavigation activeView=\{activeView\} section=\{pageSection\} onSelect=\{selectView\}/);
+  assert.match(sectionNavigationSource, /aria-current=\{item\.view === activeView \? "page"/);
+  assert.match(navigationStructureSource, /title: "Workforce"[\s\S]*title: "AI & Runtime"[\s\S]*title: "Operations"/);
 });
 
 test("product actions share one button lifecycle and file uploads use the Button primitive", async () => {

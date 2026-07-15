@@ -17,6 +17,7 @@ export function CompanySkillsPage({ currentSession }: { currentSession?: TinyOff
   const [content, setContent] = useState("");
   const [baseline, setBaseline] = useState("");
   const listQuery = useQuery({ queryKey: ["company-skills", companyId], enabled: Boolean(companyId), queryFn: () => getCompanySkills({ companyId }) });
+  const skills = listQuery.data?.skills ?? [];
   const activeId = listQuery.data?.skills.some((skill) => skill.skillId === selected) ? selected : listQuery.data?.skills[0]?.skillId ?? "";
   const skillQuery = useQuery({ queryKey: ["company-skill", companyId, activeId], enabled: Boolean(companyId && activeId), queryFn: () => getCompanySkill({ companyId, skillId: activeId }) });
   useUnsavedChanges(`company-skill:${companyId}`, Boolean(activeId && content !== baseline));
@@ -36,17 +37,23 @@ export function CompanySkillsPage({ currentSession }: { currentSession?: TinyOff
   });
 
   return (
-    <main className="grid h-svh grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
+    <main className="grid h-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
       <header className="tiny-room-header flex items-center justify-between border-b">
         <div><div className="tiny-room-title">Company Skills</div><div className="tiny-room-subtitle">Shared workflow knowledge for the current company</div></div>
         <Badge variant="secondary">Company-wide</Badge>
       </header>
-      <section className="grid min-h-0 grid-cols-[280px_minmax(0,1fr)] overflow-hidden">
+      {listQuery.isLoading ? <div className="grid place-items-center p-8 text-sm text-muted-foreground">Loading Company Skills...</div> : listQuery.error ? <div className="m-5 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">{listQuery.error instanceof Error ? listQuery.error.message : "Company Skills could not be loaded."}</div> : skills.length === 0 ? (
+        <div className="grid place-items-center overflow-auto p-6">
+          <section className="max-w-lg rounded-md border bg-card p-6 text-center shadow-sm">
+            <h2 className="font-semibold">No Company Skills yet</h2>
+            <p className="mt-2 text-sm text-muted-foreground">Company Skills capture reusable methods after an employee creates one in Chat with your confirmation. Once created, it will appear here for review and editing.</p>
+          </section>
+        </div>
+      ) : <section className="grid min-h-0 grid-cols-[280px_minmax(0,1fr)] overflow-hidden">
         <aside className="overflow-auto border-r bg-muted/20 p-3">
           <p className="mb-3 text-xs text-muted-foreground">New Skills start in Chat after confirmation. This page edits Skills that already exist.</p>
           <SelectionList>
-            {(listQuery.data?.skills ?? []).map((skill) => <SelectionRow key={skill.skillId} selected={skill.skillId === activeId} className="px-3 py-2.5" onClick={() => setSelected(skill.skillId)}><SelectionRowTitle className="truncate">{skill.name}</SelectionRowTitle></SelectionRow>)}
-            {!listQuery.isLoading && !(listQuery.data?.skills.length) ? <p className="rounded-md border p-3 text-sm text-muted-foreground">No Company Skills yet. Ask an employee in Chat to create a reusable company method.</p> : null}
+            {skills.map((skill) => <SelectionRow key={skill.skillId} selected={skill.skillId === activeId} className="px-3 py-2.5" onClick={() => setSelected(skill.skillId)}><SelectionRowTitle className="truncate">{skill.name}</SelectionRowTitle></SelectionRow>)}
           </SelectionList>
         </aside>
         <div className="min-w-0 overflow-auto p-5">
@@ -56,7 +63,7 @@ export function CompanySkillsPage({ currentSession }: { currentSession?: TinyOff
             {saveMutation.error ? <p className="text-sm text-destructive">{saveMutation.error instanceof Error ? saveMutation.error.message : "Save failed."}</p> : null}
           </div> : <div className="rounded-md border p-4 text-sm text-muted-foreground">Select a Company Skill to inspect it.</div>}
         </div>
-      </section>
+      </section>}
     </main>
   );
 }

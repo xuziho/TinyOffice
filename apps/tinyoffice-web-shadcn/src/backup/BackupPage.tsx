@@ -11,7 +11,7 @@ export function BackupPage(): ReactElement {
   const query = useQuery({ queryKey: ["tinyoffice", "backups"], queryFn: listBackups, refetchInterval: (state) => state.state.data?.jobs.some((job) => job.status === "creating") ? 1500 : false });
   const mutation = useMutation({ mutationFn: createBackup, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tinyoffice", "backups"] }) });
   const creating = mutation.isPending || query.data?.jobs.some((job) => job.status === "creating");
-  return <main className="grid h-svh grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
+  return <main className="grid h-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
     <header className="tiny-room-header flex items-center justify-between gap-3 border-b">
       <div><div className="tiny-room-title">Backup & Restore</div><div className="tiny-room-subtitle">Create verified full-instance backups. Scheduled automation uses the TinyOffice CLI.</div></div>
       <Button disabled={creating} onClick={() => mutation.mutate()}>{creating ? <LoaderCircle className="animate-spin" /> : <Archive />}Create backup</Button>

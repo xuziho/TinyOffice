@@ -1,6 +1,6 @@
 import type { MouseEvent } from "react";
 
-export type AppView = "access" | "backup" | "capabilities" | "chat" | "company" | "doctor" | "employees" | "integrations" | "prompt" | "sessions" | "settings" | "skills" | "system-ai" | "tasks";
+export type AppView = "access" | "backup" | "capabilities" | "chat" | "company" | "doctor" | "employees" | "integrations" | "prompt" | "sessions" | "settings" | "skills" | "system-ai" | "tasks" | "updates";
 
 export type ChatSurfaceRoute = "direct" | "channel";
 
@@ -57,6 +57,8 @@ export function appViewHref(view: AppView): string {
       return "/system-ai";
     case "tasks":
       return "/tasks";
+    case "updates":
+      return "/updates";
     case "chat":
       return "/chat";
   }
@@ -184,7 +186,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isAppView(value: string): value is AppView {
-  return ["access", "backup", "capabilities", "chat", "company", "doctor", "employees", "integrations", "prompt", "sessions", "settings", "skills", "system-ai", "tasks"].includes(value);
+  return ["access", "backup", "capabilities", "chat", "company", "doctor", "employees", "integrations", "prompt", "sessions", "settings", "skills", "system-ai", "tasks", "updates"].includes(value);
 }
 
 function isChatSurface(value: unknown): value is ChatSurfaceRoute {

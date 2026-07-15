@@ -20,7 +20,7 @@ export function SystemAiPage({ currentSession }: { currentSession?: TinyOfficeCu
   });
 
   return (
-    <div className="flex h-svh min-w-0 flex-col overflow-hidden bg-background">
+    <div className="flex h-full min-w-0 flex-col overflow-hidden bg-background">
       <header className="tiny-room-header border-b">
         <div className="min-w-0">
           <h1 className="tiny-room-title truncate">System AI</h1>

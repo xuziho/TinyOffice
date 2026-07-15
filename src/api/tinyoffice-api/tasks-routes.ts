@@ -26,7 +26,13 @@ function optionalString(record: Record<string, unknown>, key: string): string | 
 }
 
 export function registerTasksRoutes(app: Hono, options: TinyOfficeApiOptions): void {
-  const { companyIdFromContext, jsonResponse, resolveTasksRunActionService, resolveTasksViewModelService } = api;
+  const {
+    companyIdFromContext,
+    currentMemberSession,
+    jsonResponse,
+    resolveTasksRunActionService,
+    resolveTasksViewModelService,
+  } = api;
 
   app.get("/api/companies/:companyId/tasks/view-model", async (c) => {
     const companyId = companyIdFromContext(c);
@@ -43,6 +49,7 @@ export function registerTasksRoutes(app: Hono, options: TinyOfficeApiOptions): v
       throw new Error("workRunId is required");
     }
     const actionId = requireTasksRunActionId(c.req.param("actionId"));
+    const actor = currentMemberSession(options, c, companyId);
     const rawBody = await readJsonBody(c);
     const body = rawBody && typeof rawBody === "object" ? rawBody as Record<string, unknown> : {};
     const tasksRunActionService = await resolveTasksRunActionService(options, companyId);
@@ -50,7 +57,7 @@ export function registerTasksRoutes(app: Hono, options: TinyOfficeApiOptions): v
       requestUrl: new URL(c.req.url),
       workRunId,
       actionId,
-      actorMemberId: optionalString(body, "actorMemberId"),
+      actorMemberId: actor.memberId,
       reason: optionalString(body, "reason"),
     }), 202);
   });

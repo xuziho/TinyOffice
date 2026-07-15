@@ -14,7 +14,7 @@ export interface ExecuteTasksRunActionInput {
   requestUrl: URL;
   workRunId: string;
   actionId: TasksRunActionId;
-  actorMemberId?: string;
+  actorMemberId: string;
   reason?: string;
 }
 
@@ -47,7 +47,11 @@ function statusError(message: string, statusCode: number): Error & { statusCode:
 }
 
 function actorMemberId(input: ExecuteTasksRunActionInput): string {
-  return input.actorMemberId?.trim() || "tasks-operator";
+  const value = input.actorMemberId?.trim();
+  if (!value) {
+    throw new Error("actorMemberId is required");
+  }
+  return value;
 }
 
 function reason(input: ExecuteTasksRunActionInput, fallback: string): string {
@@ -58,6 +62,7 @@ export class WorkServiceTasksRunActionService implements TasksRunActionService {
   constructor(private readonly config: WorkServiceTasksRunActionServiceConfig) {}
 
   async executeTasksRunAction(companyId: string, input: ExecuteTasksRunActionInput): Promise<TasksRunActionResult> {
+    const authenticatedActorMemberId = actorMemberId(input);
     const scopedCompanyId = this.config.companyId || companyId;
     const workService = this.config.workService || new WorkService({
       repoRoot: this.config.repoRoot,
@@ -94,7 +99,7 @@ export class WorkServiceTasksRunActionService implements TasksRunActionService {
         workRunId: input.workRunId,
         assigneeMemberId: latestLease.assigneeMemberId,
         sessionKey: latestLease.sessionKey,
-        createdBy: actorMemberId(input),
+        createdBy: authenticatedActorMemberId,
         retryOfLeaseId: latestLease.id,
         metadata: {
           actionId: input.actionId,
@@ -113,7 +118,7 @@ export class WorkServiceTasksRunActionService implements TasksRunActionService {
     if (input.actionId === "retry-run") {
       const retriedRun = await workService.retryWorkRun({
         workRunId: input.workRunId,
-        actorMemberId: actorMemberId(input),
+        actorMemberId: authenticatedActorMemberId,
       });
       return {
         accepted: true,
@@ -140,7 +145,7 @@ export class WorkServiceTasksRunActionService implements TasksRunActionService {
     });
     const updated = await cancellationService.cancelWorkRun({
       workRunId: input.workRunId,
-      actorMemberId: actorMemberId(input),
+      actorMemberId: authenticatedActorMemberId,
       reason: reason(input, "Canceled from Tasks Run action."),
       summary: `${action.label} accepted from Tasks Run actions.`,
     });

@@ -171,7 +171,6 @@ export function EmployeesPage({ currentSession }: { currentSession?: TinyOfficeC
   return (
     <div className="grid h-full w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
       <SectionContentHeader
-        description={<>Employee configuration - {companyId || "No company selected"}</>}
         actions={
           <CreateEmployeeDialog
             companyId={companyId}

@@ -74,7 +74,6 @@ export function AccessPage({ currentSession }: { currentSession?: TinyOfficeCurr
   return (
     <div className="grid h-full w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
       <SectionContentHeader
-        description={<>Company access policy - {companyId || "No company selected"}</>}
         actions={<>
           <Button type="button" size="sm" disabled={!parsedPolicy?.ok || !policyChanged || saveMutation.isPending} onClick={() => saveMutation.mutate()}>
             <Save className="mr-2 size-4" />

@@ -15,9 +15,8 @@ export function SectionNavigation({
 }): ReactElement {
   return (
     <header className="tiny-section-navigation min-w-0 border-b bg-background">
-      <div className="min-w-0 px-5 pb-2 pt-3 sm:px-7">
+      <div className="min-w-0 px-5 py-3 sm:px-7">
         <h1 className="text-base font-semibold leading-tight">{section.title}</h1>
-        <div className="mt-0.5 truncate text-xs text-muted-foreground">{section.description}</div>
       </div>
       <nav className="tiny-section-tabs flex min-w-0 items-stretch gap-2 overflow-x-auto overflow-y-hidden border-t px-5 sm:px-7" aria-label={`${section.title} pages`}>
         {section.items.map((item) => (

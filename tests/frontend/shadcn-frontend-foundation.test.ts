@@ -295,7 +295,7 @@ test("shadcn app shell exposes Employees as the runtime employee configuration s
   assert.match(navigationStructureSource, /view: "access", label: "Access"/);
   assert.match(navigationStructureSource, /view: "doctor", label: "Health"/);
   assert.match(navigationSource, /return "\/employees"/);
-  assert.match(employeesPageSource, /Employee configuration/);
+  assert.doesNotMatch(employeesPageSource, /Employee configuration/);
   assert.match(employeesPageSource, /AGENTS\.md/);
   assert.match(employeesPageSource, /No AGENTS\.md yet\./);
   assert.match(employeesPageSource, /instructionFile\?\.exists === false/);
@@ -327,7 +327,7 @@ test("shadcn app shell exposes Prompt as the company Prompt Policy surface", asy
   assert.match(navigationStructureSource, /view: "prompt", label: "Prompt"/);
   assert.match(appSource, /activeView === "prompt"/);
   assert.match(navigationSource, /return "\/prompt"/);
-  assert.match(promptPageSource, /Company prompt configuration/);
+  assert.doesNotMatch(promptPageSource, /Company prompt configuration/);
   assert.match(promptPageSource, /Foundation prompts/);
   assert.match(promptPageSource, /Scene blocks/);
   assert.match(promptPageSource, /Loaded by/);
@@ -367,7 +367,7 @@ test("shadcn app shell keeps read-only Capabilities and operational Health in ex
   assert.match(capabilitiesPageSource, /Read only/);
   assert.match(navigationSource, /return "\/access"/);
   assert.match(navigationSource, /return "\/doctor"/);
-  assert.match(accessPageSource, /Company access policy/);
+  assert.doesNotMatch(accessPageSource, /Company access policy/);
   assert.match(accessPageSource, /Rule groups/);
   assert.match(accessPageSource, /Runtime boundary/);
   assert.match(accessPageSource, /Advanced policy JSON/);
@@ -379,7 +379,9 @@ test("shadcn app shell keeps read-only Capabilities and operational Health in ex
   assert.match(accessClientSource, /getAccessRequests/);
   assert.match(accessClientSource, /resolveAccessRequest/);
   assert.match(accessClientSource, /previewAccessDecision/);
-  assert.match(doctorPageSource, /Read-only diagnostics/);
+  assert.match(doctorPageSource, /getDoctorReport/);
+  assert.match(doctorPageSource, /Overall status/);
+  assert.doesNotMatch(doctorPageSource, /useMutation/);
   assert.match(doctorPageSource, /Next steps/);
   assert.match(doctorPageSource, /getDoctorReport/);
   assert.doesNotMatch(doctorPageSource, /policyJson|JSON\.stringify|raw JSON/i);
@@ -1082,6 +1084,8 @@ test("management navigation uses direct rail sections and one shared tab hierarc
   assert.match(sectionNavigationSource, /tiny-section-tabs/);
   assert.match(sectionNavigationSource, /overflow-y-hidden/);
   assert.match(sectionNavigationSource, /data-active=\{item\.view === activeView\}/);
+  assert.doesNotMatch(sectionNavigationSource, /section\.description/);
+  assert.doesNotMatch(navigationStructureSource, /description:/);
   assert.match(cssSource, /\.tiny-soft-retro-shell \.tiny-section-tabs \{[^}]*scrollbar-width: none/);
   assert.match(cssSource, /\.tiny-section-tab\[data-slot="button"\]\[data-active="true"\] \{[^}]*background: var\(--tiny-tab-active-surface\)[^}]*color: var\(--tiny-tab-active-ink\)[^}]*box-shadow: inset 0 -3px 0 var\(--tiny-tab-indicator\)/);
   assert.match(navigationStructureSource, /title: "Workforce"[\s\S]*title: "AI & Runtime"[\s\S]*title: "Operations"/);

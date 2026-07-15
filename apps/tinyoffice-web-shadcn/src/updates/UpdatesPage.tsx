@@ -5,7 +5,6 @@ import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tan
 import { AlertTriangle, Check, Download, RefreshCw } from "lucide-react";
 import type { ReactElement } from "react";
 import type { TinyOfficeUpdateStatus } from "tinyoffice/frontend-api-contracts";
-import { SectionContentHeader } from "@/app/SectionContentHeader";
 import { chatQueryKeys } from "@/chat/chatQueryKeys";
 
 export function UpdatesPage(): ReactElement {
@@ -19,9 +18,8 @@ export function UpdatesPage(): ReactElement {
   });
 
   return (
-    <main className="grid h-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
-      <SectionContentHeader description="Approved product maintenance and runtime compatibility" />
-      <div className="overflow-auto p-4 sm:p-6">
+    <main className="h-full overflow-hidden bg-background">
+      <div className="h-full overflow-auto p-4 sm:p-6">
         <UpdatesPanel
           query={updates}
           installing={install.isPending}

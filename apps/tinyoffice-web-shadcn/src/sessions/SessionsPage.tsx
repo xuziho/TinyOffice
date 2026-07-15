@@ -142,12 +142,10 @@ export function SessionsPage({
   }
 
   return (
-    <div className="tiny-soft-retro-sessions grid h-full w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
-      <SectionContentHeader
-        title={detailSession?.displayName ?? (listPresentation?.title !== "Runtime sessions" ? listPresentation?.title : undefined)}
-        description={detailSession
-          ? `${sessionSceneLabel(detailSession.sceneType)} - ${detailSession.role || detailSession.employeeId}`
-          : `Evidence console - ${companyId || "No company selected"}`}
+    <div className={`tiny-soft-retro-sessions grid h-full w-full overflow-hidden ${detailSession ? "grid-rows-[auto_minmax(0,1fr)]" : "grid-rows-[minmax(0,1fr)]"}`}>
+      {detailSession ? <SectionContentHeader
+        title={detailSession.displayName}
+        description={`${sessionSceneLabel(detailSession.sceneType)} - ${detailSession.role || detailSession.employeeId}`}
         actions={detailSession && model?.detail ? (
           <div className="flex shrink-0 items-center gap-2">
             {returnContext && onOpenNavigationTarget ? (
@@ -192,7 +190,7 @@ export function SessionsPage({
             ) : null}
           </div>
         ) : undefined}
-      />
+      /> : null}
       <section className="grid min-w-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-[var(--tiny-canvas)]">
         <ScrollArea className="min-h-0">
           <div className="grid w-full gap-4 px-6 py-5">

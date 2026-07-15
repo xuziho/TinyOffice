@@ -40,7 +40,7 @@ export function CompanySkillsPage({ currentSession }: { currentSession?: TinyOff
 
   return (
     <main className="grid h-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
-      <SectionContentHeader description="Shared workflow knowledge for the current company" actions={<Badge variant="secondary">Company-wide</Badge>} />
+      <SectionContentHeader actions={<Badge variant="secondary">Company-wide</Badge>} />
       {listQuery.isLoading ? <div className="grid place-items-center p-8 text-sm text-muted-foreground">Loading Company Skills...</div> : listQuery.error ? <div className="m-5 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">{listQuery.error instanceof Error ? listQuery.error.message : "Company Skills could not be loaded."}</div> : skills.length === 0 ? (
         <div className="grid place-items-center overflow-auto p-6">
           <section className="max-w-lg rounded-md border bg-card p-6 text-center shadow-sm">

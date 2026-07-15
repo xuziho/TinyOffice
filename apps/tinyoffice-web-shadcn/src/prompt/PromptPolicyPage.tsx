@@ -23,8 +23,15 @@ import { useUnsavedChanges, useUnsavedChangesNavigation } from "@/config/unsaved
 import { chatQueryKeys } from "@/chat/chatQueryKeys";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RotateCcw, Save, ScrollText } from "lucide-react";
-import { useEffect, useRef, useState, type ReactElement, type ReactNode } from "react";
+import { useEffect, useState, type ReactElement, type ReactNode } from "react";
 import { SectionContentHeader } from "@/app/SectionContentHeader";
+import {
+  editPromptDraft,
+  emptyPromptDraft,
+  promptDraftIsDirty,
+  promptDraftValue,
+  reconcilePromptDraft,
+} from "./promptDraftModel";
 import type {
   PromptPolicyBlockViewModel,
   PromptPolicyTemplateViewModel,
@@ -50,9 +57,9 @@ export function PromptPolicyPage({ currentSession }: { currentSession?: TinyOffi
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const target = selectedPromptFor(model, selectedKey);
   const persistedContent = targetContent(target);
-  const [draftContent, setDraftContent] = useState("");
-  const previousTargetKey = useRef(target?.key);
-  const dirty = Boolean(target && draftContent !== persistedContent);
+  const [draft, setDraft] = useState(emptyPromptDraft);
+  const draftContent = promptDraftValue(draft, target?.key, persistedContent);
+  const dirty = promptDraftIsDirty(draft, target?.key, persistedContent);
   useUnsavedChanges(`prompt-policy:${companyId}`, dirty);
 
   useEffect(() => {
@@ -63,12 +70,8 @@ export function PromptPolicyPage({ currentSession }: { currentSession?: TinyOffi
   }, [model, selectedKey]);
 
   useEffect(() => {
-    const targetChanged = previousTargetKey.current !== target?.key;
-    if (targetChanged || !dirty) {
-      previousTargetKey.current = target?.key;
-      setDraftContent(persistedContent);
-    }
-  }, [dirty, target?.key, persistedContent]);
+    setDraft((current) => reconcilePromptDraft(current, target?.key, persistedContent));
+  }, [target?.key, persistedContent]);
 
   const saveMutation = useMutation({
     mutationFn: () => {
@@ -116,7 +119,6 @@ export function PromptPolicyPage({ currentSession }: { currentSession?: TinyOffi
   return (
     <div className="grid h-full w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
       <SectionContentHeader
-        description={<>Company prompt configuration - {companyId || "No company selected"}</>}
         actions={<>
           <Button type="button" size="sm" disabled={!target || saveMutation.isPending || !dirty} onClick={() => saveMutation.mutate()}>
             <Save className="mr-2 size-4" />
@@ -188,7 +190,11 @@ export function PromptPolicyPage({ currentSession }: { currentSession?: TinyOffi
                   <Textarea
                     className="min-h-[520px] resize-y font-mono text-xs leading-5"
                     value={draftContent}
-                    onChange={(event) => setDraftContent(event.currentTarget.value)}
+                    onChange={(event) => {
+                      if (target) {
+                        setDraft(editPromptDraft(target.key, persistedContent, event.currentTarget.value));
+                      }
+                    }}
                   />
                 </section>
               </>

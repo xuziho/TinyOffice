@@ -15,7 +15,7 @@ export function CapabilitiesPage({ currentSession }: { currentSession?: TinyOffi
   const query = useQuery({ queryKey: chatQueryKeys.capabilities(companyId), enabled: Boolean(companyId), queryFn: () => getCapabilities({ companyId }) });
   const active = query.data?.capabilities.find((item) => item.id === selected) ?? query.data?.capabilities[0];
   return <main className="grid h-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
-    <SectionContentHeader description="System-owned runtime contracts" actions={<Badge className="tiny-page-attribute" variant="secondary"><LockKeyhole />Read only</Badge>} />
+    <SectionContentHeader actions={<Badge className="tiny-page-attribute" variant="secondary"><LockKeyhole />Read only</Badge>} />
     <section className="grid min-h-0 grid-cols-[300px_minmax(0,1fr)] overflow-hidden">
       <aside className="overflow-y-auto overflow-x-hidden border-r bg-muted/20 p-2"><SelectionList>{(query.data?.capabilities ?? []).map((item) => <SelectionRow key={item.id} selected={item.id === active?.id} className="px-3 py-2.5" onClick={() => setSelected(item.id)}><span className="min-w-0"><SelectionRowTitle className="block truncate">{item.title}</SelectionRowTitle><SelectionRowDescription className="block truncate text-xs">{item.id}</SelectionRowDescription></span></SelectionRow>)}</SelectionList></aside>
       <div className="min-w-0 overflow-auto p-6">{active ? <div className="grid max-w-4xl gap-5">

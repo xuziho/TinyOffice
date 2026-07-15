@@ -11,7 +11,6 @@ test("section navigation renders one integrated active tab with canonical links"
       activeView="sessions"
       section={{
         title: "Operations",
-        description: "Runtime evidence and maintenance",
         items: [
           { view: "sessions", label: "Runtime Sessions" },
           { view: "doctor", label: "Health" },

@@ -232,13 +232,13 @@ export function formatMessageTime(value: string): string {
   return date.toLocaleString();
 }
 
-export function formatRelativeTime(value: string): string {
+export function formatRelativeTime(value: string, now = Date.now()): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return value;
   }
 
-  const elapsedMs = Math.abs(Date.now() - date.getTime());
+  const elapsedMs = Math.abs(now - date.getTime());
   const minuteMs = 60_000;
   const hourMs = 60 * minuteMs;
   const dayMs = 24 * hourMs;
@@ -247,13 +247,10 @@ export function formatRelativeTime(value: string): string {
     return "now";
   }
   if (elapsedMs < hourMs) {
-    return `${Math.round(elapsedMs / minuteMs)}m`;
+    return `${Math.max(1, Math.floor(elapsedMs / minuteMs))}m`;
   }
   if (elapsedMs < dayMs) {
-    return `${Math.round(elapsedMs / hourMs)}h`;
-  }
-  if (elapsedMs < 7 * dayMs) {
-    return `${Math.round(elapsedMs / dayMs)}d`;
+    return `${Math.max(1, Math.floor(elapsedMs / hourMs))}h`;
   }
 
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });

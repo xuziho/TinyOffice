@@ -349,6 +349,20 @@ export default function collaborationActionsExtension(pi: ExtensionAPI) {
       "Required channel-topic state action. Call it exactly once before ending the current channel-topic turn, choosing one Handoff candidate. To return control, choose the user's participant id.",
     parameters: HandoffTopicTurnParams,
     async execute(_toolCallId: string, params: unknown) {
+      const typed = params as { toId?: unknown };
+      const toId = requiredString(typed.toId, "toId");
+      const context = gateway.optionalAmbientConversationContext();
+      const candidates = context?.reachableParticipants || [];
+      const selected = candidates.find((candidate) => candidate.id === toId);
+      if (!selected) {
+        const candidateList = candidates
+          .map((candidate) => `${candidate.displayName || candidate.id} (${candidate.id})`)
+          .join(", ");
+        throw new Error(
+          `handoff_topic_turn target "${toId}" is not a current Handoff candidate. ` +
+          `Choose exactly one candidate id${candidateList ? `: ${candidateList}` : " from the current Topic context"}.`,
+        );
+      }
       return {
         content: [
           {
@@ -358,7 +372,7 @@ export default function collaborationActionsExtension(pi: ExtensionAPI) {
         ],
         details: {
           status: "allowed",
-          result: params,
+          result: { toId },
         },
       };
     },

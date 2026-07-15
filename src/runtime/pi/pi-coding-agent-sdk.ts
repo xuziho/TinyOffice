@@ -20,7 +20,9 @@ export {
   type AgentSession,
 };
 
-export const DEFAULT_HTTP_IDLE_TIMEOUT_MS = 300_000;
+// This measures a completely idle provider connection, not total employee work time.
+// Keep it bounded so a broken stream can retry while the Chat run is still actionable.
+export const DEFAULT_HTTP_IDLE_TIMEOUT_MS = 120_000;
 
 interface PiHttpDispatcherModule {
   configureHttpDispatcher(timeoutMs?: number): void;

@@ -54,6 +54,23 @@ import {
 let sdkCreationChain: Promise<void> = Promise.resolve();
 let piHttpDispatcherConfigured = false;
 
+export function updatePiReplyText(
+  current: string,
+  event: {
+    type?: string;
+    assistantMessageEvent?: { type?: string; delta?: string };
+  },
+): { text: string; delta?: string } {
+  if (event.type === "auto_retry_start") {
+    return { text: "" };
+  }
+  if (event.type !== "message_update" || event.assistantMessageEvent?.type !== "text_delta") {
+    return { text: current };
+  }
+  const delta = event.assistantMessageEvent.delta || "";
+  return { text: current + delta, delta };
+}
+
 async function configurePiHttpDispatcherOnce(): Promise<void> {
   if (piHttpDispatcherConfigured) {
     return;
@@ -314,14 +331,14 @@ export class DefaultPiSessionTransport implements PiSessionTransport {
         delta?: string;
       };
     }) => {
+      const textUpdate = updatePiReplyText(reply, event);
+      reply = textUpdate.text;
       input.onSessionEvent?.(event);
       if (event.type === "message_update") {
         outputStarted = true;
       }
-      if (event.type === "message_update" && event.assistantMessageEvent?.type === "text_delta") {
-        const delta = event.assistantMessageEvent.delta || "";
-        reply += delta;
-        input.onTextDelta?.(delta);
+      if (textUpdate.delta !== undefined) {
+        input.onTextDelta?.(textUpdate.delta);
       }
     });
 

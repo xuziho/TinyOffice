@@ -88,6 +88,27 @@ test("collaboration realtime contract exposes Chat run lifecycle with runId and 
   assertTinyOfficeRealtimeEvent(event);
 });
 
+test("collaboration realtime contract exposes provider retry as an active Chat runtime state", () => {
+  const event = createTinyOfficeRealtimeEvent({
+    type: "chat.runtime_status.changed",
+    companyId: "acme",
+    conversationId: "conversation-topic-launch",
+    roomId: "conversation-topic-launch",
+    sourceMessageId: "message-1",
+    targetMemberId: "aster",
+    status: "retrying",
+    runId: "chat-run-1",
+    sessionKey: "aster|chat_topic_room|conversation-topic-launch",
+  }, {
+    eventId: "event-retrying",
+    occurredAt: "2026-07-15T01:00:00.000Z",
+    sequence: 3,
+  });
+
+  assert.equal(event.status, "retrying");
+  assertTinyOfficeRealtimeEvent(event);
+});
+
 test("collaboration realtime Chat viewer targeting is memberId-only", () => {
   const event = createTinyOfficeRealtimeEvent({
     type: "chat.projection.changed",

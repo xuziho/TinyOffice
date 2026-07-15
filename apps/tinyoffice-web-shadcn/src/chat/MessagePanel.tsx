@@ -540,6 +540,8 @@ function MessageAttachments({
 
 function draftStatusLabel(draftReply: DraftReply): string {
   switch (draftReply.status) {
+    case "retrying":
+      return "retrying";
     case "canceled":
       return "stopped - not sent";
     case "failed":

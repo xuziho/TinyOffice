@@ -643,7 +643,8 @@ test("shadcn chat entry rows stay compact and hide zero-value metadata", async (
   assert.doesNotMatch(productSource, /entryTitleForDisplay/);
   assert.match(productSource, /unreadCount > 0/);
   assert.match(productSource, /EntryUpdatedTime/);
-  assert.match(productSource, /grid-cols-\[minmax\(0,1fr\)_9\.375rem_2\.125rem\]/);
+  assert.match(productSource, /grid-cols-\[minmax\(0,1fr\)_5\.75rem_1\.75rem_2\.125rem\]/);
+  assert.match(productSource, /min-h-5 min-w-5 items-center justify-end/);
   assert.match(productSource, /EntryListScrollerContent/);
   assert.match(productSource, /entryListScrollKey/);
   assert.doesNotMatch(productSource, /AutoScrollViewport/);
@@ -794,6 +795,8 @@ test("shadcn chat topics show activity time and messages render markdown", async
   assert.ok(packageJson.dependencies?.["react-markdown"], "message bodies should use a mature Markdown renderer");
   assert.match(productSource, /formatRelativeTime\(entry\.updatedAt\)/);
   assert.match(productSource, /Last updated/);
+  assert.doesNotMatch(productSource, /Active \{formatRelativeTime\(entry\.updatedAt\)\}/);
+  assert.doesNotMatch(productSource, /formatCompactDate\(entry\.updatedAt\)/);
   assert.match(productSource, /ReactMarkdown/);
   assert.match(productSource, /<MarkdownMessageBody body=\{message\.body\} \/>/);
   assert.doesNotMatch(productSource, /<BubbleContent[^>]*>\s*\{message\.body\}\s*<\/BubbleContent>/s);

@@ -53,5 +53,9 @@ export function createRuntimeTextDeltaEmitter(input: {
       flushTextDelta(false);
     },
     flushTextDelta,
+    resetTextDelta() {
+      bufferedDelta = "";
+      lastDeltaFlushAt = 0;
+    },
   };
 }

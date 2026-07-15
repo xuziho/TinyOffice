@@ -9,7 +9,7 @@ import type {
   TinyOfficeCurrentSession,
 } from "tinyoffice/frontend-api-contracts";
 import { buildChatShellModel, isDirectMessageNavigationItemSelected } from "./chatShellModel";
-import { activeEntryContainerId, entryListHeaderFor, formatEntryCount, memberDisplayNameFor, threadSubtitleFor } from "./chatUiUtils";
+import { activeEntryContainerId, entryListHeaderFor, formatEntryCount, formatRelativeTime, memberDisplayNameFor, threadSubtitleFor } from "./chatUiUtils";
 
 const session: TinyOfficeCurrentSession = {
   schema: "tinyoffice-current-session",
@@ -519,6 +519,48 @@ test("shows Stopping only for a cancel-requested current Topic holder", () => {
   assert.deepEqual(model.context.participants.find((participant) => participant.id === "lena-analytics")?.chatStatus, {
     kind: "stopping",
     label: "Stopping…",
+  });
+});
+
+test("formats Topic activity as one relative time or one compact date", () => {
+  const now = new Date("2026-07-15T08:00:00.000Z").getTime();
+  const olderDate = "2026-07-14T07:59:59.000Z";
+
+  assert.equal(formatRelativeTime("2026-07-15T08:00:00.000Z", now), "now");
+  assert.equal(formatRelativeTime("2026-07-15T06:00:00.000Z", now), "2h");
+  assert.equal(
+    formatRelativeTime(olderDate, now),
+    new Date(olderDate).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+  );
+});
+
+test("shows Retrying for the current Topic holder while the provider reconnects", () => {
+  const model = buildChatShellModel({
+    session,
+    projection,
+    directory,
+    selectedSurface: { kind: "entry-room", entryId: "entry-general-1" },
+    chatRunState: {
+      runs: {
+        "run-current-topic": {
+          companyId: "ziho-co",
+          conversationId: "room-general-1",
+          roomId: "room-general-1",
+          runId: "run-current-topic",
+          chainId: "chain-current-topic",
+          sourceMessageId: "message-1",
+          targetMemberId: "lena-analytics",
+          status: "retrying",
+          streamedContent: "",
+          sequence: 6,
+        },
+      },
+    },
+  });
+
+  assert.deepEqual(model.context.participants.find((participant) => participant.id === "lena-analytics")?.chatStatus, {
+    kind: "retrying",
+    label: "Retrying…",
   });
 });
 

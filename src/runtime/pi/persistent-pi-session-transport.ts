@@ -1,6 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
+import collaborationActionsExtension from "../../collaboration/pi/collaboration-actions-extension.js";
 import {
   loadEmployeeRuntimeConfig,
   type EmployeeRuntimeConfig,
@@ -150,6 +151,10 @@ export class DefaultPiSessionTransport implements PiSessionTransport {
       noContextFiles: true,
       noSkills: true,
       additionalSkillPaths: skillPaths,
+      extensionFactories: [{
+        name: "tinyoffice-collaboration-actions",
+        factory: collaborationActionsExtension,
+      }],
       systemPromptOverride: () => input.systemPromptAppend,
       appendSystemPromptOverride: () => [
         ...formatEmployeeInstructionAppend(employeeInstructionFiles),

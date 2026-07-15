@@ -110,3 +110,17 @@ test("locally registered PI tools are declared in the runtime boundary contract"
     assert.equal(boundaryNames.has(toolName), true, `${toolName} must declare a runtime execution boundary`);
   }
 });
+
+test("host-owned collaboration tools use PI inline extension factories", async () => {
+  const transportSource = await readFile(
+    path.join(repoRoot, "src/runtime/pi/persistent-pi-session-transport.ts"),
+    "utf8",
+  );
+  const employeeHomeSource = await readFile(
+    path.join(repoRoot, "src/runtime/registry/employee-home.ts"),
+    "utf8",
+  );
+
+  assert.match(transportSource, /extensionFactories:\s*\[\{[\s\S]*?tinyoffice-collaboration-actions[\s\S]*?collaborationActionsExtension/);
+  assert.doesNotMatch(employeeHomeSource, /tinyoffice-collaboration-actions/);
+});

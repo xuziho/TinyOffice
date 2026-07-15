@@ -118,7 +118,6 @@ test("loads DB employees with workspace paths", async () => {
   assert.deepEqual(workspacePiSettings.packages, [
     "../../../../../../packages/pi-tool-guard",
     "../../../../../../packages/pi-web-tools",
-    "../../../../../../packages/tinyoffice-collaboration-actions",
     "../../../../../../packages/pi-context-harness",
   ]);
 });

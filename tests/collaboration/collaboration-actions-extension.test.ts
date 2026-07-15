@@ -16,6 +16,7 @@ import {
 } from "../../src/runtime/company-config/postgres-runtime-connection.js";
 import { DEFAULT_COMPANY_ID } from "../../src/runtime/company-config/postgres-schema.js";
 import { registerTinyOfficeRealtimePublisher } from "../../src/collaboration/contracts/tinyoffice-realtime-publisher-registry.js";
+import { DefaultResourceLoader } from "../../src/runtime/pi/pi-coding-agent-sdk.js";
 import { RuntimeSessionRepository } from "../../src/runtime/storage/runtime-session-repository.js";
 import { loadTasksViewModel } from "../../src/work/tasks-loader.js";
 import { WorkRepository } from "../../src/work/work-repository.js";
@@ -391,16 +392,6 @@ test("collaboration PI tool gateway can resolve companyId from ambient context",
 });
 
 test("tinyoffice_capability_call reads registered capabilities through runtime services", async () => {
-  const tools = new Map<string, RegisteredTool>();
-  collaborationActionsExtension({
-    registerTool(definition) {
-      tools.set(definition.name, definition as RegisteredTool);
-    },
-  });
-
-  const apiRequestTool = tools.get("tinyoffice_capability_call");
-  assert.ok(apiRequestTool);
-
   const sandboxRoot = await mkdtemp(path.join(os.tmpdir(), "collaboration-ext-api-"));
   await writeEmployeeHomeFixture({
     repoRoot: sandboxRoot,
@@ -410,6 +401,31 @@ test("tinyoffice_capability_call reads registered capabilities through runtime s
     role: "automation",
     mountedActions: [],
   });
+
+  const loader = new DefaultResourceLoader({
+    cwd: sandboxRoot,
+    agentDir: path.join(sandboxRoot, ".pi-agent"),
+    noContextFiles: true,
+    noSkills: true,
+    noPromptTemplates: true,
+    noThemes: true,
+    extensionFactories: [{
+      name: "tinyoffice-collaboration-actions",
+      factory: collaborationActionsExtension,
+    }],
+  });
+  await loader.reload();
+  const extensionResult = loader.getExtensions();
+  assert.deepEqual(extensionResult.errors, []);
+  const inlineExtension = extensionResult.extensions.find(
+    (extension) => extension.path === "<inline:tinyoffice-collaboration-actions>",
+  );
+  assert.ok(inlineExtension);
+  const loadedApiRequestTool = inlineExtension.tools.get("tinyoffice_capability_call") as
+    | { definition: RegisteredTool }
+    | undefined;
+  assert.ok(loadedApiRequestTool);
+  const apiRequestTool = loadedApiRequestTool.definition;
 
   const result = await withEnv(
     {

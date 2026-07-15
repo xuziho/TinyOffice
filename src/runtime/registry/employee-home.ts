@@ -52,10 +52,6 @@ async function ensureWorkspacePiSettings(input: {
       )),
       toPosixPath(path.relative(
         workspacePiPath,
-        path.join(input.repoRoot, "packages", "tinyoffice-collaboration-actions"),
-      )),
-      toPosixPath(path.relative(
-        workspacePiPath,
         path.join(input.repoRoot, "packages", "pi-context-harness"),
       )),
     ],

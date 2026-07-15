@@ -95,7 +95,7 @@ export function AccessPage({ currentSession }: { currentSession?: TinyOfficeCurr
                 </SelectionRow>
               ))}
               {accessQuery.isLoading ? <PanelNote>{t("admin.loadingAccess")}</PanelNote> : null}
-              {accessQuery.error ? <PanelNote>{errorText(accessQuery.error, "Failed to load Access policy.")}</PanelNote> : null}
+              {accessQuery.error ? <PanelNote>{errorText(accessQuery.error, t("admin.accessLoadFailed"))}</PanelNote> : null}
             </SelectionList>
           </ScrollArea>
         </aside>
@@ -108,7 +108,7 @@ export function AccessPage({ currentSession }: { currentSession?: TinyOfficeCurr
                     <div className="min-w-0">
                       <div className="flex min-w-0 items-center gap-2">
                         <ShieldCheck className="size-5 text-[var(--tiny-muted)]" />
-                        <h1 className="truncate text-xl font-semibold">{selectedGroup?.label ?? "Runtime guard"}</h1>
+                        <h1 className="truncate text-xl font-semibold">{selectedGroup?.label ?? t("admin.runtimeGuard")}</h1>
                       </div>
                       {selectedGroup ? <p className="mt-1 text-sm text-[var(--tiny-muted)]">{selectedGroup.summary}</p> : null}
                     </div>
@@ -120,14 +120,14 @@ export function AccessPage({ currentSession }: { currentSession?: TinyOfficeCurr
                       <SaveStateBadge dirty={policyChanged} saving={saveMutation.isPending} />
                     </div>
                   </div>
-                  {saveMutation.error ? <div className="text-sm text-destructive">{errorText(saveMutation.error, "Failed to save Access policy.")}</div> : null}
+                  {saveMutation.error ? <div className="text-sm text-destructive">{errorText(saveMutation.error, t("admin.accessSaveFailed"))}</div> : null}
                   {parsedPolicy && !parsedPolicy.ok ? <div className="text-sm text-destructive">{parsedPolicy.message}</div> : null}
                 </section>
                 {selectedGroup ? <RuleGroupDetails group={selectedGroup} /> : null}
                 <GuardBoundary />
                 <details className="group rounded-md border border-[var(--tiny-line-soft)] bg-[var(--tiny-surface)]">
                   <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-[var(--tiny-muted)] transition-colors hover:bg-[var(--tiny-hover)]">
-                    Advanced policy JSON
+                    {t("admin.advancedPolicyJson")}
                   </summary>
                   <div className="grid gap-2 border-t border-[var(--tiny-line-faint)] p-3">
                     <Textarea
@@ -162,7 +162,7 @@ function RuleGroupDetails({ group }: { group: ToolSafetyCapabilityGroup }): Reac
               <PatternList key={column.title} title={column.title} patterns={column.patterns} />
             ))}
           </div>
-        ) : <PanelNote>No command patterns are configured here. Ordinary bash remains allowed unless a lower-level guard matches a sensitive path.</PanelNote>
+        ) : <PanelNote>{t("admin.noCommandPatterns")}</PanelNote>
       ) : (
         <div className="grid gap-2">
           {resourcePatterns.length ? resourcePatterns.map((item) => (
@@ -173,7 +173,7 @@ function RuleGroupDetails({ group }: { group: ToolSafetyCapabilityGroup }): Reac
                 <DecisionBadge decision={item.writeRule} label={`write ${item.writeRule}`} />
               </div>
             </div>
-          )) : <PanelNote>No configured patterns in this group.</PanelNote>}
+          )) : <PanelNote>{t("admin.noConfiguredPatterns")}</PanelNote>}
         </div>
       )}
     </section>
@@ -187,10 +187,10 @@ function GuardBoundary(): ReactElement {
       <SectionTitle>{t("admin.runtimeBoundary")}</SectionTitle>
       <div className="grid divide-y border-y text-sm text-[var(--tiny-muted)]">
         <div className="py-2">
-          Access guards tool calls for sensitive paths and high-risk commands. It is not a sandbox and not a full business permission system.
+          {t("admin.guardBoundaryDescription")}
         </div>
         <div className="py-2">
-          Foreground approvals belong in the Chat room that raised them. This page edits the company guard policy.
+          {t("admin.guardApprovalDescription")}
         </div>
       </div>
     </section>

@@ -121,7 +121,7 @@ test("keeps Prompt Policy focused on content instead of scene binding or JSON ed
   assert.match(source, /savePromptPolicyBlock/);
   assert.match(source, /resetPromptPolicyTemplate/);
   assert.match(source, /resetPromptPolicyBlock/);
-  assert.match(source, /Other Prompt Policy entries will not change/);
+  assert.match(source, /admin\.resetPromptDescription/);
   assert.match(source, /<Dialog open=\{resetDialogOpen\}/);
   assert.doesNotMatch(source, /window\.confirm/);
   assert.doesNotMatch(source, /Reset selectedPromptFor\(model, ""\)/);

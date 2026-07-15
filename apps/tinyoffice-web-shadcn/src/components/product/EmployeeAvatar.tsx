@@ -2,6 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useMemo, type ReactElement } from "react";
 import { employeeAvatarDataUri } from "./employeeAvatarSource";
+import { i18n } from "@/i18n";
 
 export function EmployeeAvatar({
   memberId,
@@ -22,7 +23,7 @@ export function EmployeeAvatar({
     <Avatar
       data-member-id={memberId}
       className={cn("tiny-employee-avatar", kind === "member" && "tiny-member-avatar", className)}
-      aria-label={`${displayName} avatar`}
+      aria-label={i18n.t("shared.avatarLabel", { name: displayName })}
     >
       {employeeImage ? <AvatarImage src={employeeImage} alt="" /> : null}
       <AvatarFallback>{initialsForName(displayName)}</AvatarFallback>

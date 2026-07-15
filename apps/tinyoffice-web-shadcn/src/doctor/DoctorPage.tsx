@@ -15,8 +15,11 @@ import type {
   TinyOfficeDoctorSection,
   TinyOfficeDoctorStatus,
 } from "tinyoffice/frontend-api-contracts";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 
 export function DoctorPage({ currentSession }: { currentSession?: TinyOfficeCurrentSession }): ReactElement {
+  const { t } = useTranslation();
   const companyId = currentSession?.companyId ?? currentSession?.currentCompanyId;
   const doctorQuery = useQuery({
     queryKey: chatQueryKeys.doctorReport(companyId),
@@ -27,44 +30,45 @@ export function DoctorPage({ currentSession }: { currentSession?: TinyOfficeCurr
   return (
     <main className="h-full w-full overflow-hidden bg-background">
       {!companyId ? (
-        <ProductState className="m-5" icon={Stethoscope} description="Select a company before running diagnostics." />
+        <ProductState className="m-5" icon={Stethoscope} description={t("admin.selectCompanyDiagnostics")} />
       ) : doctorQuery.isLoading ? (
-        <ProductState className="m-5" icon={Stethoscope} description="Loading diagnostics..." />
+        <ProductState className="m-5" icon={Stethoscope} description={t("admin.loadingDiagnostics")} />
       ) : doctorQuery.isError ? (
-        <ProductState className="m-5" icon={Stethoscope} tone="error" description={doctorQuery.error instanceof Error ? doctorQuery.error.message : "Diagnostics could not load."} />
+        <ProductState className="m-5" icon={Stethoscope} tone="error" description={doctorQuery.error instanceof Error ? doctorQuery.error.message : t("admin.diagnosticsLoadFailed")} />
       ) : doctorQuery.data ? (
         <DoctorReport report={doctorQuery.data} />
       ) : (
-        <ProductState className="m-5" icon={Stethoscope} description="No diagnostics are available." />
+        <ProductState className="m-5" icon={Stethoscope} description={t("admin.noDiagnostics")} />
       )}
     </main>
   );
 }
 
 function DoctorReport({ report }: { report: TinyOfficeDoctorReport }): ReactElement {
+  const { t } = useTranslation();
   return (
     <section className="grid h-full min-h-0 grid-cols-[300px_minmax(0,1fr)] overflow-hidden">
       <aside className="border-r bg-muted/20 p-4">
         <div className="flex items-center gap-2">
           <StatusIcon status={report.overallStatus} />
           <div className="min-w-0">
-            <div className="text-sm font-semibold">Overall status</div>
-            <div className="text-sm text-muted-foreground">{statusLabel(report.overallStatus)}</div>
+            <div className="text-sm font-semibold">{t("admin.overallStatus")}</div>
+            <div className="text-sm text-muted-foreground">{statusLabel(report.overallStatus, t)}</div>
           </div>
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <CountPill label="Fail" value={report.counts.fail} status="fail" />
-          <CountPill label="Warn" value={report.counts.warn} status="warn" />
-          <CountPill label="Ok" value={report.counts.ok} status="ok" />
-          <CountPill label="Info" value={report.counts.info} status="info" />
+          <CountPill label={t("enums.fail")} value={report.counts.fail} status="fail" />
+          <CountPill label={t("enums.warn")} value={report.counts.warn} status="warn" />
+          <CountPill label={t("enums.ok")} value={report.counts.ok} status="ok" />
+          <CountPill label={t("enums.info")} value={report.counts.info} status="info" />
         </div>
 
         {report.nextSteps.length ? (
           <>
             <Separator className="my-4" />
             <div className="grid gap-2">
-              <div className="text-xs font-semibold uppercase text-muted-foreground">Next steps</div>
+              <div className="text-xs font-semibold uppercase text-muted-foreground">{t("admin.nextSteps")}</div>
               {report.nextSteps.map((step) => (
                 <Button key={`${step.checkId}-${step.label}`} asChild size="sm" variant="outline" className="justify-start">
                   <a href={step.href || "#"}>{step.label}</a>
@@ -147,9 +151,10 @@ function CountPill({ label, value, status }: { label: string; value: number; sta
 }
 
 function StatusBadge({ status }: { status: TinyOfficeDoctorStatus }): ReactElement {
+  const { t } = useTranslation();
   return (
     <Badge className={statusBadgeClass(status)} variant="outline">
-      {statusLabel(status)}
+      {statusLabel(status, t)}
     </Badge>
   );
 }
@@ -169,16 +174,16 @@ function StatusIcon({ status }: { status: TinyOfficeDoctorStatus }): ReactElemen
 }
 
 
-function statusLabel(status: TinyOfficeDoctorStatus): string {
+function statusLabel(status: TinyOfficeDoctorStatus, t: TFunction): string {
   switch (status) {
     case "fail":
-      return "Failed";
+      return t("enums.failed");
     case "warn":
-      return "Needs attention";
+      return t("enums.needsAttention");
     case "ok":
-      return "OK";
+      return t("enums.ok");
     case "info":
-      return "Info";
+      return t("enums.info");
   }
 }
 

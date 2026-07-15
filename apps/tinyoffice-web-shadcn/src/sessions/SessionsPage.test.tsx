@@ -193,7 +193,7 @@ test("renders Sessions as a dense evidence inspector", async () => {
   assert.match(html, /Trigger message/);
   assert.match(html, /Prompt input/);
   assert.doesNotMatch(html, /Open prompt input/);
-  assert.match(html, /Tools and skills/);
+  assert.match(html, /Tools and Skills/);
   assert.doesNotMatch(html, /Open tools and skills/);
   assert.match(html, /tinyoffice_capability_call/);
   assert.match(html, /work-creator/);

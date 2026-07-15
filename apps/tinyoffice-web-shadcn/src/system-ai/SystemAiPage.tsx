@@ -37,9 +37,9 @@ export function SystemAiPage({ currentSession }: { currentSession?: TinyOfficeCu
             <Badge variant="secondary">{t("admin.developerTool")}</Badge>
           </div>
           <div className="pt-5">
-            {companiesQuery.isLoading ? <ProductState description="Loading System AI settings..." />
-              : companiesQuery.error ? <ProductState tone="error" description={companiesQuery.error instanceof Error ? companiesQuery.error.message : "Failed to load System AI settings."} />
-                : !companyId ? <ProductState description="Select a Company before configuring System AI." />
+            {companiesQuery.isLoading ? <ProductState description={t("admin.loadingSystemAi")} />
+              : companiesQuery.error ? <ProductState tone="error" description={companiesQuery.error instanceof Error ? companiesQuery.error.message : t("admin.systemAiLoadFailed")} />
+                : !companyId ? <ProductState description={t("admin.selectCompanySystemAi")} />
                   : <SystemAiSettingsForm companyId={companyId} viewModel={companiesQuery.data} busy={mutation.isPending} error={mutation.error} onSave={(input) => mutation.mutate(input)} />}
           </div>
         </section>

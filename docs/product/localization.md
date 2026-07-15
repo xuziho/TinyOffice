@@ -33,4 +33,6 @@ English is the fallback resource language. Unknown backend diagnostics remain in
 - Owner preference: `user_profiles.ui_locale`
 - Profile API contract: `UserProfileState.uiLocale`
 
+The maintained coverage includes the shared shell, Chat and Task operations, Workforce and Company configuration, AI and Runtime administration, Operations pages, dialogs, empty/loading/error states, and accessibility labels. Resource-parity and static-key tests prevent one language from silently losing a key, while a hard-coded chrome regression test protects the migrated product surfaces.
+
 New product copy must be added through the localization resources rather than embedded as parallel English and Chinese conditionals in a page.

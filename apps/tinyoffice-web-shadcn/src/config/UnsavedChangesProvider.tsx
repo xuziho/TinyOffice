@@ -15,9 +15,11 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { UnsavedChangesContext, type UnsavedTransitionAction } from "./unsavedChangesContext";
 
 export function UnsavedChangesProvider({ children }: { children: ReactNode }): ReactElement {
+  const { t } = useTranslation();
   const [dirtyScopes, setDirtyScopes] = useState<Set<string>>(() => new Set());
   const [pendingAction, setPendingAction] = useState<UnsavedTransitionAction>();
   const hasUnsavedChanges = dirtyScopes.size > 0;
@@ -61,13 +63,13 @@ export function UnsavedChangesProvider({ children }: { children: ReactNode }): R
       <Dialog open={Boolean(pendingAction)} onOpenChange={(open) => { if (!open) setPendingAction(undefined); }}>
         <DialogContent showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle>Discard unsaved changes?</DialogTitle>
+            <DialogTitle>{t("common.discardChanges")}</DialogTitle>
             <DialogDescription>
-              Your latest edits have not been saved. Leaving now will discard them.
+              {t("shared.unsavedDescription")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setPendingAction(undefined)}>Keep editing</Button>
+            <Button type="button" variant="outline" onClick={() => setPendingAction(undefined)}>{t("common.keepEditing")}</Button>
             <Button
               type="button"
               variant="destructive"
@@ -77,7 +79,7 @@ export function UnsavedChangesProvider({ children }: { children: ReactNode }): R
                 action?.();
               }}
             >
-              Discard changes
+              {t("common.discard")}
             </Button>
           </DialogFooter>
         </DialogContent>

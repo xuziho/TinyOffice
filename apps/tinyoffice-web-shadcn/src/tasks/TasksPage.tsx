@@ -535,7 +535,13 @@ function TaskGroupRow({ label, count, tone }: { label: string; count: number; to
 function TaskStateBadge({ task, view }: { task: TasksTaskListItem; view: TaskListView }): ReactElement {
   const { t } = useTranslation();
   const display = view === "scheduled" ? { label: t("tasksPage.scheduledLabel") } : displayStatusForTask(task);
-  return <Badge variant="outline" className={`tiny-task-status ${display.label.toLowerCase().replaceAll(" ", "-")}`}>{display.label}</Badge>;
+  const stableClass = view === "scheduled" ? "scheduled" : display.label.toLowerCase().replaceAll(" ", "-");
+  return <Badge variant="outline" className={`tiny-task-status ${stableClass}`}>{localizedTaskStatus(display.label, t)}</Badge>;
+}
+
+function localizedTaskStatus(label: string, t: TFunction): string {
+  const key = ({ Archived: "archived", Canceled: "canceled", Completed: "completed", Running: "running", Pending: "pending", Open: "open", "Needs attention": "needsAttention" } as const)[label as "Archived" | "Canceled" | "Completed" | "Running" | "Pending" | "Open" | "Needs attention"];
+  return key ? t(`enums.${key}`) : label;
 }
 
 function taskRowGroups(rows: TasksTaskListItem[], view: TaskListView, t: TFunction): Array<{ id: string; label?: string; rows: TasksTaskListItem[] }> {
@@ -668,14 +674,14 @@ function TaskDetail({
       </Dialog>
       {actionError || runActionError ? <div className="tiny-task-error text-sm text-destructive">{actionError || runActionError}</div> : null}
       <DetailSection title={t("tasksPage.currentState")}>
-        <FactRow label="Status" value={displayStatusForTask(task).label} />
-        <FactRow label="Owner" value={taskOwnerLabel(task)} />
-        <FactRow label="Latest update" value={formatDateTime(task.updatedAt)} />
+        <FactRow label={t("tasksPage.status")} value={displayStatusForTask(task).label} />
+        <FactRow label={t("tasksPage.owner")} value={taskOwnerLabel(task)} />
+        <FactRow label={t("tasksPage.latestUpdate")} value={formatDateTime(task.updatedAt)} />
       </DetailSection>
       <DetailSection title={t("tasksPage.objective")}>
-        <FactRow label="Revision" value={`v${task.revision}`} />
-        {task.description ? <FactRow label="Brief" value={task.description} /> : null}
-        <FactRow label="Acceptance" value={task.acceptanceCriteria} />
+        <FactRow label={t("tasksPage.revision")} value={`v${task.revision}`} />
+        {task.description ? <FactRow label={t("tasksPage.brief")} value={task.description} /> : null}
+        <FactRow label={t("tasksPage.acceptance")} value={task.acceptanceCriteria} />
       </DetailSection>
       <DetailSection title={t("tasksPage.revisionHistory")} summary={`${task.revisions.length} confirmed objective version${task.revisions.length === 1 ? "" : "s"}`}>
         {task.revisions.map((revision) => (
@@ -687,8 +693,8 @@ function TaskDetail({
         ))}
       </DetailSection>
       <DetailSection title={t("tasksPage.source")} summary={sourceLabel(task.sourceKind)}>
-        <FactRow label="Source" value={sourceLabel(task.sourceKind)} />
-        {task.sourceLink ? <FactRow label="Reference" value={task.sourceLink.label} /> : null}
+        <FactRow label={t("tasksPage.source")} value={sourceLabel(task.sourceKind)} />
+        {task.sourceLink ? <FactRow label={t("tasksPage.reference")} value={task.sourceLink.label} /> : null}
         {sourceNavigationTarget ? (
           <Button asChild size="xs" variant="outline" className="w-fit">
             <a
@@ -701,7 +707,7 @@ function TaskDetail({
                 onOpenNavigationTarget(sourceNavigationTarget);
               }}
             >
-              Open source discussion
+              {t("tasksPage.openSourceDiscussion")}
             </a>
           </Button>
         ) : null}
@@ -712,7 +718,7 @@ function TaskDetail({
             label={scheduleLabelForKind(task.scheduleRecord.kind)}
             value={`${statusLabel(task.scheduleRecord.status)} - ${nextStepForSchedule(task.scheduleRecord)}`}
           />
-        ) : <EmptyLine>No schedule is stored. A valid Task must already have an execution or a future schedule.</EmptyLine>}
+        ) : <EmptyLine>{t("tasksPage.noSchedule")}</EmptyLine>}
       </DetailSection>
       <DetailSection title={t("tasksPage.executionHistory")} summary={runsSummaryForTask(task)}>
         {task.executions.length ? task.executions.map((run) => (
@@ -745,7 +751,7 @@ function TaskDetail({
               ))}
             </div>
           </div>
-        )) : <EmptyLine>No execution history recorded.</EmptyLine>}
+        )) : <EmptyLine>{t("tasksPage.noExecutionHistory")}</EmptyLine>}
       </DetailSection>
     </div>
   );

@@ -178,7 +178,7 @@ test("shadcn chat shell uses a fixed object rail, center workspace, and context 
   assert.match(productSource, /onBackToList/);
   assert.match(productSource, /<EntryListPanel[^>]*onSelectEntry/);
   assert.match(productSource, /<MessagePanel[^>]*onBackToList/);
-  assert.match(productSource, /Back to list/);
+  assert.match(productSource, /chat\.backToList/);
   assert.equal((chatRouteSource.match(/className="min-w-0 overflow-hidden"/g) ?? []).length >= 3, true);
 });
 
@@ -241,11 +241,11 @@ test("shadcn app shell exposes Tasks as a first-class operations surface", async
 
   assert.match(navigationSource, /type AppView = [^;]*"tasks"/);
   assert.match(appSource, /import\("@\/tasks\/TasksPage"\)/);
-  assert.match(appSource, /label="Tasks"/);
+  assert.match(appSource, /label=\{t\("nav\.tasks"\)\}/);
   assert.match(navigationSource, /return "\/tasks"/);
   assert.match(tasksPageSource, /TaskViewTabs/);
   assert.match(tasksPageSource, /"current" \| "scheduled" \| "history"/);
-  assert.match(tasksPageSource, /Needs attention/);
+  assert.match(tasksPageSource, /t\("tasksPage\.needsAttention"\)/);
   assert.doesNotMatch(tasksPageSource, /New Task|Create Task|createManualWork/);
   assert.match(tasksPageSource, /executeWorkTaskLifecycleAction/);
   assert.match(tasksClientSource, /companyTasksPath/);
@@ -285,26 +285,26 @@ test("shadcn app shell exposes Employees as the runtime employee configuration s
   const contractSource = await readText("src/api/contracts/tinyoffice-frontend-api-contracts.ts");
 
   assert.match(appSource, /import\("@\/employees\/EmployeesPage"\)/);
-  assert.match(appSource, /label="Workforce" active=\{isWorkforceView\(activeView\)\}/);
-  assert.match(appSource, /label="Organization" active=\{activeView === "company"\}/);
-  assert.match(appSource, /label="Integrations" active=\{activeView === "integrations"\}/);
-  assert.match(appSource, /label="AI & Runtime" active=\{isAiRuntimeView\(activeView\)\}/);
-  assert.match(appSource, /label="Operations" active=\{isOperationsView\(activeView\)\}/);
-  assert.match(navigationStructureSource, /view: "employees", label: "Employees"/);
-  assert.match(navigationStructureSource, /view: "prompt", label: "Prompt"/);
-  assert.match(navigationStructureSource, /view: "access", label: "Access"/);
-  assert.match(navigationStructureSource, /view: "doctor", label: "Health"/);
+  assert.match(appSource, /label=\{t\("nav\.workforce"\)\} active=\{isWorkforceView\(activeView\)\}/);
+  assert.match(appSource, /label=\{t\("nav\.organization"\)\} active=\{activeView === "company"\}/);
+  assert.match(appSource, /label=\{t\("nav\.integrations"\)\} active=\{activeView === "integrations"\}/);
+  assert.match(appSource, /label=\{t\("nav\.aiRuntime"\)\} active=\{isAiRuntimeView\(activeView\)\}/);
+  assert.match(appSource, /label=\{t\("nav\.operations"\)\} active=\{isOperationsView\(activeView\)\}/);
+  assert.match(navigationStructureSource, /view: "employees", labelKey: "nav\.employees"/);
+  assert.match(navigationStructureSource, /view: "prompt", labelKey: "nav\.prompt"/);
+  assert.match(navigationStructureSource, /view: "access", labelKey: "nav\.access"/);
+  assert.match(navigationStructureSource, /view: "doctor", labelKey: "nav\.health"/);
   assert.match(navigationSource, /return "\/employees"/);
   assert.doesNotMatch(employeesPageSource, /Employee configuration/);
   assert.match(employeesPageSource, /AGENTS\.md/);
-  assert.match(employeesPageSource, /No AGENTS\.md yet\./);
+  assert.match(employeesPageSource, /t\("employeesPage\.noAgents"\)/);
   assert.match(employeesPageSource, /instructionFile\?\.exists === false/);
-  assert.match(employeesPageSource, /Employee-private skills are edited here after they already exist/);
-  assert.match(employeesPageSource, /Runtime model/);
+  assert.match(employeesPageSource, /t\("employeesPage\.privateSkillHelp"\)/);
+  assert.match(employeesPageSource, /t\("employeesPage\.runtimeModel"\)/);
   assert.match(employeesPageSource, /reloadEmployeeRuntimeIfAvailable\(\{ companyId, memberId: selectedEmployee\.employeeId \}\)/);
   assert.match(employeesPageSource, /reloadEmployeeRuntimeIfAvailable\(\{ companyId, memberId: employee\.employeeId \}\)/);
-  assert.match(employeesPageSource, /Company skills/);
-  assert.match(employeesPageSource, /Employee skills/);
+  assert.match(employeesPageSource, /t\("employeesPage\.companySkills"\)/);
+  assert.match(employeesPageSource, /t\("employeesPage\.employeeSkills"\)/);
   assert.doesNotMatch(employeesPageSource, /Reload all/);
   assert.doesNotMatch(employeesPageSource, /<Input value=\{draft\.modelProvider\}/);
   assert.doesNotMatch(employeesPageSource, /Skills root/);
@@ -324,13 +324,13 @@ test("shadcn app shell exposes Prompt as the company Prompt Policy surface", asy
   const contractSource = await readText("src/api/contracts/tinyoffice-frontend-api-contracts.ts");
 
   assert.match(appSource, /import\("@\/prompt\/PromptPolicyPage"\)/);
-  assert.match(navigationStructureSource, /view: "prompt", label: "Prompt"/);
+  assert.match(navigationStructureSource, /view: "prompt", labelKey: "nav\.prompt"/);
   assert.match(appSource, /activeView === "prompt"/);
   assert.match(navigationSource, /return "\/prompt"/);
   assert.doesNotMatch(promptPageSource, /Company prompt configuration/);
-  assert.match(promptPageSource, /Foundation prompts/);
-  assert.match(promptPageSource, /Scene blocks/);
-  assert.match(promptPageSource, /Loaded by/);
+  assert.match(promptPageSource, /t\("admin\.foundationPrompts"\)/);
+  assert.match(promptPageSource, /t\("admin\.sceneBlocks"\)/);
+  assert.match(promptPageSource, /t\("admin\.loadedBy"/);
   assert.doesNotMatch(promptPageSource, /MetaPanel title="Boundary"/);
   assert.doesNotMatch(promptPageSource, /No diagnostics/);
   assert.doesNotMatch(promptPageSource, /runtime_default/);
@@ -357,20 +357,20 @@ test("shadcn app shell keeps read-only Capabilities and operational Health in ex
   assert.match(appSource, /import\("@\/access\/AccessPage"\)/);
   assert.match(appSource, /import\("@\/doctor\/DoctorPage"\)/);
   assert.doesNotMatch(appSource, /useDeveloperModePreference|developerMode\.enabled/);
-  assert.match(navigationStructureSource, /view: "access", label: "Access"/);
-  assert.match(navigationStructureSource, /view: "doctor", label: "Health"/);
+  assert.match(navigationStructureSource, /view: "access", labelKey: "nav\.access"/);
+  assert.match(navigationStructureSource, /view: "doctor", labelKey: "nav\.health"/);
   assert.match(appSource, /isAiRuntimeView\(activeView\)/);
   assert.match(appSource, /isOperationsView\(activeView\)/);
   assert.match(appSource, /activeView === "access"/);
   assert.match(appSource, /activeView === "capabilities"/);
-  assert.match(navigationStructureSource, /view: "capabilities", label: "Capabilities"/);
-  assert.match(capabilitiesPageSource, /Read only/);
+  assert.match(navigationStructureSource, /view: "capabilities", labelKey: "nav\.capabilities"/);
+  assert.match(capabilitiesPageSource, /t\("admin\.readOnly"\)/);
   assert.match(navigationSource, /return "\/access"/);
   assert.match(navigationSource, /return "\/doctor"/);
   assert.doesNotMatch(accessPageSource, /Company access policy/);
   assert.match(accessPageSource, /<SelectionList/);
-  assert.match(accessPageSource, /Runtime boundary/);
-  assert.match(accessPageSource, /Advanced policy JSON/);
+  assert.match(accessPageSource, /t\("admin\.runtimeBoundary"\)/);
+  assert.match(accessPageSource, /t\("admin\.advancedPolicyJson"\)/);
   assert.match(accessPageSource, /grid-cols-\[300px_minmax\(0,1fr\)\]/);
   assert.match(accessPageSource, /policyJson/);
   assert.doesNotMatch(accessPageSource, /Decision preview|Pending requests|Manual check|Policy tools|Preview is available/);
@@ -380,9 +380,9 @@ test("shadcn app shell keeps read-only Capabilities and operational Health in ex
   assert.match(accessClientSource, /resolveAccessRequest/);
   assert.match(accessClientSource, /previewAccessDecision/);
   assert.match(doctorPageSource, /getDoctorReport/);
-  assert.match(doctorPageSource, /Overall status/);
+  assert.match(doctorPageSource, /t\("admin\.overallStatus"\)/);
   assert.doesNotMatch(doctorPageSource, /useMutation/);
-  assert.match(doctorPageSource, /Next steps/);
+  assert.match(doctorPageSource, /t\("admin\.nextSteps"\)/);
   assert.match(doctorPageSource, /getDoctorReport/);
   assert.doesNotMatch(doctorPageSource, /policyJson|JSON\.stringify|raw JSON/i);
   assert.match(doctorClientSource, /companyDoctorPath/);
@@ -401,21 +401,21 @@ test("shadcn Settings owns account identity and security while Operations owns U
   const navigationSource = await readText("apps/tinyoffice-web-shadcn/src/app/navigationRoutes.ts");
 
   assert.match(appSource, /import\("@\/settings\/SettingsPage"\)/);
-  assert.match(appSource, /label="Settings"/);
+  assert.match(appSource, /label=\{t\("nav\.settings"\)\}/);
   assert.match(appSource, /activeView === "settings"/);
   assert.doesNotMatch(appSource, /developerMode=/);
   assert.match(navigationSource, /return "\/settings"/);
-  assert.match(settingsPageSource, /My Profile/);
-  assert.match(settingsPageSource, /Display name/);
-  assert.match(settingsPageSource, /Company role/);
+  assert.match(settingsPageSource, /t\("settings\.profile"\)/);
+  assert.match(settingsPageSource, /t\("settings\.displayName"\)/);
+  assert.match(settingsPageSource, /t\("settings\.companyRole"\)/);
   assert.match(settingsPageSource, /saveMyProfile/);
-  assert.match(settingsPageSource, /Owner security/);
+  assert.match(settingsPageSource, /t\("settings\.ownerSecurity"\)/);
   assert.doesNotMatch(settingsPageSource, /Check for updates|installApprovedUpdate/);
   assert.match(appSource, /import\("@\/updates\/UpdatesPage"\)/);
-  assert.match(navigationStructureSource, /view: "updates", label: "Updates"/);
+  assert.match(navigationStructureSource, /view: "updates", labelKey: "nav\.updates"/);
   assert.match(navigationSource, /return "\/updates"/);
-  assert.match(updatesPageSource, /Check for updates/);
-  assert.match(updatesPageSource, /Back up and install/);
+  assert.match(updatesPageSource, /t\("updatesPage\.check"\)/);
+  assert.match(updatesPageSource, /t\("updatesPage\.backupInstall"\)/);
   assert.match(updatesPageSource, /installApprovedUpdate/);
   assert.doesNotMatch(settingsPageSource, /Developer mode|Developer tools menu|aria-pressed/);
   assert.doesNotMatch(companyPageSource, /SectionHeading title="Developer mode"/);
@@ -455,10 +455,10 @@ test("shadcn Company creation exposes System AI model setup as a separate config
 
   assert.match(createCompanyRequestBlock, /systemAiRuntime\?:/);
   assert.match(companyClientSource, /systemAiRuntime/);
-  assert.match(companyPageSource, /System AI model/);
+  assert.match(companyPageSource, /t\("companyPage\.systemAiModel"\)/);
   assert.match(companyPageSource, /Tooltip/);
   assert.match(companyPageSource, /Info/);
-  assert.match(companyPageSource, /title generation/i);
+  assert.match(companyPageSource, /t\("companyPage\.systemAiHelp"\)/);
   assert.match(companyPageSource, /systemAiRuntime/);
   assert.match(companyPageSource, /systemAiModelValue/);
   assert.doesNotMatch(companyPageSource, /same model/i);
@@ -472,12 +472,12 @@ test("shadcn AI and Runtime exposes company-level System AI settings outside Com
   const systemAiSource = await readText("apps/tinyoffice-web-shadcn/src/system-ai/SystemAiPage.tsx");
 
   assert.match(companyClientSource, /saveCompanySystemAiSettings/);
-  assert.match(navigationStructureSource, /view: "system-ai", label: "System AI"/);
+  assert.match(navigationStructureSource, /view: "system-ai", labelKey: "nav\.systemAi"/);
   assert.match(appSource, /activeView === "system-ai"/);
-  assert.match(systemAiSource, /Chat title generation/);
-  assert.match(systemAiSource, /Topic summaries/);
+  assert.match(systemAiSource, /t\("admin\.chatTitles"\)/);
+  assert.match(systemAiSource, /t\("admin\.topicSummaries"\)/);
   assert.match(systemAiSource, /saveCompanySystemAiSettings/);
-  assert.match(systemAiSource, /Set later/);
+  assert.match(systemAiSource, /t\("common\.setLater"\)/);
   assert.doesNotMatch(companyPageSource, /SectionHeading title="System AI"|saveCompanySystemAiSettings|Chat title generation|Topic summaries/);
 });
 
@@ -488,14 +488,14 @@ test("shadcn Integrations page exposes Intake discovery without an Intake operat
   const companySource = await readText("apps/tinyoffice-web-shadcn/src/app/CompanyLifecyclePage.tsx");
   const source = await readText("apps/tinyoffice-web-shadcn/src/integrations/IntegrationsPage.tsx");
 
-  assert.match(navigationStructureSource, /view: "integrations", label: "Integrations"/);
+  assert.match(navigationStructureSource, /view: "integrations", labelKey: "nav\.integrations"/);
   assert.match(appSource, /activeView === "integrations"/);
   assert.match(navigationSource, /return "\/integrations"/);
-  assert.match(source, /External Intake/);
-  assert.match(source, /Ask AI to set it up/);
+  assert.match(source, /t\("admin\.externalIntake"\)/);
+  assert.match(source, /t\("admin\.askAiSetup"\)/);
   assert.match(source, /href="\/chat"/);
   assert.doesNotMatch(source, /intent=intake-setup/);
-  assert.match(source, /Monitoring alerts/);
+  assert.match(source, /t\("admin\.monitoringAlerts"\)/);
   assert.doesNotMatch(source, /intake\/events|targetMemberId|sourceEventId|Copy JSON|POST endpoint/);
   assert.doesNotMatch(source, /Intake queue|Manage intake sources/);
   assert.doesNotMatch(companySource, /Intake \/ External inputs|intake\/events|Minimum event example/);
@@ -506,10 +506,10 @@ test("shadcn Company page keeps company list and selected company settings in a 
 
   assert.match(companyPageSource, /NewCompanyDialog/);
   assert.doesNotMatch(companyPageSource, /<ManagementPageHeader[\s\S]*?actions=/);
-  assert.match(companyPageSource, /<h2 className="text-base font-semibold leading-tight">Companies<\/h2>[\s\S]*?<NewCompanyDialog/);
+  assert.match(companyPageSource, /<h2 className="text-base font-semibold leading-tight">\{t\("companyPage\.companies"\)\}<\/h2>[\s\S]*?<NewCompanyDialog/);
   assert.match(companyPageSource, /xl:grid-cols-\[minmax\(360px,440px\)_minmax\(0,1fr\)\]/);
-  assert.match(companyPageSource, /<h2 className="text-base font-semibold leading-tight">Companies<\/h2>[\s\S]*<CompanySettingsPanel/);
-  assert.match(companyPageSource, /<SectionHeading title="Identity" \/>[\s\S]*<DangerZone/);
+  assert.match(companyPageSource, /<h2 className="text-base font-semibold leading-tight">\{t\("companyPage\.companies"\)\}<\/h2>[\s\S]*<CompanySettingsPanel/);
+  assert.match(companyPageSource, /<SectionHeading title=\{t\("companyPage\.identity"\)\} \/>[\s\S]*<DangerZone/);
   assert.doesNotMatch(companyPageSource, /<SectionHeading title="System AI" \/>/);
   assert.doesNotMatch(companyPageSource, /<SectionHeading title="Developer mode" \/>/);
   assert.doesNotMatch(companyPageSource, /<CreateCompanyPanel[\s\S]*<CompanySettingsPanel/);
@@ -522,9 +522,9 @@ test("shadcn Company deletion requires a destructive confirmation dialog after t
   assert.match(companyPageSource, /DialogContent/);
   assert.match(companyPageSource, /DialogTitle/);
   assert.match(companyPageSource, /DialogDescription/);
-  assert.match(companyPageSource, /Delete company permanently/);
-  assert.match(companyPageSource, /Type DELETE to remove \{company\.displayName\}\. This action cannot be undone\./);
-  assert.match(companyPageSource, /I understand, delete company/);
+  assert.match(companyPageSource, /t\("companyPage\.deletePermanently"\)/);
+  assert.match(companyPageSource, /t\("companyPage\.deleteConfirmation", \{ name: company\.displayName \}\)/);
+  assert.match(companyPageSource, /t\("companyPage\.understandDelete"\)/);
   assert.match(companyPageSource, /handleDeleteDialogOpenChange/);
   assert.match(companyPageSource, /setConfirmationText\(""\)/);
   assert.doesNotMatch(companyPageSource, /onClick=\{\(\) => onDelete\(confirmationText\)\}/);
@@ -641,7 +641,7 @@ test("shadcn chat entry list opens a draft topic before creating the persisted r
   assert.match(productSource, /Start new topic/);
   assert.match(productSource, /kind: "draft-entry"/);
   assert.match(productSource, /<DraftEntryPanel/);
-  assert.match(productSource, /placeholder="Type a message\.\.\."/);
+  assert.match(productSource, /chat\.typeMessage/);
   assert.doesNotMatch(productSource, /placeholder=\{header\.title\}/);
   assert.match(productSource, /onCreateEntry/);
   assert.match(productSource, /created\.entry\.entryId/);
@@ -682,8 +682,8 @@ test("shadcn chat keeps archived topics out of the active production list", asyn
   const source = await readText("apps/tinyoffice-web-shadcn/src/chat/EntryListPanel.tsx");
 
   assert.match(source, /showArchived \? model\.archivedDirectoryEntries \?\? \[\] : model\.directoryEntries/);
-  assert.match(source, /showArchived \? `Archived \$\{archiveNoun\}` : header\.title/);
-  assert.match(source, /showArchived \? "Back to topics"/);
+  assert.match(source, /showArchived \? t\("chat\.archivedItems", \{ noun: archiveNoun \}\) : header\.title/);
+  assert.match(source, /showArchived \? t\("chat\.backToTopics"\)/);
   assert.match(source, /<ArchivedTopicRow entry=\{entry\} onRestoreEntry=\{onRestoreEntry\}/);
   assert.doesNotMatch(source, /className="mt-6 border-t pt-4"/);
 });
@@ -812,7 +812,7 @@ test("shadcn chat topics show activity time and messages render markdown", async
 
   assert.ok(packageJson.dependencies?.["react-markdown"], "message bodies should use a mature Markdown renderer");
   assert.match(productSource, /formatRelativeTime\(entry\.updatedAt\)/);
-  assert.match(productSource, /Last updated/);
+  assert.match(productSource, /t\("chat\.lastUpdated"/);
   assert.doesNotMatch(productSource, /Active \{formatRelativeTime\(entry\.updatedAt\)\}/);
   assert.doesNotMatch(productSource, /formatCompactDate\(entry\.updatedAt\)/);
   assert.match(productSource, /ReactMarkdown/);
@@ -886,8 +886,8 @@ test("shadcn Chat uses employee runtime summary only as lightweight Chat context
   assert.match(contextPanelSource, /runtimeSummaryForMember/);
   assert.match(contextPanelSource, /model\.surface\.kind === "dm-directory"/);
   assert.match(contextPanelSource, /tasksHref/);
-  assert.match(directMessageWorkSummarySource, /Blocked work/);
-  assert.match(directMessageWorkSummarySource, /Open task/);
+  assert.match(directMessageWorkSummarySource, /t\("chat\.blockedWork"\)/);
+  assert.match(directMessageWorkSummarySource, /t\("chat\.openTask"\)/);
   assert.match(contextPanelSource, /summary\.issues\.slice\(0, 1\)/);
   assert.match(contextPanelSource, /summary\.status\.kind !== "idle" && issues\.length === 0/);
   assert.doesNotMatch(directMessageWorkSummarySource, /Needs attention|Open session/);
@@ -903,9 +903,9 @@ test("shadcn Chat exposes Channel settings without role-edit controls", async ()
   assert.match(chatClientSource, /addChatChannelMembers/);
   assert.match(chatClientSource, /removeChatChannelMember/);
   assert.match(productSource, /ChannelSettingsDialog/);
-  assert.match(productSource, /Manage channel/);
-  assert.match(productSource, /Add members/);
-  assert.match(productSource, /Remove/);
+  assert.match(productSource, /t\("chat\.manageChannel"\)/);
+  assert.match(productSource, /t\("chat\.addMembers"\)/);
+  assert.match(productSource, /t\("common\.remove"\)/);
   assert.match(productSource, /selectedContainer\?\.chatChannelId/);
   assert.doesNotMatch(productSource, /selectedContainer\?\.containerId, "chatChannelId"/);
   assert.doesNotMatch(productSource, /updateChatChannelMemberRole|Change role|RoleSelect/);
@@ -918,12 +918,12 @@ test("shadcn Chat exposes Channel creation and hard-delete dissolve controls", a
   assert.match(chatClientSource, /createChatChannel/);
   assert.match(chatClientSource, /dissolveChatChannel/);
   assert.match(productSource, /CreateChannelDialog/);
-  assert.match(productSource, /Create channel/);
+  assert.match(productSource, /t\("chat\.createChannel"\)/);
   assert.match(productSource, /DissolveChannelDialog/);
-  assert.match(productSource, /Dissolve permanently/);
+  assert.match(productSource, /t\("chat\.dissolvePermanently"\)/);
   assert.match(productSource, /placeholder="DELETE"/);
   assert.match(productSource, /confirmation !== "DELETE"/);
-  assert.match(productSource, /I understand, dissolve Channel/);
+  assert.match(productSource, /t\("chat\.understandDissolve"\)/);
   assert.match(productSource, /setOpen\(false\)/);
   assert.doesNotMatch(productSource, /confirmation === channel\.title/);
 });
@@ -937,7 +937,7 @@ test("shadcn chat room composer sends real replies through the API client", asyn
   assert.match(productSource, /RoomReplyComposer/);
   assert.match(productSource, /onSendReply/);
   assert.match(productSource, /sendReplyToSelectedRoom/);
-  assert.match(productSource, /placeholder="Type a message\.\.\."/);
+  assert.match(productSource, /chat\.typeMessage/);
   assert.doesNotMatch(productSource, /placeholder=\{model\.selectedEntry \? `Message \$\{model\.selectedEntry\.title\}` : "Select a room"\}/);
   assert.doesNotMatch(productSource, /<Textarea placeholder=\{model\.selectedEntry \? `Message \$\{model\.selectedEntry\.title\}` : "Select a room"\} rows=\{3\} disabled \/>/);
 });
@@ -967,8 +967,8 @@ test("shadcn chat composer groups toolbar affordances and can disable images", a
   const draftEntryPanelSource = await readText("apps/tinyoffice-web-shadcn/src/chat/DraftEntryPanel.tsx");
 
   assert.match(composerSource, /imageAttachmentsEnabled/);
-  assert.match(composerSource, /aria-label="Attach image"/);
-  assert.match(composerSource, /aria-label="Attach file"/);
+  assert.match(composerSource, /aria-label=\{t\("chat\.attachImage"\)\}/);
+  assert.match(composerSource, /aria-label=\{t\("chat\.attachFile"\)\}/);
   assert.match(composerSource, /disabled=\{!imageAttachmentsEnabled/);
   assert.match(composerSource, /ImageIcon/);
   assert.match(composerSource, /PaperclipIcon/);
@@ -999,7 +999,7 @@ test("shadcn chat composer offers inline and toolbar mention selection without l
   assert.match(composerSource, /textareaRef\.current\?\.focus\(\)/);
   assert.match(composerSource, /selectedMentionCandidates/);
   assert.match(composerSource, /AtSignIcon/);
-  assert.match(composerSource, /aria-label="Mention someone"/);
+  assert.match(composerSource, /aria-label=\{t\("chat\.mentionSomeone"\)\}/);
   assert.match(composerSource, /ensureMentionStarter/);
   assert.match(composerSource, /openMentionPicker/);
   assert.match(composerSource, /window\.addEventListener\("focus"/);
@@ -1081,9 +1081,9 @@ test("management navigation uses direct rail sections and one shared tab hierarc
   assert.match(promptSource, /className="tiny-readonly-fact" role="listitem"/);
   assert.doesNotMatch(promptSource, /key=\{item\} className="rounded-md border[^\n]+bg-\[#fffdf7\]/);
   assert.doesNotMatch(appSource, /WorkforceMenu|AdminMenu|useRailHoverMenu/);
-  assert.match(appSource, /label="Workforce" active=\{isWorkforceView\(activeView\)\}/);
-  assert.match(appSource, /label="AI & Runtime" active=\{isAiRuntimeView\(activeView\)\}/);
-  assert.match(appSource, /label="Operations" active=\{isOperationsView\(activeView\)\}/);
+  assert.match(appSource, /label=\{t\("nav\.workforce"\)\} active=\{isWorkforceView\(activeView\)\}/);
+  assert.match(appSource, /label=\{t\("nav\.aiRuntime"\)\} active=\{isAiRuntimeView\(activeView\)\}/);
+  assert.match(appSource, /label=\{t\("nav\.operations"\)\} active=\{isOperationsView\(activeView\)\}/);
   assert.match(appSource, /<SectionNavigation activeView=\{activeView\} section=\{pageSection\} onSelect=\{selectView\}/);
   assert.match(sectionNavigationSource, /aria-current=\{item\.view === activeView \? "page"/);
   assert.match(sectionNavigationSource, /tiny-section-tabs/);
@@ -1093,7 +1093,7 @@ test("management navigation uses direct rail sections and one shared tab hierarc
   assert.doesNotMatch(navigationStructureSource, /description:/);
   assert.match(cssSource, /\.tiny-soft-retro-shell \.tiny-section-tabs \{[^}]*scrollbar-width: none/);
   assert.match(cssSource, /\.tiny-section-tab\[data-slot="button"\]\[data-active="true"\] \{[^}]*background: var\(--tiny-tab-active-surface\)[^}]*color: var\(--tiny-tab-active-ink\)[^}]*box-shadow: inset 0 -3px 0 var\(--tiny-tab-indicator\)/);
-  assert.match(navigationStructureSource, /title: "Workforce"[\s\S]*title: "AI & Runtime"[\s\S]*title: "Operations"/);
+  assert.match(navigationStructureSource, /titleKey: "nav\.workforce"[\s\S]*titleKey: "nav\.aiRuntime"[\s\S]*titleKey: "nav\.operations"/);
 });
 
 test("product actions share one button lifecycle and file uploads use the Button primitive", async () => {
@@ -1139,5 +1139,5 @@ test("management pages avoid empty action strips and decorative nested surfaces"
   assert.match(integrationsSource, /grid divide-y border-y md:grid-cols-3/);
   assert.doesNotMatch(integrationsSource, /tiny-room-subtitle/);
   assert.doesNotMatch(settingsSource, /tiny-settings-primary-surface/);
-  assert.match(backupSource, /<h2 className="text-lg font-semibold">Backups<\/h2><Button/);
+  assert.match(backupSource, /<h2 className="text-lg font-semibold">\{t\("admin\.backups"\)\}<\/h2><Button/);
 });

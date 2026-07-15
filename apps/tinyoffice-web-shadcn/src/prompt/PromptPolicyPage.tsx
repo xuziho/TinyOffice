@@ -78,7 +78,7 @@ export function PromptPolicyPage({ currentSession }: { currentSession?: TinyOffi
   const saveMutation = useMutation({
     mutationFn: () => {
       if (!target) {
-        throw new Error("Select a prompt before saving.");
+        throw new Error(t("admin.selectPromptBeforeSave"));
       }
       return target.kind === "template"
         ? savePromptPolicyTemplate({
@@ -101,7 +101,7 @@ export function PromptPolicyPage({ currentSession }: { currentSession?: TinyOffi
   const resetMutation = useMutation({
     mutationFn: () => {
       if (!target) {
-        throw new Error("Select a prompt before resetting.");
+        throw new Error(t("admin.selectPromptBeforeReset"));
       }
       return target.kind === "template"
         ? resetPromptPolicyTemplate({ companyId, templateId: target.template.id })
@@ -148,7 +148,7 @@ export function PromptPolicyPage({ currentSession }: { currentSession?: TinyOffi
                 ))}
               </PromptGroup>
               {promptPolicyQuery.isLoading ? <PanelNote>{t("admin.loadingPrompt")}</PanelNote> : null}
-              {promptPolicyQuery.error ? <PanelNote>{errorText(promptPolicyQuery.error, "Failed to load Prompt Policy.")}</PanelNote> : null}
+              {promptPolicyQuery.error ? <PanelNote>{errorText(promptPolicyQuery.error, t("admin.promptLoadFailed"))}</PanelNote> : null}
             </div>
           </ScrollArea>
         </aside>
@@ -177,8 +177,8 @@ export function PromptPolicyPage({ currentSession }: { currentSession?: TinyOffi
                       </Button>
                     </div>
                   </div>
-                  {saveMutation.error ? <div className="text-sm text-destructive">{errorText(saveMutation.error, "Failed to save Prompt Policy.")}</div> : null}
-                  {resetMutation.error ? <div className="text-sm text-destructive">{errorText(resetMutation.error, "Failed to reset Prompt Policy.")}</div> : null}
+                  {saveMutation.error ? <div className="text-sm text-destructive">{errorText(saveMutation.error, t("admin.promptSaveFailed"))}</div> : null}
+                  {resetMutation.error ? <div className="text-sm text-destructive">{errorText(resetMutation.error, t("admin.promptResetFailed"))}</div> : null}
                 </section>
                 <section className="grid gap-2">
                   <div className="flex flex-wrap items-center gap-2">
@@ -203,12 +203,12 @@ export function PromptPolicyPage({ currentSession }: { currentSession?: TinyOffi
         {showSidePanel ? (
           <aside className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] border-l border-[var(--tiny-line-soft)] bg-[var(--tiny-sidebar)]">
             <div className="border-b border-[var(--tiny-line-faint)] px-4 py-3">
-              <div className="tiny-section-label">{usageItems.length ? "Runtime usage" : "Issues"}</div>
+              <div className="tiny-section-label">{usageItems.length ? t("admin.runtimeUsage") : t("admin.issues")}</div>
             </div>
             <ScrollArea className="min-h-0">
               <div className="grid gap-3 p-3">
                 {usageItems.length ? (
-                  <MetaPanel title="Loaded by">
+                  <MetaPanel title={t("admin.loadedBy")}>
                     <div className="grid gap-1" role="list">
                       {usageItems.map((item) => (
                         <div key={item} className="tiny-readonly-fact" role="listitem">
@@ -220,7 +220,7 @@ export function PromptPolicyPage({ currentSession }: { currentSession?: TinyOffi
                   </MetaPanel>
                 ) : null}
                 {diagnostics.length ? (
-                  <MetaPanel title="Diagnostics">
+                  <MetaPanel title={t("sessionsPage.diagnostics")}>
                   <div className="grid gap-2">
                     {diagnostics.map((item) => (
                       <div key={`${item.code}:${item.message}`} className="rounded-md border border-[var(--tiny-line-soft)] bg-[var(--tiny-surface)] px-3 py-2 text-sm">
@@ -241,7 +241,7 @@ export function PromptPolicyPage({ currentSession }: { currentSession?: TinyOffi
           <DialogHeader>
             <DialogTitle>{t("admin.resetPrompt")}</DialogTitle>
             <DialogDescription>
-              {target ? `${targetTitle(target)} will be restored to its TinyOffice default. Other Prompt Policy entries will not change.` : "Select a prompt before resetting."}
+              {target ? t("admin.resetPromptDescription", { title: targetTitle(target) }) : t("admin.selectPromptBeforeReset")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

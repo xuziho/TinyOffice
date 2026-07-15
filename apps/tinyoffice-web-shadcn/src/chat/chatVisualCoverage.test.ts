@@ -53,7 +53,7 @@ test("Channel marks and access approvals use the simplified product treatment", 
 test("Chat uses a responsive Context column and conventional back-action order", () => {
   assert.match(chatRoute, /tiny-chat-workbench tiny-soft-retro-chat/);
   assert.match(css, /grid-template-columns: 274px minmax\(0, 1fr\) clamp\(248px, 22vw, 320px\);/);
-  assert.match(messagePanel, /<header[\s\S]*?aria-label="Back to list"[\s\S]*?tiny-room-title/);
+  assert.match(messagePanel, /<header[\s\S]*?aria-label=\{t\("chat\.backToList"\)\}[\s\S]*?tiny-room-title/);
 });
 
 test("Channel participants expose the current Topic holder with a quiet text status", () => {

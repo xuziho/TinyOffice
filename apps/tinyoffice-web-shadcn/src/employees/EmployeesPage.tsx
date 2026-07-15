@@ -42,6 +42,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Save, UserRound } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { i18n } from "@/i18n";
 import type {
   EmployeeAdminRecord,
   EmployeeInstructionFile,
@@ -783,7 +784,7 @@ function previewEmployeeId(displayName: string): string {
 
 function requireSkill(skill: EmployeePrivateSkillFile | undefined): EmployeePrivateSkillFile {
   if (!skill) {
-    throw new Error("Select a skill before saving.");
+    throw new Error(i18n.t("employeesPage.selectSkillBeforeSave"));
   }
   return skill;
 }

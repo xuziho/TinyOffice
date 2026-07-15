@@ -174,8 +174,8 @@ function EntryTopicRow({
       role="button"
       tabIndex={0}
       className={isArchiveConfirming
-        ? "tiny-topic-row group grid min-w-0 cursor-pointer grid-cols-[minmax(0,1fr)_8.75rem_4.75rem] items-center gap-2 px-2 py-2.5 text-left font-normal"
-        : "tiny-topic-row group grid min-w-0 cursor-pointer grid-cols-[minmax(0,1fr)_9.375rem_2.125rem] items-center gap-2 px-2 py-2.5 text-left font-normal"}
+        ? "tiny-topic-row group grid min-w-0 cursor-pointer grid-cols-[minmax(0,1fr)_5.75rem_1.75rem_4.75rem] items-center gap-2 px-2 py-2.5 text-left font-normal"
+        : "tiny-topic-row group grid min-w-0 cursor-pointer grid-cols-[minmax(0,1fr)_5.75rem_1.75rem_2.125rem] items-center gap-2 px-2 py-2.5 text-left font-normal"}
       onClick={() => onSelectEntry(entry.entryId)}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -201,20 +201,19 @@ function EntryTopicRow({
         </a>
         {entry.summary ? <span className="tiny-topic-preview mt-0.5 block truncate font-normal">{entry.summary}</span> : null}
       </span>
-      <span className="tiny-topic-time grid shrink-0 justify-items-end gap-1 text-xs font-normal">
+      <span className="tiny-topic-time shrink-0 text-right text-xs font-normal">
         <EntryUpdatedTime entry={entry} />
-        <span className="text-muted-foreground/70">{formatCompactDate(entry.updatedAt)}</span>
       </span>
-      <span className="flex items-center justify-end gap-1">
+      <span className="flex min-h-5 min-w-5 items-center justify-end">
         <EntryUnreadBadge mentionCount={entry.mentionCount} unreadCount={entry.unreadCount} />
-        <ArchiveEntryAction
-          entryId={entry.entryId}
-          title={entry.title}
-          isConfirming={isArchiveConfirming}
-          onConfirmingChange={setIsArchiveConfirming}
-          onArchiveEntry={onArchiveEntry}
-        />
       </span>
+      <ArchiveEntryAction
+        entryId={entry.entryId}
+        title={entry.title}
+        isConfirming={isArchiveConfirming}
+        onConfirmingChange={setIsArchiveConfirming}
+        onArchiveEntry={onArchiveEntry}
+      />
     </div>
   );
 }
@@ -295,15 +294,7 @@ function ArchiveEntryAction({
 function EntryUpdatedTime({ entry }: { entry: ChatShellModel["directoryEntries"][number] }): ReactElement {
   return (
     <span className="shrink-0 text-xs text-muted-foreground" title={`Last updated ${formatMessageTime(entry.updatedAt)}`}>
-      Active {formatRelativeTime(entry.updatedAt)}
+      {formatRelativeTime(entry.updatedAt)}
     </span>
   );
-}
-
-function formatCompactDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }

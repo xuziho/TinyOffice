@@ -32,3 +32,29 @@ test("runtime text deltas emit realtime-only process events without persistent s
   assert.equal(lifecycleEventCount, 0);
   assert.equal(flushCount, 0);
 });
+
+test("runtime text delta reset drops buffered text from the failed provider attempt", () => {
+  const previews: string[] = [];
+  let now = 0;
+  const emitter = createRuntimeTextDeltaEmitter({
+    responseInput: {
+      enableTextDeltas: true,
+      sessionKey: "alex|chat_direct_room|room-1",
+      employee: { employeeId: "alex" },
+    } as never,
+    preferredLanguage: "en-US",
+    emitProcessEvent: (event) => {
+      previews.push(event.preview || "");
+    },
+    appendModelCallLifecycleEvent: () => undefined,
+    scheduleRuntimeSessionFlush: async () => undefined,
+    now: () => now,
+  });
+
+  emitter.appendTextDelta("partial attempt");
+  emitter.resetTextDelta();
+  now = 100;
+  emitter.appendTextDelta("clean retry");
+
+  assert.deepEqual(previews, ["clean retry"]);
+});

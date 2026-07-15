@@ -586,8 +586,14 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
       runtimeProvider: config.runtimeProvider,
       onRuntimeSessionPersisted: config.onRuntimeSessionPersisted,
       onProcessEvent: async (event) => {
+        if (event.kind === "provider_retry" && event.status === "running") {
+          resetReplyDraftForProviderRetry(config.realtimePublisher, decision, activeRun);
+        }
         const status = runtimeStatusFromProcessEvent(event);
         if (status) {
+          if (activeRun) {
+            activeRun.status = status;
+          }
           publishRuntimeStatus(config.realtimePublisher, decision, {
             status,
             runtimeProviderId: config.runtimeProvider?.providerId,
@@ -1070,7 +1076,38 @@ function publishChatReplySnapshot(
   });
 }
 
+function resetReplyDraftForProviderRetry(
+  publisher: TinyOfficeRealtimePublisher | undefined,
+  decision: Extract<TinyOfficeChatTurnDispatchDecision, { kind: "routable" }>,
+  activeRun: ActiveChatRun | undefined,
+): void {
+  if (!publisher || !activeRun) {
+    return;
+  }
+  activeRun.sequenceInRun += 1;
+  activeRun.streamedContent = "";
+  publisher.publish({
+    type: "chat.reply.snapshot",
+    companyId: decision.companyId,
+    conversationId: decision.roomId,
+    roomId: decision.roomId,
+    runId: decision.eventKey,
+    chainId: decision.chainId,
+    sourceMessageId: decision.messageId,
+    targetMemberId: decision.targetMemberId,
+    sessionKey: decision.sessionKey,
+    content: "",
+    sequenceInRun: activeRun.sequenceInRun,
+  });
+}
+
 function runtimeStatusFromProcessEvent(event: ProcessTraceEventDraft): ChatRuntimeStatus | undefined {
+  if (event.kind === "provider_retry" && event.status === "running") {
+    return "retrying";
+  }
+  if (event.kind === "provider_retry" && event.status === "succeeded") {
+    return "thinking";
+  }
   if (event.kind === "tool_activity" && event.status === "running") {
     return "tool_calling";
   }

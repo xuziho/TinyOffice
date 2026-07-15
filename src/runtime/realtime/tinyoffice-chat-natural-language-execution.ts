@@ -249,7 +249,13 @@ export async function executeTinyOfficeChatNaturalLanguageTurn(
     });
   }
   if (!stateAction.ok) {
-    throw new Error(`Invalid ${input.context.sceneType} state action: ${stateAction.error}`);
+    const errorMessage = `Invalid ${input.context.sceneType} state action: ${stateAction.error}`;
+    await markRuntimeSessionFailed({
+      repository: input.runtimeSessionRepository,
+      sessionRecordId: runtimeEvidence?.sessionRecordId,
+      errorMessage,
+    }).catch(() => undefined);
+    throw new Error(errorMessage);
   }
   if (runtimeEvidence) {
     const processTraceSummary = summarizeTinyOfficeChatProcessTrace(finalOutputEvents);
@@ -283,6 +289,27 @@ export async function executeTinyOfficeChatNaturalLanguageTurn(
   };
   assertNoForbiddenPublicCarrierFields(result);
   return result;
+}
+
+async function markRuntimeSessionFailed(input: {
+  repository: TinyOfficeChatNaturalLanguageExecutionInput["runtimeSessionRepository"];
+  sessionRecordId?: string;
+  errorMessage: string;
+}): Promise<void> {
+  if (!input.repository || !input.sessionRecordId) {
+    return;
+  }
+  const record = input.repository.getSessionRecord(input.sessionRecordId);
+  if (!record) {
+    return;
+  }
+  input.repository.upsertSessionRecord({
+    ...record,
+    status: "failed",
+    summary: input.errorMessage,
+    updatedAt: new Date().toISOString(),
+  });
+  await input.repository.save();
 }
 
 function hasSuccessfulHandoffCall(events: ProcessTraceEvent[]): boolean {

@@ -300,6 +300,40 @@ test("handoff_topic_turn describes the required single-transfer Handoff candidat
   assert.doesNotMatch(properties?.toId?.description || "", /visible channel topic participants/i);
 });
 
+test("handoff_topic_turn rejects unreachable ids immediately and accepts a current candidate", async () => {
+  const tools = new Map<string, RegisteredTool>();
+  collaborationActionsExtension({
+    registerTool(definition) {
+      tools.set(definition.name, definition as RegisteredTool);
+    },
+  });
+  const handoff = tools.get("handoff_topic_turn");
+  assert.ok(handoff);
+
+  await withEnv({
+    PI_EMPLOYEE_ID: "noah",
+    PI_CONVERSATION_CONTEXT_JSON: JSON.stringify({
+      companyId: DEFAULT_COMPANY_ID,
+      sessionKey: "noah|chat_topic_room|conversation-1",
+      reachableMemberIds: ["lina", "noah"],
+      reachableParticipants: [
+        { id: "lina", displayName: "Lina", runtimeCapable: true },
+        { id: "owner", displayName: "Xu Ziho", runtimeCapable: false },
+      ],
+    }),
+  }, async () => {
+    await assert.rejects(
+      handoff.execute("tool-invalid", { toId: "xu-ziho" }),
+      /not a current Handoff candidate.*Xu Ziho \(owner\)/,
+    );
+    const result = await handoff.execute("tool-valid", { toId: "owner" });
+    assert.deepEqual(result.details, {
+      status: "allowed",
+      result: { toId: "owner" },
+    });
+  });
+});
+
 test("finish_work_turn describes each WorkRun final status and required evidence contract", async () => {
   const tools = new Map<string, RegisteredTool>();
   collaborationActionsExtension({

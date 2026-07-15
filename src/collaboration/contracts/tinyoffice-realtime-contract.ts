@@ -151,6 +151,7 @@ export const CHAT_RUNTIME_STATUSES = [
   "thinking",
   "tool_calling",
   "streaming",
+  "retrying",
   "replying",
   "completed",
   "cancel_requested",

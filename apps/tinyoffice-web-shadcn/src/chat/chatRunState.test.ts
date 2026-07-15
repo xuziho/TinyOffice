@@ -37,6 +37,56 @@ test("chat run state treats reply deltas as streaming work", () => {
   assert.equal(activeChatRunForRoom(state, "room-1")?.streamedContent, "Working");
 });
 
+test("chat run state replaces a failed attempt draft when the provider retries", () => {
+  const partial = applyChatRunRealtimeEvent(emptyChatRunState(), realtimeEvent({
+    type: "chat.reply.delta",
+    companyId: "acme",
+    conversationId: "conversation-1",
+    roomId: "room-1",
+    runId: "run-1",
+    sourceMessageId: "message-1",
+    targetMemberId: "aster",
+    delta: "partial attempt",
+    sequenceInRun: 1,
+  }));
+  const reset = applyChatRunRealtimeEvent(partial, realtimeEvent({
+    type: "chat.reply.snapshot",
+    companyId: "acme",
+    conversationId: "conversation-1",
+    roomId: "room-1",
+    runId: "run-1",
+    sourceMessageId: "message-1",
+    targetMemberId: "aster",
+    content: "",
+    sequenceInRun: 2,
+  }));
+  const retrying = applyChatRunRealtimeEvent(reset, realtimeEvent({
+    type: "chat.runtime_status.changed",
+    companyId: "acme",
+    conversationId: "conversation-1",
+    roomId: "room-1",
+    sourceMessageId: "message-1",
+    targetMemberId: "aster",
+    status: "retrying",
+    runId: "run-1",
+  }));
+  const clean = applyChatRunRealtimeEvent(retrying, realtimeEvent({
+    type: "chat.reply.delta",
+    companyId: "acme",
+    conversationId: "conversation-1",
+    roomId: "room-1",
+    runId: "run-1",
+    sourceMessageId: "message-1",
+    targetMemberId: "aster",
+    delta: "clean retry",
+    sequenceInRun: 4,
+  }));
+
+  assert.equal(activeChatRunForRoom(retrying, "room-1")?.status, "retrying");
+  assert.equal(activeChatRunForRoom(retrying, "room-1")?.streamedContent, "");
+  assert.equal(activeChatRunForRoom(clean, "room-1")?.streamedContent, "clean retry");
+});
+
 test("chat run state exposes a renderable streaming reply while text is arriving", () => {
   const state = applyChatRunRealtimeEvent(emptyChatRunState(), realtimeEvent({
     type: "chat.reply.delta",

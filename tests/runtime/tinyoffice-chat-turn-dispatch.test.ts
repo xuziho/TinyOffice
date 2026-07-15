@@ -2014,6 +2014,7 @@ test("TinyOffice Chat channel handoff can route to a member-backed runtime parti
 });
 
 test("TinyOffice Chat channel execution rejects multiple handoff_topic_turn calls", async () => {
+  const runtimeSessions = memoryRuntimeSessionRepository();
   const [decision] = buildTinyOfficeChatTurnDispatches({
     source: "chat_room_message",
     companyId: "acme",
@@ -2055,7 +2056,7 @@ test("TinyOffice Chat channel execution rejects multiple handoff_topic_turn call
     executeTinyOfficeChatNaturalLanguageTurn({
       context,
       employee: employeeHome(),
-      runtimeSessionRepository: memoryRuntimeSessionRepository().repository,
+      runtimeSessionRepository: runtimeSessions.repository,
       runtimeProvider: {
         async reply(input) {
           emitHandoffTopicTurn(input, { toId: "iris-growth" });
@@ -2066,6 +2067,11 @@ test("TinyOffice Chat channel execution rejects multiple handoff_topic_turn call
     }),
     /handoff_topic_turn must be called exactly once/,
   );
+  const runtimeSession = runtimeSessions.records.find((record) =>
+    record.employeeId === "nora-automation" && record.sceneType === "chat_topic_room"
+  );
+  assert.equal(runtimeSession?.status, "failed");
+  assert.match(runtimeSession?.summary || "", /handoff_topic_turn must be called exactly once/);
 });
 
 test("TinyOffice Chat channel execution treats self handoff as a non-candidate target", async () => {

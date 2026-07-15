@@ -80,6 +80,8 @@ The realtime client connects to the current socket.io path `/api/realtime/socket
 
 Runtime and streaming events use the same shared realtime contract but are not all persisted-data notifications. `chat.runtime_status.changed`, `chat.reply.delta`, and `chat.reply.snapshot` update only the local `chatRunState` layer. `chat.process_trace.appended` invalidates the selected room Activity query, not room messages or Chat Projection. Runtime events must not invalidate room messages or Chat Projection, because doing so can remount the selected surface or flash back to list/empty states. The final persisted reply still arrives through the backend Message/Projection APIs and their realtime notifications. The composer can show Stop only when `chatRunState` has a non-terminal active run for the selected room, and Stop must call the backend cancel API.
 
+Provider retry is an explicit ephemeral lifecycle state. When a retry starts, the backend publishes an empty `chat.reply.snapshot` before `chat.runtime_status.changed: retrying`; the frontend discards the failed attempt's draft, shows `Retrying...` on the active employee, and renders only text from the new attempt. A successful retry returns to `thinking` until new text arrives. Terminal `completed`, `failed`, or `canceled` events clear the active employee state consistently.
+
 Employee status dots and the Chat right Context rail are not independent server-state caches. They are derived from the employee runtime summary API and should refresh through WorkTask, WorkRun, Session, and Process Trace realtime notifications. Tasks mutations should also locally invalidate the same runtime summary and Sessions scopes so the operator sees immediate feedback even before the websocket round trip completes.
 
 Chat frontend identity is member-only. API clients send `viewerMemberId`, `actorMemberId`, Channel member `memberId`, `mentionedMemberIds`, and image attachment owner member context. They must not send `viewerEmployeeId`, `actorEmployeeId`, `participantEmployeeIds`, `mentionedEmployeeIds`, or `ownerEmployeeId` to Chat routes. Active runtime UI state also uses `targetMemberId`.
@@ -157,6 +159,7 @@ Use the focused shadcn checks for frontend work:
 ```powershell
 node --import tsx --test apps\tinyoffice-web-shadcn\src\api\chatClient.test.ts apps\tinyoffice-web-shadcn\src\chat\chatShellModel.test.ts tests\frontend\shadcn-frontend-foundation.test.ts
 node --import tsx --test apps\tinyoffice-web-shadcn\src\chat\chatRunState.test.ts
+node --import tsx --test tests\collaboration\tinyoffice-realtime-contract.test.ts tests\runtime\runtime-text-delta-emitter.test.ts tests\runtime\persistent-pi-employee-agent.test.ts
 npm run check --prefix apps/tinyoffice-web-shadcn
 npm run build --prefix apps/tinyoffice-web-shadcn
 npm run lint --prefix apps/tinyoffice-web-shadcn

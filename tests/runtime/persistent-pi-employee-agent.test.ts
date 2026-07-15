@@ -31,8 +31,27 @@ import {
 } from "../../src/runtime/company-config/company-paths.js";
 import { DEFAULT_COMPANY_ID } from "../../src/runtime/company-config/postgres-schema.js";
 import { resetRuntimePostgresTables } from "./postgres-test-utils.js";
+import { updatePiReplyText } from "../../src/runtime/pi/persistent-pi-session-transport.js";
+import { DEFAULT_HTTP_IDLE_TIMEOUT_MS } from "../../src/runtime/pi/pi-coding-agent-sdk.js";
 
 beforeEach(resetRuntimePostgresTables);
+
+test("PI retry starts a clean reply buffer and uses a bounded idle timeout", () => {
+  const partial = updatePiReplyText("", {
+    type: "message_update",
+    assistantMessageEvent: { type: "text_delta", delta: "partial attempt" },
+  });
+  const reset = updatePiReplyText(partial.text, { type: "auto_retry_start" });
+  const retried = updatePiReplyText(reset.text, {
+    type: "message_update",
+    assistantMessageEvent: { type: "text_delta", delta: "clean retry" },
+  });
+
+  assert.equal(partial.text, "partial attempt");
+  assert.equal(reset.text, "");
+  assert.equal(retried.text, "clean retry");
+  assert.equal(DEFAULT_HTTP_IDLE_TIMEOUT_MS, 120_000);
+});
 
 const TEST_COMPANY_ID = DEFAULT_COMPANY_ID;
 const DEFAULT_TEST_PROMPT_SCENES = {

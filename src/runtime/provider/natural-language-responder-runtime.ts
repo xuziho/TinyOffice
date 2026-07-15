@@ -138,6 +138,11 @@ export async function generateNaturalLanguageEmployeeReply(
         if (!input.onProcessEvent) {
           return;
         }
+        if (event.processTraceEvents?.some((processEvent) =>
+          processEvent.kind === "provider_retry" && processEvent.status === "running"
+        )) {
+          textDeltas.resetTextDelta();
+        }
         for (const processEvent of event.processTraceEvents || []) {
           emitProcessEvent(processEvent);
         }

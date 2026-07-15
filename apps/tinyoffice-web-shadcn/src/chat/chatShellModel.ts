@@ -73,8 +73,8 @@ export type ChatRelatedTask = {
 };
 
 export type ChatParticipantStatus = {
-  kind: "replying" | "stopping";
-  label: "Replying…" | "Stopping…";
+  kind: "replying" | "retrying" | "stopping";
+  label: "Replying…" | "Retrying…" | "Stopping…";
 };
 
 export type ChatShellModel = {
@@ -395,8 +395,8 @@ function chatRuntimeStatusByMember(chatRunState: ChatRunState | undefined): Map<
     sequences.set(run.targetMemberId, run.sequence);
     statuses.set(run.targetMemberId, {
       kind: "working",
-      label: "Replying",
-      reason: "Responding in Chat.",
+      label: run.status === "retrying" ? "Retrying" : "Replying",
+      reason: run.status === "retrying" ? "Retrying the Chat response." : "Responding in Chat.",
     });
   }
   return statuses;
@@ -430,6 +430,9 @@ function navigationSubtitleFor(
   }
   if (status.label === "Replying") {
     return "Replying...";
+  }
+  if (status.label === "Retrying") {
+    return "Retrying...";
   }
   return "Working...";
 }
@@ -498,9 +501,13 @@ function participantsFor(input: {
 }
 
 function participantStatusForRun(status: ChatRunRecord["status"]): ChatParticipantStatus {
-  return status === "cancel_requested"
-    ? { kind: "stopping", label: "Stopping…" }
-    : { kind: "replying", label: "Replying…" };
+  if (status === "cancel_requested") {
+    return { kind: "stopping", label: "Stopping…" };
+  }
+  if (status === "retrying") {
+    return { kind: "retrying", label: "Retrying…" };
+  }
+  return { kind: "replying", label: "Replying…" };
 }
 
 function imageAttachmentsEnabledFor(input: {

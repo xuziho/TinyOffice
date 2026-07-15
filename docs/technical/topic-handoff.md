@@ -29,6 +29,8 @@ Channel handoff context uses progressive disclosure. The receiver gets shared To
 
 Runtime context exposes `Handoff candidates` rather than the full visible participant roster. Candidate context includes display name, stable id, and product role/responsibility, and excludes the runtime member taking the current turn. `handoff_topic_turn.toId` must target a listed candidate. Runtime Dispatch owns the execution decision after the model selects `toId`; prompt context must not describe candidates as human-vs-AI or return-to-user handoff classes.
 
+The `handoff_topic_turn` tool validates `toId` against that turn's `reachableParticipants` while the tool call is executing. An unknown id fails immediately and the provider can correct the tool call within the same turn; it must not be accepted as successful Handoff evidence and discovered only after the visible reply has finished. The final Chat boundary still enforces exactly one successful Handoff as the authoritative invariant.
+
 `chat_topic_chains` is the durable single-ball control record. `chat_topic_chain_runs` links every child `runId` to the same `chainId`. A partial unique index permits only one `active` or `cancel_requested` chain per Topic room. Handoff advances `current_run_id` and `current_holder_member_id` with an expected-current-run guard before the child queued event is published. Cancel can therefore resolve an older visible run id to the actual current holder.
 
 ## Rules
@@ -43,7 +45,8 @@ Runtime context exposes `Handoff candidates` rather than the full visible partic
 - Recovered or suppressed handoff action evidence must use owned room, conversation, chat entry, action, and participant ids.
 - A Topic message produces one initial dispatch only. Multiple structured mentions select the first id; no mention uses a SHA-256-derived stable selection over sorted eligible runtime participant ids.
 - `handoff_topic_turn` must appear exactly once in every Channel Topic turn. Selecting the user's participant id returns control to the user.
-- Handoff count is unlimited. Runtime/provider timeouts remain operational failure boundaries, not product Handoff limits.
+- Handoff count is unlimited. Runtime/provider timeouts remain operational failure boundaries, not product Handoff limits. The provider HTTP idle timeout is currently 120 seconds of connection inactivity; it is not a total employee-work duration or Topic-turn-count limit.
+- If final Handoff validation fails after provider execution, both the Chat dispatch and its runtime Session record must finish as `failed`; a completed runtime Session must not coexist with a failed Topic turn.
 - Topic cancellation validates the requesting actor against Conversation participation, marks the chain `cancel_requested`, aborts its current run, blocks a later Handoff, and suppresses late provider output.
 
 ## Focused Tests
@@ -51,6 +54,8 @@ Runtime context exposes `Handoff candidates` rather than the full visible partic
 ```powershell
 node --import tsx --test tests\runtime\channel-topic-service.test.ts
 node --import tsx --test tests\runtime\collaboration-action-boundary.test.ts
+node --import tsx --test tests\collaboration\collaboration-actions-extension.test.ts
+node --import tsx --test tests\runtime\tinyoffice-chat-turn-dispatch.test.ts
 node --import tsx --test --test-name-pattern "buildHandoffReplayKey" tests\runtime\handoff-replay-ledger.test.ts
 node --import tsx --test tests\runtime\postgres-schema.test.ts
 ```

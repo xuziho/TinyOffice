@@ -26,6 +26,7 @@ test("appViewHref returns stable top-level module paths", () => {
   assert.equal(appViewHref("skills"), "/skills");
   assert.equal(appViewHref("system-ai"), "/system-ai");
   assert.equal(appViewHref("tasks"), "/tasks");
+  assert.equal(appViewHref("updates"), "/updates");
 });
 
 test("chatRoomHref writes concrete room routes", () => {

@@ -24,10 +24,10 @@ export function DoctorPage({ currentSession }: { currentSession?: TinyOfficeCurr
   });
 
   return (
-    <main className="grid h-svh w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
+    <main className="grid h-full w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
       <header className="tiny-room-header flex items-center justify-between gap-3 border-b">
         <div className="min-w-0">
-          <div className="tiny-room-title truncate">Doctor</div>
+          <div className="tiny-room-title truncate">Health</div>
           <div className="tiny-room-subtitle truncate">
             {companyId ? "Read-only diagnostics for the current company" : "Read-only diagnostics"}
           </div>

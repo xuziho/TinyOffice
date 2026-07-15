@@ -167,7 +167,7 @@ export function EmployeesPage({ currentSession }: { currentSession?: TinyOfficeC
   });
 
   return (
-    <div className="grid h-svh w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
+    <div className="grid h-full w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
       <header className="tiny-room-header flex items-center justify-between gap-3 border-b">
         <div className="min-w-0">
           <div className="tiny-room-title truncate">Employees</div>

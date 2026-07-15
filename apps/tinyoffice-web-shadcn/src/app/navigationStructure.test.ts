@@ -4,6 +4,7 @@ import {
   adminNavigation,
   isAdminView,
   isWorkforceView,
+  pageSectionForView,
   workforceNavigation,
 } from "./navigationStructure";
 
@@ -22,12 +23,22 @@ test("admin navigation groups existing routes by product responsibility", () => 
     label: group.label,
     views: group.items.map((item) => item.view),
   })), [
-    { label: "Company", views: ["company", "integrations"] },
+    { label: "Organization", views: ["company"] },
+    { label: "Automation", views: ["integrations"] },
     { label: "AI & Runtime", views: ["system-ai", "prompt", "access", "capabilities"] },
-    { label: "System", views: ["sessions", "doctor", "backup"] },
+    { label: "Operations", views: ["sessions", "doctor", "backup", "updates"] },
   ]);
   assert.equal(isAdminView("sessions"), true);
   assert.equal(isAdminView("doctor"), true);
   assert.equal(isAdminView("chat"), false);
   assert.equal(isAdminView("settings"), false);
+});
+
+test("page sections expose sibling navigation without merging product routes", () => {
+  assert.deepEqual(pageSectionForView("skills")?.items.map((item) => item.view), ["employees", "skills"]);
+  assert.deepEqual(pageSectionForView("access")?.items.map((item) => item.view), ["system-ai", "prompt", "access", "capabilities"]);
+  assert.deepEqual(pageSectionForView("updates")?.items.map((item) => item.view), ["sessions", "doctor", "backup", "updates"]);
+  assert.equal(pageSectionForView("company"), undefined);
+  assert.equal(pageSectionForView("integrations"), undefined);
+  assert.equal(pageSectionForView("settings"), undefined);
 });

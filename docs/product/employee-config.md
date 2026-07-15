@@ -4,6 +4,8 @@ Employee Config is the operator entry point for long-lived runtime-capable membe
 
 Product framing: read Employee Config as Member Runtime Configuration. Visible copy and new docs should describe configured identities as runtime-capable members. See [Member Identity Model](member-identity-model.md).
 
+The Workforce editor treats employee identity, responsibilities, presence, runtime model, and thinking level as one `General` configuration area. Runtime model selection is important configuration, but two controls do not justify an otherwise sparse standalone tab. Active state is communicated by the Active employee collection; only exceptional inactive state is repeated beside the selected employee. Creation belongs to the employee collection header, and successful saves stay visually quiet until another edit creates actionable state.
+
 ## Purpose
 
 - Maintain member identity, display name, role, responsibilities, and presence for runtime-capable members.

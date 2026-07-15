@@ -123,7 +123,7 @@ test("renders Employees as an employee configuration surface", async () => {
   );
 
   assert.doesNotMatch(html, /Employee configuration/);
-  assert.doesNotMatch(html, />Employees</);
+  assert.match(html, />Employees</);
   assert.match(html, /New employee/);
   assert.doesNotMatch(html, /Reload all/);
   assert.match(html, /Save changes/);
@@ -132,13 +132,13 @@ test("renders Employees as an employee configuration surface", async () => {
   assert.match(html, /Inactive 1/);
   assert.doesNotMatch(html, /Retired Avery/);
   assert.match(html, /automation/);
-  assert.match(html, /Profile/);
+  assert.match(html, /General/);
   assert.match(html, /Runtime/);
   assert.match(html, /AGENTS.md/);
   assert.match(html, /Skills/);
   assert.match(html, /Display name/);
   assert.match(html, /Responsibilities/);
-  assert.doesNotMatch(html, /openai-codex/);
+  assert.match(html, /Provider: openai-codex/);
   assert.doesNotMatch(html, /gpt-5.5/);
   assert.doesNotMatch(html, /weekly-audit/);
   assert.doesNotMatch(html, /Audit weekly operations/);
@@ -197,6 +197,13 @@ test("renders employee lifecycle as a segmented control and editor navigation as
   assert.match(source, /w-fit max-w-full overflow-x-auto/);
   assert.match(source, /const employeeTabTriggerClassName =/);
   assert.match(source, /hover:text-foreground/);
+  assert.match(source, /<TabsTrigger value="general"[^>]*>General<\/TabsTrigger>/);
+  assert.doesNotMatch(source, /<TabsTrigger value="runtime"/);
+  assert.doesNotMatch(source, /<TabsContent value="runtime"/);
+  assert.match(source, /<h2 className="text-sm font-semibold">Runtime<\/h2>/);
+  assert.doesNotMatch(source, /function RuntimeValue/);
+  assert.doesNotMatch(source, />Enabled<\/Badge>/);
+  assert.match(source, /employee\.enabled === false \? <Badge variant="outline">Inactive<\/Badge> : null/);
 });
 
 test("employee lifecycle changes invalidate active Chat discovery", async () => {

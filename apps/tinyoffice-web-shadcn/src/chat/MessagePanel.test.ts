@@ -16,8 +16,8 @@ test("streaming reply uses the final message row geometry from its first visible
 });
 
 test("streaming reply keeps one stable scroller item while persisted data is reconciled", () => {
-  assert.match(source, /persistedMessageForDraftReply\(model\.messages, draftReply\)/);
-  assert.match(source, /messagesWithoutReconciledReply\(model\.messages, persistedDraftReply\)/);
+  assert.match(source, /reconciledTimelineRows\(model\.messages, draftReply\)/);
+  assert.match(source, /persistedMessage=\{row\.persistedMessage\}/);
   assert.match(source, /<MarkdownMessageBody body=\{persistedMessage\?\.body \?\? draftReply\.content\} \/>/);
 });
 

@@ -1,6 +1,8 @@
 import type { ProcessEventEmitter } from "./natural-language-responder-contracts.js";
 import type { NaturalLanguageResponseInput } from "./natural-language-responder-contracts.js";
 
+export const RUNTIME_TEXT_DELTA_FLUSH_INTERVAL_MS = 50;
+
 export function createRuntimeTextDeltaEmitter(input: {
   responseInput: NaturalLanguageResponseInput;
   preferredLanguage: string;
@@ -15,6 +17,7 @@ export function createRuntimeTextDeltaEmitter(input: {
     semanticRole?: string;
   }) => void;
   scheduleRuntimeSessionFlush: () => Promise<void>;
+  now?: () => number;
 }) {
   let bufferedDelta = "";
   let lastDeltaFlushAt = 0;
@@ -25,8 +28,8 @@ export function createRuntimeTextDeltaEmitter(input: {
       return;
     }
 
-    const now = Date.now();
-    if (!force && now - lastDeltaFlushAt < 400) {
+    const now = input.now?.() ?? Date.now();
+    if (!force && now - lastDeltaFlushAt < RUNTIME_TEXT_DELTA_FLUSH_INTERVAL_MS) {
       return;
     }
 

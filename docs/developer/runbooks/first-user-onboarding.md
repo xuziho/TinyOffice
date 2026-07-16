@@ -46,7 +46,7 @@ Startup prints a one-time local Owner access URL. Open that exact URL. Local acc
 2. Open the launcher URL and confirm TinyOffice enters the authenticated Owner session without a visible token field or Windows Hello prompt.
 3. Confirm the app enters Owner profile setup and does not show seeded Companies, Channels, Topics, or DMs.
 4. Set the Owner display name and avatar, then confirm `session/current` reports `needsProfileInitialization: false` and `needsCompanyInitialization: true`.
-5. Create a Company with a Company name and HR name. Runtime models may remain `Set later`.
+5. Inspect the initial HR and System AI model selectors. A production acceptance must expose at least one PI model and select an HR model. `Set later` is acceptable only for an intentionally model-free UI acceptance; if it is the only option, stop and repair PI configuration for the TinyOffice service account before treating the installation as ready.
 6. Confirm the Company becomes current and normal navigation unlocks.
 7. Confirm `/api/tinyoffice/session/current` reports the authenticated Owner as the Company `boss`, with both initialization flags `false`.
 8. Confirm Chat shows the named HR as a direct-message participant and ordinary UI does not use account, Company, member, or employee ids as display labels.

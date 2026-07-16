@@ -51,7 +51,7 @@ npm run build:production-release
 
 `.release/tinyoffice-<version>-<commit>.tgz` 和配套的 `.sha256` 包含构建后的前端静态文件和运行时代码，不包含前端开发依赖、测试、本地 Company 数据、密钥和两个 `node_modules`。带 commit 的 Release id 可以避免同一 package 版本的不同构建相互覆盖。Linux 执行器 `scripts/release/install-production-release.sh` 会先验证校验和，再在目标主机安装生产依赖、保留共享数据目录、创建并验证升级前备份、执行待处理 migration、切换 Release、重启并检查 `/ready`。
 
-在迷你主机保存真实数据前请阅读 [Production Releases](docs/product/production-releases.md)。生产实例必须使用基于 `deploy/tinyoffice.env.example` 的显式配置，绝不能把 `runtime:postgres:reset` 当作更新方式。
+在迷你主机保存真实数据前请阅读 [Production Releases](docs/product/production-releases.md)。生产实例必须使用基于 `deploy/tinyoffice.env.example` 的显式配置，绝不能把 `runtime:postgres:reset` 当作更新方式。首次创建 Company 前，还必须为运行 TinyOffice 服务的系统用户配置 PI 模型注册表，并确认至少能够枚举出一个模型。主机上的 Codex 登录不会自动配置 PI，TinyOffice 也不会复用 `~/.codex/auth.json`。
 
 `setup` 会同时安装根目录运行时依赖和独立 shadcn 前端依赖。执行前请确认 `node --version` 为 Node.js 22.19 或更高版本。
 

@@ -16,6 +16,30 @@ The target host extracts a Release under an immutable `releases/<release-id>` di
 
 The repository includes `scripts/release/install-production-release.sh` as the first guarded Linux executor. It requires the expected SHA-256, a host-level `shared/tinyoffice.env`, a supported application root, and `TINYOFFICE_DEPLOYMENT_MODE=production`. It creates a verified pre-update backup when a current Release exists, installs production dependencies, applies pending migrations, switches the active Release, restarts the user service, and checks `/ready`. If readiness fails before a migration was needed, it switches code back. Once a migration has been applied, it deliberately refuses automatic code rollback because the old code may not understand the new schema; recovery uses the retained previous Release and verified backup. It never performs `git pull` or resets PostgreSQL.
 
+## PI model readiness
+
+TinyOffice uses the PI model registry for employee and System AI models. A successful Codex login on the host does not configure PI: `~/.codex/auth.json` and PI's `auth.json` are separate credential stores, and TinyOffice does not copy or reuse Codex credentials.
+
+Before first-Company onboarding, configure PI for the same operating-system account that runs `tinyoffice.service`. By default TinyOffice reads `$HOME/.pi/agent/auth.json` and `$HOME/.pi/agent/models.json`; an explicit `PI_CODING_AGENT_DIR` changes that root and must be present in the service environment. Provider API keys supplied through the service environment are also resolved by PI. Never place these credentials inside an immutable Release.
+
+Do not treat the presence or non-zero size of `auth.json` as proof of readiness: an empty JSON object is a valid file but exposes no models. Run this check as the service account from the active Release:
+
+```bash
+cd /home/xu/apps/tinyoffice/current
+node --import tsx --input-type=module <<'NODE'
+import { loadPiModelState } from "./src/runtime/company-config/employees-admin.ts";
+
+const { availableModels } = await loadPiModelState();
+if (availableModels.length === 0) {
+  console.error("PI model registry is empty for the TinyOffice service account.");
+  process.exit(1);
+}
+console.log(availableModels.map(({ provider, id }) => `${provider}/${id}`).join("\n"));
+NODE
+```
+
+Replace the application root when the deployment uses a different approved path. The command prints model identifiers, not credentials. An empty result means the deployment is not employee-runtime ready: Company onboarding will show only `Set later` for both the initial HR and System AI, and employees cannot run until PI authentication or a custom model definition is configured.
+
 ## Persistent instance boundary
 
 Program files are replaceable. These roots are persistent and must survive Release replacement:
@@ -32,11 +56,11 @@ The initial executor may expose these persistent roots inside each Release with 
 ## Update sequence
 
 1. Resolve an exact approved target Release and verify its checksum.
-2. Verify Node.js, PostgreSQL, disk space, persistent-root permissions, current schema, and service ownership.
+2. Verify Node.js, PostgreSQL, disk space, persistent-root permissions, current schema, service ownership, and a non-empty PI model registry for the service account.
 3. Extract the target into a new immutable Release directory and install production dependencies only while the current service remains available.
 4. Stop TinyOffice writes, then create and verify a full-instance backup associated with the source and target versions.
 5. Apply pending append-only migrations and atomically switch the active Release. A backup or migration failure restarts the unchanged prior Release.
-6. Restart the service, check liveness and readiness, then run focused authentication, Chat, realtime, and employee-runtime smoke checks.
+6. Restart the service, check liveness and readiness, re-run PI model enumeration, then run focused authentication, Chat, realtime, and employee-runtime smoke checks.
 7. Record success or preserve structured failure evidence. Code rollback switches to the prior Release only when no migration was applied; otherwise recovery uses the verified pre-update backup instead of pretending that code rollback is safe.
 
 `runtime:postgres:reset` is a local test/development command and refuses to run when `TINYOFFICE_DEPLOYMENT_MODE=production`.

@@ -5,6 +5,7 @@ import { once } from "node:events";
 
 import { createTinyOfficeServer } from "../../src/runtime/realtime/tinyoffice-server.js";
 import { defaultRuntimeProvider } from "../../src/runtime/provider/pi-runtime-provider.js";
+import { printOwnerAccessInstructions } from "./owner-access-instructions.js";
 import { createRuntimeShutdownCoordinator } from "./runtime-shutdown-coordinator.js";
 
 if (process.env.TINYOFFICE_DEPLOYMENT_MODE !== "production") {
@@ -43,6 +44,11 @@ const runtime = await createTinyOfficeServer({
 runtime.server.listen(runtimePort, bindHost);
 await once(runtime.server, "listening");
 console.log(`TinyOffice production Release ${releaseManifest.releaseId}: ${publicOrigin}`);
+printOwnerAccessInstructions({
+  publicOrigin,
+  ...(runtime.bootstrapToken ? { bootstrapToken: runtime.bootstrapToken } : {}),
+  ...(runtime.localAccessTicket ? { localAccessTicket: runtime.localAccessTicket } : {}),
+});
 
 const shutdownCoordinator = createRuntimeShutdownCoordinator({
   terminateWeb: () => undefined,

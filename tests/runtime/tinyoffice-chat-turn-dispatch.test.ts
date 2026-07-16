@@ -3541,13 +3541,26 @@ test("TinyOffice Chat repairs one missing Channel handoff without replacing the 
     ],
   });
   const calls: NaturalLanguageResponseInput[] = [];
+  const runtimeSession = memoryRuntimeSessionRepository();
   const result = await executeTinyOfficeChatNaturalLanguageTurn({
     context,
     employee: employeeHome(),
-    runtimeSessionRepository: memoryRuntimeSessionRepository().repository,
+    runtimeSessionRepository: runtimeSession.repository,
     runtimeProvider: {
       async reply(runtimeInput) {
         calls.push(runtimeInput);
+        const usage = calls.length === 1
+          ? { input: 100, output: 20, cacheRead: 8 }
+          : { input: 30, output: 4, cacheWrite: 2 };
+        runtimeInput.onProviderEvent?.({
+          provider: "test",
+          usage,
+          runtimeSessionEvent: {
+            kind: "message_end",
+            role: "assistant",
+            payload: { usage },
+          },
+        });
         if (calls.length === 1) {
           return "I am Nora, and Iris should continue next.";
         }
@@ -3566,6 +3579,16 @@ test("TinyOffice Chat repairs one missing Channel handoff without replacing the 
   );
   assert.equal(result.chatOutput.message, "I am Nora, and Iris should continue next.");
   assert.equal(result.stateAction?.targetMemberId, "iris-growth");
+  const visibleEvents = runtimeSession.events.filter((event) => event.visibility === "user_visible");
+  assert.deepEqual(visibleEvents.map((event) => event.kind), ["user_message", "assistant_message"]);
+  const usageEvents = runtimeSession.events.filter((event) => event.kind === "model_call_usage");
+  assert.equal(usageEvents.length, 2);
+  assert.equal(new Set(usageEvents.map((event) => event.turnId)).size, 1);
+  assert.equal(new Set(usageEvents.map((event) => event.modelCallId)).size, 2);
+  assert.match(usageEvents[1]?.modelCallId || "", /followup\|state_action_repair$/);
+  assert.equal(runtimeSession.records.at(-1)?.tokenInputTotal, 130);
+  assert.equal(runtimeSession.records.at(-1)?.tokenOutputTotal, 24);
+  assert.equal(runtimeSession.records.at(-1)?.tokenCacheTotal, 10);
 });
 
 test("TinyOffice Chat channel context omits a provisional title that repeats the trigger body", async () => {

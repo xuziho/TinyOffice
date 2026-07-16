@@ -71,12 +71,12 @@ The session list presentation is derived in `apps/tinyoffice-web-shadcn/src/sess
 
 ## Usage Persistence
 
-Sessions treats `session_records.token_input_total`, `token_output_total`, and `token_cache_total` as authoritative for page totals. The natural language responder dedupes usage by `modelCallId` and overwrites the current model call with the final usage returned by the provider.
+Sessions treats `session_records.token_input_total`, `token_output_total`, and `token_cache_total` as authoritative for page totals. All runtime projections use the same model-call accounting rule: repeated lifecycle snapshots for one `modelCallId` are one call, the final `model_call_usage` snapshot replaces earlier snapshots for that call, and distinct model calls are added together. A Channel Handoff state-action repair is therefore counted once as a second model call inside the original visible runtime turn rather than appearing as a second conversation turn.
 
 The main page shows usage in two places only:
 
-- Session Overview shows total session tokens.
-- Runtime Turns show per-turn tokens.
+- Session Overview shows the total for the whole persistent session.
+- Runtime Turns show the sum of unique model calls attributed to each product turn.
 
 The former standalone Usage section was retired because it repeated the same per-turn token facts and exposed model call ids in the primary reading path.
 

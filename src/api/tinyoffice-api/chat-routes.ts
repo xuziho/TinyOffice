@@ -2,7 +2,8 @@ import type { Hono } from "hono";
 
 import type { MessageDto, MessagePage } from "../../collaboration/contracts/conversation-message-contract.js";
 import { buildRuntimeActivity } from "../../runtime/activity/runtime-activity-projection.js";
-import { addUsage, usageFromEvent, usageMagnitude, usageTotals } from "../../runtime/pi/session-explorer-projection-utils.js";
+import { usageMagnitude, usageTotals } from "../../runtime/pi/session-explorer-projection-utils.js";
+import { collectRuntimeModelCallUsage, runtimeUsageTotals } from "../../runtime/usage/runtime-token-usage.js";
 import { RuntimeSessionRepository, type RuntimeSessionEvent, type RuntimeSessionRecord, type RuntimeSessionRepositoryLike } from "../../runtime/storage/runtime-session-repository.js";
 import type { ChatRunControlApiService, TinyOfficeApiOptions } from "./context.js";
 import * as api from "./context.js";
@@ -457,11 +458,15 @@ function runtimeUsageForMessage(input: {
     if (!record) {
       continue;
     }
-    const turnUsage = link.sourceMessageId
-      ? runtimeUsageForSourceMessage(input.repository.listSessionEvents(record.id), link.sourceMessageId)
-      : undefined;
-    if (turnUsage && usageMagnitude(turnUsage) > 0) {
-      return turnUsage;
+    if (link.sourceMessageId) {
+      const turnUsage = runtimeUsageForSourceMessage(
+        input.repository.listSessionEvents(record.id),
+        link.sourceMessageId,
+      );
+      if (turnUsage && usageMagnitude(turnUsage) > 0) {
+        return turnUsage;
+      }
+      continue;
     }
     const sessionUsage = usageTotals({
       inputTokens: record.tokenInputTotal,
@@ -485,16 +490,9 @@ function runtimeUsageForSourceMessage(
       .map((event) => event.turnId)
       .filter((turnId): turnId is string => Boolean(turnId)),
   );
-  const total = events.reduce((current, event) => {
-    const usage = usageFromEvent(event);
-    if (!usage) {
-      return current;
-    }
-    if ((event.turnId && turnIds.has(event.turnId)) || (!event.turnId && payloadReferencesMessage(event.payload, sourceMessageId))) {
-      return addUsage(current, usage);
-    }
-    return current;
-  }, usageTotals());
+  const total = runtimeUsageTotals(
+    collectRuntimeModelCallUsage(events).filter((modelCall) => modelCall.turnId && turnIds.has(modelCall.turnId)),
+  );
   return usageMagnitude(total) > 0 ? total : undefined;
 }
 

@@ -3,6 +3,11 @@ import {
   type RuntimeSessionRepositoryLike,
 } from "../storage/runtime-session-repository.js";
 import type { RuntimeTokenUsage } from "./contracts.js";
+import {
+  collectRuntimeModelCallUsage,
+  runtimeUsageTotals,
+  tokenTotal as normalizedTokenTotal,
+} from "../usage/runtime-token-usage.js";
 import type {
   RuntimeSessionEventInput,
   RuntimeSessionPersistResult,
@@ -19,6 +24,7 @@ export async function persistNaturalLanguageRuntimeSessionSnapshot(
     beforeSave?: () => Promise<void>;
     authoritativeUsage?: {
       modelCallId: string;
+      turnId?: string;
       usage: RuntimeTokenUsage;
     };
   } = {},
@@ -53,6 +59,7 @@ export async function persistNaturalLanguageRuntimeSessionSnapshotIntoRepository
   options: {
     authoritativeUsage?: {
       modelCallId: string;
+      turnId?: string;
       usage: RuntimeTokenUsage;
     };
   } = {},
@@ -276,7 +283,7 @@ function stringFromPayload(payload: Record<string, unknown> | undefined, key: st
 }
 
 export function tokenTotal(value: number | undefined): number | undefined {
-  return value === undefined ? undefined : Math.max(0, Math.round(value));
+  return value === undefined ? undefined : normalizedTokenTotal(value);
 }
 
 export function cacheTokenTotal(usage: RuntimeTokenUsage | undefined): number | undefined {
@@ -293,6 +300,7 @@ function runtimeSessionTokenTotals(input: {
   fallbackRecord: RuntimeSessionRecordInput;
   authoritativeUsage?: {
     modelCallId: string;
+    turnId?: string;
     usage: RuntimeTokenUsage;
   };
   events: Array<{
@@ -306,7 +314,7 @@ function runtimeSessionTokenTotals(input: {
     payload?: Record<string, unknown>;
   }>;
 }): Pick<RuntimeSessionRecordInput, "tokenInputTotal" | "tokenOutputTotal" | "tokenCacheTotal"> {
-  const usages = uniqueUsageRecords(input.events, input.authoritativeUsage);
+  const usages = collectRuntimeModelCallUsage(input.events, input.authoritativeUsage);
   if (usages.length === 0) {
     return {
       tokenInputTotal: input.fallbackRecord.tokenInputTotal ?? input.existingRecord?.tokenInputTotal,
@@ -314,96 +322,10 @@ function runtimeSessionTokenTotals(input: {
       tokenCacheTotal: input.fallbackRecord.tokenCacheTotal ?? input.existingRecord?.tokenCacheTotal,
     };
   }
+  const total = runtimeUsageTotals(usages);
   return {
-    tokenInputTotal: usages.reduce((total, usage) => total + (tokenTotal(usage.input) || 0), 0),
-    tokenOutputTotal: usages.reduce((total, usage) => total + (tokenTotal(usage.output) || 0), 0),
-    tokenCacheTotal: usages.reduce((total, usage) => total + (cacheTokenTotal(usage) || 0), 0),
+    tokenInputTotal: total.inputTokens,
+    tokenOutputTotal: total.outputTokens,
+    tokenCacheTotal: total.cacheTokens,
   };
-}
-
-function uniqueUsageRecords(events: Array<{
-  id: string;
-  kind: string;
-  role?: string;
-  modelCallId?: string;
-  title?: string;
-  summary?: string;
-  preview?: string;
-  payload?: Record<string, unknown>;
-}>, authoritativeUsage?: {
-  modelCallId: string;
-  usage: RuntimeTokenUsage;
-}): RuntimeTokenUsage[] {
-  const usagesByCall = new Map<string, RuntimeTokenUsage>();
-  for (const event of events) {
-    const usage = extractUsageFromRuntimeSessionEvent(event);
-    if (!usage) {
-      continue;
-    }
-    const key = event.modelCallId || event.id;
-    const existing = usagesByCall.get(key);
-    if (!existing || usageTokenMagnitude(usage) >= usageTokenMagnitude(existing)) {
-      usagesByCall.set(key, usage);
-    }
-  }
-  if (authoritativeUsage) {
-    usagesByCall.set(authoritativeUsage.modelCallId, authoritativeUsage.usage);
-  }
-  return [...usagesByCall.values()];
-}
-
-function usageTokenMagnitude(usage: RuntimeTokenUsage) {
-  return (tokenTotal(usage.input) || 0) +
-    (tokenTotal(usage.output) || 0) +
-    (tokenTotal(usage.cacheRead) || 0) +
-    (tokenTotal(usage.cacheWrite) || 0);
-}
-
-function extractUsageFromRuntimeSessionEvent(event: {
-  payload?: Record<string, unknown>;
-}): RuntimeTokenUsage | undefined {
-  const message = event.payload?.message;
-  if (!message || typeof message !== "object") {
-    return undefined;
-  }
-  return normalizeUsage((message as { usage?: unknown }).usage);
-}
-
-function normalizeUsage(usage: unknown): RuntimeTokenUsage | undefined {
-  if (!usage || typeof usage !== "object") {
-    return undefined;
-  }
-
-  const record = usage as {
-    input?: unknown;
-    output?: unknown;
-    cacheRead?: unknown;
-    cacheWrite?: unknown;
-    totalTokens?: unknown;
-    cost?: {
-      total?: unknown;
-    };
-  };
-  const normalized: RuntimeTokenUsage = {
-    input: numberFrom(record.input),
-    output: numberFrom(record.output),
-    cacheRead: numberFrom(record.cacheRead),
-    cacheWrite: numberFrom(record.cacheWrite),
-    totalTokens: numberFrom(record.totalTokens),
-    cost: {
-      total: numberFrom(record.cost?.total),
-    },
-  };
-
-  return normalized.input !== undefined ||
-    normalized.output !== undefined ||
-    normalized.cacheRead !== undefined ||
-    normalized.cacheWrite !== undefined ||
-    normalized.totalTokens !== undefined
-    ? normalized
-    : undefined;
-}
-
-function numberFrom(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }

@@ -1,6 +1,7 @@
 import type { ParticipantRef } from "../../collaboration/contracts/participant-ref.js";
 import type { RuntimePromptContextBlockInput } from "../prompting/prompt-compiler.js";
 import type { EmployeeHome } from "../registry/employee-home.js";
+import type { RuntimeSceneTurn } from "../orchestration/runtime-scene-turn.js";
 import type { RuntimeSessionRepositoryLike } from "../storage/runtime-session-repository.js";
 import type {
   ProcessTraceEventDraft,
@@ -36,11 +37,14 @@ export interface NaturalLanguageResponseInput {
   onRuntimeSessionPersisted?: (input: RuntimeSessionPersistResult) => void | Promise<void>;
   repoRoot?: string;
   runtimeProvider?: RuntimeProvider;
+  runtimeSceneTurn?: RuntimeSceneTurn;
+  recordVisibleMessages?: boolean;
 }
 
 export interface NaturalLanguageResponse {
   message: string;
   usage?: RuntimeTokenUsage;
+  runtimeSceneTurn: RuntimeSceneTurn;
 }
 
 export type RuntimeSessionRecordInput = Parameters<RuntimeSessionRepositoryLike["upsertSessionRecord"]>[0];

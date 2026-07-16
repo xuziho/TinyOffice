@@ -788,19 +788,18 @@ test("natural language responder returns structured usage from PI session events
     runtimeProvider,
   });
 
-  assert.deepEqual(reply, {
-    message: "I am Mira.",
-    usage: {
-      input: 3320,
-      output: 36,
-      cacheRead: 7,
-      cacheWrite: 5,
-      totalTokens: 3356,
-      cost: {
-        total: 0.00884,
-      },
+  assert.equal(reply.message, "I am Mira.");
+  assert.deepEqual(reply.usage, {
+    input: 3320,
+    output: 36,
+    cacheRead: 7,
+    cacheWrite: 5,
+    totalTokens: 3356,
+    cost: {
+      total: 0.00884,
     },
   });
+  assert.equal(reply.runtimeSceneTurn.modelCall.purpose, "primary");
 
   const repository = await RuntimeSessionRepository.open(repoRoot, { companyId: DEFAULT_COMPANY_ID });
   try {

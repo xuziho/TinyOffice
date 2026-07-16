@@ -4,7 +4,7 @@ import {
   type RuntimeTurnIdentityInput,
 } from "./runtime-turn-identity.js";
 
-export type RuntimeModelCallPurpose = "primary";
+export type RuntimeModelCallPurpose = "primary" | "state_action_repair";
 export type RuntimeModelCallLifecycleKind =
   | "model_call_started"
   | "model_call_delta"
@@ -44,6 +44,19 @@ export function buildRuntimeSceneTurn(input: RuntimeTurnIdentityInput): RuntimeS
     modelCall: {
       id,
       purpose: "primary",
+    },
+  };
+}
+
+export function buildRuntimeFollowupModelCall(
+  turn: RuntimeSceneTurn,
+  purpose: Exclude<RuntimeModelCallPurpose, "primary">,
+): RuntimeSceneTurn {
+  return {
+    identity: turn.identity,
+    modelCall: {
+      id: `${turn.modelCall.id}|followup|${purpose}`,
+      purpose,
     },
   };
 }

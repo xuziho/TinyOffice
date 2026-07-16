@@ -7,7 +7,8 @@ import type { SessionExplorerActionSummary, SessionExplorerConversationTurn, Ses
 import { buildPromptInputPackages } from "./session-explorer-projection-prompts.js";
 import { buildActionSummary, summarizeRuntimeSessionRecord } from "./session-explorer-projection-summary.js";
 import { buildAiCallTranscript, dedupeReadableTraceTranscriptEvents, isReadableTraceTranscriptEvent, transcriptTextForTraceEvent } from "./session-explorer-projection-transcript.js";
-import { addUsage, compactLine, isGenericAssistantReply, sessionModelDisplay, textForRuntimeSessionEvent, turnKeyForEvent, usageFromEvent, usageMagnitude, usageTotals } from "./session-explorer-projection-utils.js";
+import { collectRuntimeModelCallUsage, runtimeUsageTotals } from "../usage/runtime-token-usage.js";
+import { addUsage, compactLine, isGenericAssistantReply, sessionModelDisplay, textForRuntimeSessionEvent, turnKeyForEvent, usageMagnitude, usageTotals } from "./session-explorer-projection-utils.js";
 
 export function runtimeEventToExplorerEvent(
   event: RuntimeSessionEvent,
@@ -25,27 +26,19 @@ export function runtimeEventToExplorerEvent(
 export function buildTurnUsage(events: RuntimeSessionEvent[]) {
   const usageByTurn = new Map<string, { modelCallId?: string; usage: SessionExplorerUsageTotals }>();
   const usageByModelCall = new Map<string, { turnId: string; usage: SessionExplorerUsageTotals }>();
-  for (const event of events) {
-    const usage = usageFromEvent(event);
-    if (!usage) {
-      continue;
-    }
-    const turnId = turnKeyForEvent(event);
+  for (const modelCall of collectRuntimeModelCallUsage(events)) {
+    const turnId = modelCall.turnId;
     if (!turnId) {
       continue;
     }
+    const usage = runtimeUsageTotals([modelCall]);
     const existing = usageByTurn.get(turnId);
-    if (!existing || usageMagnitude(usage) >= usageMagnitude(existing.usage)) {
-      usageByTurn.set(turnId, {
-        modelCallId: event.modelCallId,
-        usage,
-      });
-    }
-    if (event.modelCallId) {
-      const existingForCall = usageByModelCall.get(event.modelCallId);
-      if (!existingForCall || usageMagnitude(usage) >= usageMagnitude(existingForCall.usage)) {
-        usageByModelCall.set(event.modelCallId, { turnId, usage });
-      }
+    usageByTurn.set(turnId, {
+      modelCallId: existing?.modelCallId || modelCall.modelCallId,
+      usage: addUsage(existing?.usage || usageTotals(), usage),
+    });
+    if (modelCall.modelCallId) {
+      usageByModelCall.set(modelCall.modelCallId, { turnId, usage });
     }
   }
   return { usageByTurn, usageByModelCall };
@@ -152,17 +145,6 @@ export function buildConversationTurns(input: {
         timestamp: event.timestamp,
         text: textForRuntimeSessionEvent(event),
       };
-    }
-  }
-
-  for (const event of input.events) {
-    const key = turnKeyForEvent(event);
-    if (!key || !turns.has(key)) {
-      continue;
-    }
-    const usage = usageFromEvent(event);
-    if (usage && usageMagnitude(usage) >= usageMagnitude((turns.get(key) as SessionExplorerConversationTurn).usage)) {
-      (turns.get(key) as SessionExplorerConversationTurn).usage = usage;
     }
   }
 

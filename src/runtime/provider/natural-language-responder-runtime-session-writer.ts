@@ -72,6 +72,28 @@ export class NaturalLanguageRuntimeSessionWriter {
     return this.latestUsage;
   }
 
+  appendFinalUsageEvent() {
+    if (!this.latestUsage) {
+      return;
+    }
+    this.appendRuntimeSessionEvent({
+      kind: "model_call_usage",
+      source: "runtime.model_call",
+      visibility: "diagnostic",
+      semanticRole: "model_call_usage",
+      rawEventKind: "model_call_usage",
+      title: "Model call usage",
+      payload: {
+        sceneId: this.sceneId,
+        turnId: this.turnId,
+        runId: this.runId,
+        modelCallId: this.modelCallId,
+        usage: this.latestUsage,
+      },
+      byteSize: Buffer.byteLength(JSON.stringify(this.latestUsage), "utf8"),
+    });
+  }
+
   appendRuntimeSessionEvent(event: RuntimeSessionEventDraft) {
     const sequence = ++this.sessionEventSequence;
     const eventTurnId = event.turnId || this.turnId;
@@ -153,6 +175,7 @@ export class NaturalLanguageRuntimeSessionWriter {
     const authoritativeUsage = this.latestUsage
       ? {
           modelCallId: this.modelCallId,
+          turnId: this.turnId,
           usage: this.latestUsage,
         }
       : undefined;

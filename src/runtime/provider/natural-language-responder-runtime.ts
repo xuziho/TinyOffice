@@ -48,7 +48,7 @@ export async function generateNaturalLanguageEmployeeReply(
   const runtimeProvider = input.runtimeProvider || defaultRuntimeProvider;
   const repoRoot = input.repoRoot || process.cwd();
   const replyStartedAt = nowIso();
-  const runtimeSceneTurn = buildRuntimeSceneTurn({
+  const runtimeSceneTurn = input.runtimeSceneTurn || buildRuntimeSceneTurn({
     employeeId: input.employee.employeeId,
     sessionKey: input.sessionKey,
     turnKey: `${replyStartedAt}:${randomUUID()}`,
@@ -87,7 +87,9 @@ export async function generateNaturalLanguageEmployeeReply(
   try {
     runtimeSession.upsertRuntimeSession("running", "Employee reply started.");
     appendPromptContextEvents(input, runtimeSession);
-    appendUserMessageEvent(input, runtimeSession);
+    if (input.recordVisibleMessages !== false) {
+      appendUserMessageEvent(input, runtimeSession);
+    }
     runtimeSession.appendModelCallLifecycleEvent("model_call_started", {
       title: "Model call started",
       summary: "Primary model call started.",
@@ -163,22 +165,25 @@ export async function generateNaturalLanguageEmployeeReply(
     if (!input.allowEmptyReply && !reply.trim()) {
       throw new Error(`Runtime provider returned an empty reply for ${input.employee.employeeId}`);
     }
+    runtimeSession.appendFinalUsageEvent();
     runtimeSession.appendModelCallLifecycleEvent("model_call_completed", {
       title: "Model call completed",
       summary: reply.slice(0, 900),
       preview: reply.slice(0, 1200),
       byteSize: Buffer.byteLength(reply, "utf8"),
     });
-    runtimeSession.appendRuntimeSessionEvent({
-      kind: "assistant_message",
-      role: "assistant",
-      visibility: "user_visible",
-      semanticRole: "assistant_visible_message",
-      title: "Assistant reply",
-      summary: reply.slice(0, 900),
-      preview: reply.slice(0, 1200),
-      byteSize: Buffer.byteLength(reply, "utf8"),
-    });
+    if (input.recordVisibleMessages !== false) {
+      runtimeSession.appendRuntimeSessionEvent({
+        kind: "assistant_message",
+        role: "assistant",
+        visibility: "user_visible",
+        semanticRole: "assistant_visible_message",
+        title: "Assistant reply",
+        summary: reply.slice(0, 900),
+        preview: reply.slice(0, 1200),
+        byteSize: Buffer.byteLength(reply, "utf8"),
+      });
+    }
     runtimeSession.upsertRuntimeSession("completed", "Employee reply completed.");
     await runtimeSession.flushRuntimeSessionWrites();
     await updateRuntimeSessionCompletionMemory({
@@ -196,6 +201,7 @@ export async function generateNaturalLanguageEmployeeReply(
     return {
       message: reply,
       ...(latestUsage ? { usage: latestUsage } : {}),
+      runtimeSceneTurn,
     };
   } catch (error) {
     textDeltas.flushTextDelta(true);

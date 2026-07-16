@@ -1956,6 +1956,7 @@ test("Hono TinyOffice API attaches per-turn runtime usage to linked Chat message
     kind: "message_end",
     role: "assistant",
     turnId: "nora-automation|chat_topic_room|conversation-runtime-usage|message-other",
+    modelCallId: "model-call-other",
     payload: { usage: { input: 9000, output: 800, cacheRead: 70, cacheWrite: 7 } },
     byteSize: 0,
     truncated: false,
@@ -1967,7 +1968,31 @@ test("Hono TinyOffice API attaches per-turn runtime usage to linked Chat message
     kind: "message_end",
     role: "assistant",
     turnId: "nora-automation|chat_topic_room|conversation-runtime-usage|message-source",
+    modelCallId: "model-call-primary",
     payload: { usage: { input: 1234, output: 56, cacheRead: 700, cacheWrite: 8 } },
+    byteSize: 0,
+    truncated: false,
+  }, {
+    id: "event-runtime-usage-duplicate-snapshot",
+    sessionRecordId: "session-runtime-usage",
+    sequence: 3,
+    timestamp: fixedNow,
+    kind: "turn_end",
+    role: "assistant",
+    turnId: "nora-automation|chat_topic_room|conversation-runtime-usage|message-source",
+    modelCallId: "model-call-primary",
+    payload: { usage: { input: 1234, output: 56, cacheRead: 700, cacheWrite: 8 } },
+    byteSize: 0,
+    truncated: false,
+  }, {
+    id: "event-runtime-usage-handoff-repair",
+    sessionRecordId: "session-runtime-usage",
+    sequence: 4,
+    timestamp: fixedNow,
+    kind: "model_call_usage",
+    turnId: "nora-automation|chat_topic_room|conversation-runtime-usage|message-source",
+    modelCallId: "model-call-handoff-repair",
+    payload: { usage: { input: 10, output: 2, cacheRead: 3 } },
     byteSize: 0,
     truncated: false,
   }] satisfies RuntimeSessionEvent[];
@@ -1997,10 +2022,18 @@ test("Hono TinyOffice API attaches per-turn runtime usage to linked Chat message
       }>;
     };
     assert.deepEqual(body.messages?.[0]?.runtimeUsage, {
-      inputTokens: 1234,
-      outputTokens: 56,
-      cacheTokens: 708,
+      inputTokens: 1244,
+      outputTokens: 58,
+      cacheTokens: 711,
     });
+  }, undefined, { runtimeSessionRepository });
+
+  runtimeSessionEvents.splice(1);
+  await withServer(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/companies/acme/chat/rooms/conversation-runtime-usage/messages?viewerMemberId=xuziho`);
+    assert.equal(response.status, 200, await response.clone().text());
+    const body = await json(response) as { messages?: Array<{ runtimeUsage?: unknown }> };
+    assert.equal(body.messages?.[0]?.runtimeUsage, undefined);
   }, undefined, { runtimeSessionRepository });
 });
 

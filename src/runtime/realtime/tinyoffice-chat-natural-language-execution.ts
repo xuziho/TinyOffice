@@ -11,6 +11,7 @@ import {
   type RuntimeSessionPersistResult,
 } from "../provider/natural-language-responder.js";
 import { consumeDeferredRuntimeReloads } from "../capabilities/deferred-runtime-reload.js";
+import { buildRuntimeFollowupModelCall } from "../orchestration/runtime-scene-turn.js";
 import {
   buildChatTurnActiveToolNames,
   resolveChatTurnStateAction,
@@ -215,6 +216,8 @@ export async function executeTinyOfficeChatNaturalLanguageTurn(
   ) {
     await generateNaturalLanguageEmployeeReply({
       ...responseInput,
+      runtimeSceneTurn: buildRuntimeFollowupModelCall(response.runtimeSceneTurn, "state_action_repair"),
+      recordVisibleMessages: false,
       message: "Complete the required Channel state action for the preceding reply.",
       imageInputs: [],
       contextBlocks: [{

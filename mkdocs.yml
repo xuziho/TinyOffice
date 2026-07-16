@@ -107,6 +107,7 @@ nav:
           - Cleanup: developer/runbooks/cleanup.md
           - Deletion / Retirement: developer/runbooks/deletion-retirement.md
           - Release Boundary: developer/runbooks/release-boundary.md
+          - Publish Production Release: developer/runbooks/publish-production-release.md
       - Development Workflow: developer/development-workflow.md
       - Foundation Development Principles: developer/foundation-development-principles.md
       - UI Performance Smoke: developer/ui-performance-smoke.md

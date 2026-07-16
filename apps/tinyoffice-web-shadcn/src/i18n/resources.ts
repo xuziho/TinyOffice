@@ -376,11 +376,12 @@ export const en = {
   },
   capabilitiesPage: { useWhen: "Use when", allowedScenes: "Allowed scenes", guardrails: "Guardrails", inputSchema: "Input schema", outputSchema: "Output schema" },
   updatesPage: {
-    title: "Product updates", description: "TinyOffice checks the PI registry for upstream releases and installs only versions approved by the TinyOffice stable manifest.", check: "Check for updates", checking: "Checking update sources…",
-    installedPi: "Installed PI", latestUpstream: "Latest upstream", approvedPi: "Approved PI", unavailable: "Unavailable", runtimeCompatibility: "Runtime compatibility", nodeRequirement: "Node {{installed}} installed · Node {{minimum}} or newer required",
+    title: "Product updates", description: "Install only immutable TinyOffice Releases approved through the stable channel. PI dependency approval remains visible separately.", check: "Check for updates", checking: "Checking update sources…",
+    installedTinyOffice: "Installed TinyOffice", approvedTinyOffice: "Approved TinyOffice", installedPi: "Installed PI", latestUpstream: "Latest upstream", approvedPi: "Approved PI", unavailable: "Unavailable", runtimeCompatibility: "Runtime compatibility", nodeRequirement: "Node {{installed}} installed · Node {{minimum}} or newer required",
     installationPolicy: "Installation policy", installationRequirement: "Installation always requires a verified backup, runtime verification, and restart.", starting: "Starting update…", backupInstall: "Back up and install",
     modelChanges: "Approved model catalog changes", noModelChanges: "No model changes in the approved catalog.", added: "Added", removed: "Removed", sourceWarnings: "Some update sources could not be refreshed",
-    approvalSource: "Approval source: {{source}}", stableChannel: "TinyOffice stable channel", bundledManifest: "bundled fallback manifest", upToDate: "Up to date", awaitingApproval: "Awaiting approval", readyToInstall: "Ready to install", blocked: "Blocked", checkFailed: "Check failed",
+    approvalSource: "Approval source: {{source}}", stableChannel: "TinyOffice stable channel", bundledManifest: "bundled fallback manifest", development: "Development checkout", upToDate: "Up to date", awaitingApproval: "Awaiting approval", readyToInstall: "Ready to install", blocked: "Blocked", checkFailed: "Check failed", updateProgress: "Update progress",
+    releaseNotes: "Release notes", job: { accepted: "Queued", downloading: "Downloading", verifying: "Verifying", installing: "Installing and restarting", completed: "Completed", failed: "Failed" },
   },
   admin: {
     externalIntake: "External Intake",
@@ -869,11 +870,12 @@ export const zhCN = {
   },
   capabilitiesPage: { useWhen: "适用场景", allowedScenes: "允许的场景", guardrails: "约束规则", inputSchema: "输入结构", outputSchema: "输出结构" },
   updatesPage: {
-    title: "产品更新", description: "TinyOffice 会检查 PI 注册表中的上游版本，并且只安装 TinyOffice 稳定清单批准的版本。", check: "检查更新", checking: "正在检查更新来源…",
-    installedPi: "已安装的 PI", latestUpstream: "最新上游版本", approvedPi: "已批准的 PI", unavailable: "不可用", runtimeCompatibility: "运行环境兼容性", nodeRequirement: "已安装 Node {{installed}} · 要求 Node {{minimum}} 或更高版本",
+    title: "产品更新", description: "只安装稳定通道批准的不可变 TinyOffice Release；PI 依赖的批准状态会单独展示。", check: "检查更新", checking: "正在检查更新来源…",
+    installedTinyOffice: "已安装的 TinyOffice", approvedTinyOffice: "已批准的 TinyOffice", installedPi: "已安装的 PI", latestUpstream: "最新上游版本", approvedPi: "已批准的 PI", unavailable: "不可用", runtimeCompatibility: "运行环境兼容性", nodeRequirement: "已安装 Node {{installed}} · 要求 Node {{minimum}} 或更高版本",
     installationPolicy: "安装策略", installationRequirement: "安装始终需要已验证的备份、运行时验证和重启。", starting: "正在启动更新…", backupInstall: "备份并安装",
     modelChanges: "已批准模型目录的变化", noModelChanges: "已批准目录中没有模型变化。", added: "新增", removed: "移除", sourceWarnings: "部分更新来源无法刷新",
-    approvalSource: "批准来源：{{source}}", stableChannel: "TinyOffice 稳定通道", bundledManifest: "内置备用清单", upToDate: "已是最新版本", awaitingApproval: "等待批准", readyToInstall: "可以安装", blocked: "已阻止", checkFailed: "检查失败",
+    approvalSource: "批准来源：{{source}}", stableChannel: "TinyOffice 稳定通道", bundledManifest: "内置备用清单", development: "开发检出", upToDate: "已是最新版本", awaitingApproval: "等待批准", readyToInstall: "可以安装", blocked: "已阻止", checkFailed: "检查失败", updateProgress: "更新进度",
+    releaseNotes: "版本说明", job: { accepted: "已排队", downloading: "正在下载", verifying: "正在校验", installing: "正在安装并重启", completed: "已完成", failed: "失败" },
   },
   admin: {
     externalIntake: "外部接入",

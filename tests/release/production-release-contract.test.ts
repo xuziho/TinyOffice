@@ -9,9 +9,12 @@ test("production installer verifies, backs up, migrates, checks readiness, and g
   assert.match(source, /backup create/);
   assert.match(source, /systemctl --user stop/);
   assert.match(source, /active Release was not changed/);
+  assert.match(source, /inactive target Release was removed/);
+  assert.match(source, /Release id is unsafe/);
   assert.match(source, /init-tinyoffice-postgres-schema/);
   assert.match(source, /\/ready/);
   assert.match(source, /Restoring previous code Release/);
+  assert.match(source, /service restart was rejected; evaluating the guarded rollback boundary/);
   assert.match(source, /automatic code rollback is unsafe/);
   assert.doesNotMatch(source, /git pull|git reset|runtime:postgres:reset/);
 });
@@ -23,4 +26,19 @@ test("production Release build binds the artifact to a clean Git commit and writ
   assert.match(source, /uncommitted tracked changes/);
   assert.match(source, /sha256/);
   assert.doesNotMatch(source, /companies|shared\/\.data/);
+});
+
+test("release publication emits a stable manifest and the host updater re-verifies it", async () => {
+  const manifestBuilder = await readFile("scripts/release/build-release-channel-manifest.mjs", "utf8");
+  const updater = await readFile("scripts/release/run-approved-production-update.ts", "utf8");
+  const workflow = await readFile(".github/workflows/release.yml", "utf8");
+  assert.match(manifestBuilder, /tinyoffice-release-channel/);
+  assert.match(manifestBuilder, /GITHUB_SHA/);
+  assert.match(manifestBuilder, /sha256/);
+  assert.match(updater, /targetReleaseId/);
+  assert.match(updater, /Release checksum mismatch/);
+  assert.match(updater, /install-production-release\.sh/);
+  assert.match(workflow, /push:\s*[\s\S]*tags:/);
+  assert.match(workflow, /gh release create/);
+  assert.match(workflow, /tinyoffice-stable\.json/);
 });

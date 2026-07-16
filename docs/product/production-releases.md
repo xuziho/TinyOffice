@@ -63,6 +63,29 @@ The initial executor may expose these persistent roots inside each Release with 
 6. Restart the service, check liveness and readiness, re-run PI model enumeration, then run focused authentication, Chat, realtime, and employee-runtime smoke checks.
 7. Record success or preserve structured failure evidence. Code rollback switches to the prior Release only when no migration was applied; otherwise recovery uses the verified pre-update backup instead of pretending that code rollback is safe.
 
+## Stable-channel delivery
+
+TinyOffice application Releases and PI dependency approval are separate contracts. `updates/stable.json` approves the PI package and model catalog. A published GitHub Release carries `tinyoffice-stable.json`, which approves one exact TinyOffice artifact, commit, checksum, and minimum Node.js version.
+
+Pushing `main` never updates a production host. Publishing is deliberate:
+
+1. Batch ordinary fixes on `main`; urgent production failures may use a focused hotfix.
+2. Update `package.json` to the intended version and create the matching `v<version>` Git tag only after CI passes.
+3. `.github/workflows/release.yml` re-runs checks and tests, builds the immutable archive, creates its SHA-256 and stable-channel manifest, cold-smokes the packaged server, and uploads all three files to one GitHub Release.
+4. Production checks only the published stable-channel manifest. It never treats a branch head or an untagged commit as installable.
+
+This keeps Release safety inexpensive: the workflow is automated, while Release frequency remains a product decision. Small low-impact fixes may be batched; security, authentication, data, or severe messaging defects may be released immediately.
+
+## External updater
+
+The first host executor is `tinyoffice-updater.service`, a separate systemd user oneshot. The TinyOffice web process writes a narrow job containing only the approved `releaseId` and asks systemd to start that fixed unit. The updater independently re-downloads the stable manifest, requires the same `releaseId`, downloads the artifact, verifies SHA-256, and invokes `install-production-release.sh`. It cannot accept an arbitrary URL, Git branch, shell command, or database reset request.
+
+Update evidence is stored below the shared `.runtime/updates/` root, so it survives Release replacement and the browser can reconcile after the service restart. Operations > Updates polls that evidence while the external updater downloads, verifies, installs, restarts, and completes or fails.
+
+Configure the host with both `tinyoffice.service` and `tinyoffice-updater.service`, plus `TINYOFFICE_UPDATE_EXECUTOR=systemd`. Without that explicit executor setting, the UI remains read-only and explains that the host is not configured for one-click installation.
+
+The first Release that introduces this updater is a bootstrap exception: an older host cannot invoke a service and API it does not yet contain. Install that one Release with the existing guarded `install-production-release.sh`, add the updater unit and environment entries, and verify them once. Every later approved Release can use the product update flow.
+
 `runtime:postgres:reset` is a local test/development command and refuses to run when `TINYOFFICE_DEPLOYMENT_MODE=production`.
 
 ## Operations surfaces
@@ -71,4 +94,4 @@ The initial executor may expose these persistent roots inside each Release with 
 - readiness must prove database/schema/static-assets/persistent-root availability before a Release is accepted.
 - Operations > Health provides deeper read-only operator diagnostics.
 - Operations > Backup & Restore owns verified instance snapshots, not scheduling or remote-storage credentials.
-- Operations > Updates displays approved Release state and submits work to an external executor. The current PI-only executor boundary is an intermediate implementation, not the final whole-product update contract.
+- Operations > Updates separates the installed/approved TinyOffice Release from PI dependency visibility, submits an exact approved Release to the external executor, and reconciles persistent job evidence after restart.

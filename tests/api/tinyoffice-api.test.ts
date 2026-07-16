@@ -2625,16 +2625,16 @@ test("Hono TinyOffice API exposes authenticated update status and controlled ins
   await withServer(async (baseUrl) => {
     const loaded = await fetch(`${baseUrl}/api/tinyoffice/updates`);
     assert.equal(loaded.status, 200, await loaded.clone().text());
-    const status = await json(loaded) as { schema?: string; pi?: { state?: string; installedVersion?: string } };
+    const status = await json(loaded) as { schema?: string; release?: { state?: string }; pi?: { installedVersion?: string } };
     assert.equal(status.schema, "tinyoffice-update-status");
-    assert.equal(status.pi?.state, "ready_to_install");
+    assert.equal(status.release?.state, "ready_to_install");
     assert.equal(status.pi?.installedVersion, "0.80.6");
 
     const started = await fetch(`${baseUrl}/api/tinyoffice/updates`, { method: "POST" });
     assert.equal(started.status, 202, await started.clone().text());
-    const job = await json(started) as { schema?: string; targetPiVersion?: string };
+    const job = await json(started) as { schema?: string; targetReleaseId?: string };
     assert.equal(job.schema, "tinyoffice-update-job");
-    assert.equal(job.targetPiVersion, "0.81.0");
+    assert.equal(job.targetReleaseId, "0.1.1-bbbbbbbbbbbb");
     assert.deepEqual(updateCalls, ["status", "start"]);
   }, undefined, {
     updateService: {
@@ -2642,10 +2642,14 @@ test("Hono TinyOffice API exposes authenticated update status and controlled ins
         updateCalls.push("status");
         return {
           schema: "tinyoffice-update-status",
-          version: 1,
+          version: 2,
           checkedAt: fixedNow,
           channel: "stable",
-          tinyOfficeVersion: "0.1.0",
+          release: {
+            installed: { releaseId: "0.1.0-aaaaaaaaaaaa", tinyOfficeVersion: "0.1.0", gitCommit: "a".repeat(40) },
+            approved: { releaseId: "0.1.1-bbbbbbbbbbbb", tinyOfficeVersion: "0.1.1", gitCommit: "b".repeat(40), minimumNodeVersion: "22.19.0", artifact: { fileName: "tinyoffice.tgz", url: "https://example.test/tinyoffice.tgz", sha256: "c".repeat(64) }, notes: [] },
+            state: "ready_to_install",
+          },
           runtime: { nodeVersion: "22.19.0", minimumNodeVersion: "22.19.0", compatible: true },
           pi: {
             packageName: "@earendil-works/pi-coding-agent",
@@ -2659,16 +2663,16 @@ test("Hono TinyOffice API exposes authenticated update status and controlled ins
             removedModels: [],
           },
           installation: { enabled: true, reason: "Ready", requiresBackup: true, requiresRestart: true },
-          sources: { npmRegistry: "npm", approvalManifest: "manifest", approvalManifestSource: "remote", warnings: [] },
+          sources: { npmRegistry: "npm", approvalManifest: "manifest", approvalManifestSource: "remote", releaseManifest: "release-manifest", releaseManifestSource: "remote", warnings: [] },
         };
       },
       async startApprovedUpdate() {
         updateCalls.push("start");
         return {
           schema: "tinyoffice-update-job",
-          version: 1,
+          version: 2,
           jobId: "update-1",
-          targetPiVersion: "0.81.0",
+          targetReleaseId: "0.1.1-bbbbbbbbbbbb",
           status: "accepted",
           startedAt: fixedNow,
           updatedAt: fixedNow,

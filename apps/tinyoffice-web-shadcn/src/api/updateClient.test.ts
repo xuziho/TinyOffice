@@ -12,22 +12,22 @@ test("update client checks status and starts only the controlled update endpoint
     requests.push({ url: String(url), init });
     return new Response(JSON.stringify(init?.method === "POST" ? {
       schema: "tinyoffice-update-job",
-      version: 1,
+      version: 2,
       jobId: "update-1",
-      targetPiVersion: "0.81.0",
+      targetReleaseId: "0.1.1-aaaaaaaaaaaa",
       status: "accepted",
       startedAt: "2026-07-12T00:00:00.000Z",
       updatedAt: "2026-07-12T00:00:00.000Z",
     } : {
       schema: "tinyoffice-update-status",
-      version: 1,
+      version: 2,
       pi: { installedVersion: "0.80.6" },
     }), { status: 200, headers: { "Content-Type": "application/json" } });
   };
 
   try {
     assert.equal((await getUpdateStatus()).pi.installedVersion, "0.80.6");
-    assert.equal((await installApprovedUpdate()).targetPiVersion, "0.81.0");
+    assert.equal((await installApprovedUpdate()).targetReleaseId, "0.1.1-aaaaaaaaaaaa");
   } finally {
     globalThis.fetch = previousFetch;
     globalThis.window = previousWindow;

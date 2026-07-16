@@ -1,0 +1,13 @@
+[Unit]
+Description=TinyOffice guarded production updater
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/apps/tinyoffice/current
+EnvironmentFile=%h/apps/tinyoffice/shared/tinyoffice.env
+ExecStart=/usr/bin/npm run update:production:execute
+TimeoutStartSec=30min
+
+[Install]
+WantedBy=default.target

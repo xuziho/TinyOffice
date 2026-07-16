@@ -228,12 +228,41 @@ export type TinyOfficeUpdateManifest = {
   };
 };
 
+export type TinyOfficeReleaseChannelManifest = {
+  schema: "tinyoffice-release-channel";
+  version: 1;
+  channel: "stable";
+  publishedAt: string;
+  release: {
+    releaseId: string;
+    tinyOfficeVersion: string;
+    gitCommit: string;
+    minimumNodeVersion: string;
+    artifact: {
+      fileName: string;
+      url: string;
+      sha256: string;
+    };
+    notes: string[];
+  };
+};
+
+export type TinyOfficeReleaseIdentity = {
+  releaseId: string;
+  tinyOfficeVersion: string;
+  gitCommit: string;
+};
+
 export type TinyOfficeUpdateStatus = {
   schema: "tinyoffice-update-status";
-  version: 1;
+  version: 2;
   checkedAt: string;
   channel: "stable";
-  tinyOfficeVersion: string;
+  release: {
+    installed: TinyOfficeReleaseIdentity;
+    approved?: TinyOfficeReleaseChannelManifest["release"];
+    state: "development" | "up_to_date" | "ready_to_install" | "blocked" | "check_failed";
+  };
   runtime: {
     nodeVersion: string;
     minimumNodeVersion: string;
@@ -260,19 +289,23 @@ export type TinyOfficeUpdateStatus = {
     npmRegistry: string;
     approvalManifest: string;
     approvalManifestSource: "remote" | "local";
+    releaseManifest: string;
+    releaseManifestSource: "remote" | "unavailable";
     warnings: string[];
   };
+  job?: TinyOfficeUpdateJob;
 };
 
 export type TinyOfficeUpdateJob = {
   schema: "tinyoffice-update-job";
-  version: 1;
+  version: 2;
   jobId: string;
-  targetPiVersion: string;
-  status: "accepted" | "backing_up" | "installing" | "verifying" | "restart_required" | "completed" | "failed";
+  targetReleaseId: string;
+  status: "accepted" | "downloading" | "verifying" | "installing" | "completed" | "failed";
   startedAt: string;
   updatedAt: string;
   error?: string;
+  evidence?: string[];
 };
 
 export type EmployeeRuntimeSummaryStatusKind =

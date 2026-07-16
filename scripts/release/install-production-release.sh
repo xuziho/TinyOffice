@@ -47,6 +47,10 @@ if [[ -z "$RELEASE_DIR_SOURCE" || ! -f "$RELEASE_DIR_SOURCE/RELEASE.json" ]]; th
   exit 5
 fi
 RELEASE_ID="$(node -e 'const fs=require("fs"); const p=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); if(p.schema!=="tinyoffice-production-release"||!p.releaseId||!p.tinyOfficeVersion||!p.gitCommit) process.exit(1); process.stdout.write(p.releaseId)' "$RELEASE_DIR_SOURCE/RELEASE.json")"
+if [[ ! "$RELEASE_ID" =~ ^[0-9A-Za-z][0-9A-Za-z._-]{0,127}$ ]]; then
+  echo "Release id is unsafe." >&2
+  exit 5
+fi
 TARGET="$APP_ROOT/releases/$RELEASE_ID"
 if [[ -e "$TARGET" ]]; then
   echo "Release already exists: $TARGET" >&2
@@ -65,7 +69,11 @@ for persistent in companies .data .runtime .scratch; do
 done
 
 echo "Installing production dependencies for TinyOffice $RELEASE_ID"
-(cd "$TARGET" && npm ci --omit=dev)
+if ! (cd "$TARGET" && npm ci --omit=dev); then
+  rm -rf "$TARGET"
+  echo "Production dependency installation failed; the inactive target Release was removed." >&2
+  exit 6
+fi
 
 SERVICE_WAS_ACTIVE=0
 if systemctl --user is-active --quiet "$SERVICE"; then
@@ -77,6 +85,7 @@ if [[ -n "$PREVIOUS" ]]; then
   echo "Creating verified pre-update backup from $PREVIOUS"
   if ! (cd "$PREVIOUS" && node --import tsx src/cli/agentco.ts backup create --output "$APP_ROOT/shared/.data/backups/pre-update" --json); then
     if [[ "$SERVICE_WAS_ACTIVE" -eq 1 ]]; then systemctl --user start "$SERVICE"; fi
+    rm -rf "$TARGET"
     echo "Pre-update backup failed; the active Release was not changed." >&2
     exit 6
   fi
@@ -85,6 +94,7 @@ fi
 echo "Applying pending append-only migrations"
 if ! MIGRATION_OUTPUT="$(cd "$TARGET" && TINYOFFICE_RELEASE_VERSION="$RELEASE_ID" node --import tsx scripts/runtime/init-tinyoffice-postgres-schema.ts)"; then
   if [[ "$SERVICE_WAS_ACTIVE" -eq 1 ]]; then systemctl --user start "$SERVICE"; fi
+  rm -rf "$TARGET"
   echo "Database migration failed; the active Release was not changed." >&2
   exit 6
 fi
@@ -97,16 +107,22 @@ fi
 rm -f "$APP_ROOT/current.next"
 ln -s "$TARGET" "$APP_ROOT/current.next"
 mv -Tf "$APP_ROOT/current.next" "$APP_ROOT/current"
-systemctl --user restart "$SERVICE"
+RESTART_ACCEPTED=1
+if ! systemctl --user restart "$SERVICE"; then
+  RESTART_ACCEPTED=0
+  echo "TinyOffice service restart was rejected; evaluating the guarded rollback boundary." >&2
+fi
 
 READY_URL="${TINYOFFICE_INTERNAL_ORIGIN:-http://127.0.0.1:8095}/ready"
-for attempt in {1..30}; do
-  if curl --fail --silent --show-error "$READY_URL" >/dev/null; then
-    echo "TinyOffice $RELEASE_ID is ready."
-    exit 0
-  fi
-  sleep 1
-done
+if [[ "$RESTART_ACCEPTED" -eq 1 ]]; then
+  for attempt in {1..30}; do
+    if curl --fail --silent --show-error "$READY_URL" >/dev/null; then
+      echo "TinyOffice $RELEASE_ID is ready."
+      exit 0
+    fi
+    sleep 1
+  done
+fi
 
 echo "TinyOffice $RELEASE_ID failed readiness." >&2
 if [[ -n "$PREVIOUS" && "$MIGRATIONS_APPLIED" -eq 0 ]]; then
@@ -114,7 +130,7 @@ if [[ -n "$PREVIOUS" && "$MIGRATIONS_APPLIED" -eq 0 ]]; then
   rm -f "$APP_ROOT/current.rollback"
   ln -s "$PREVIOUS" "$APP_ROOT/current.rollback"
   mv -Tf "$APP_ROOT/current.rollback" "$APP_ROOT/current"
-  systemctl --user restart "$SERVICE"
+  systemctl --user restart "$SERVICE" || echo "Previous Release restart also failed; inspect the user service journal." >&2
 elif [[ "$MIGRATIONS_APPLIED" -eq 1 ]]; then
   echo "A database migration was applied; automatic code rollback is unsafe." >&2
   if [[ -n "$PREVIOUS" ]]; then

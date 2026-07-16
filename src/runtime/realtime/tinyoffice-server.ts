@@ -77,6 +77,7 @@ import {
 import { createTinyOfficeDoctorService } from "../doctor/tinyoffice-doctor-service.js";
 import { TinyOfficeBackupService } from "../backup/tinyoffice-backup-service.js";
 import { TinyOfficeUpdateService } from "../update/tinyoffice-update-service.js";
+import { TinyOfficeSystemdUpdateExecutor } from "../update/tinyoffice-systemd-update-executor.js";
 import { AccessRequestService } from "../company-config/access-request-service.js";
 import { createDbCompanyGovernanceServices } from "../../governance/services/company-governance-services.js";
 import { loadCompanyMemberDirectory } from "../members/company-member-directory.js";
@@ -999,7 +1000,14 @@ export async function createTinyOfficeServer(
     serviceForCompany,
   });
   const directorySource = createPostgresCompanyDirectoryApiSource({ repoRoot: config.repoRoot });
-  const updateService = new TinyOfficeUpdateService({ repoRoot: config.repoRoot });
+  const updateExecutor = process.env.TINYOFFICE_UPDATE_EXECUTOR === "systemd"
+    ? new TinyOfficeSystemdUpdateExecutor({ repoRoot: config.repoRoot })
+    : undefined;
+  const updateService = new TinyOfficeUpdateService({
+    repoRoot: config.repoRoot,
+    deploymentMode: process.env.TINYOFFICE_DEPLOYMENT_MODE,
+    ...(updateExecutor ? { updateExecutor } : {}),
+  });
   const tinyOfficeApi = createTinyOfficeApi({
     repoRoot: config.repoRoot,
     backupService: new TinyOfficeBackupService(config.repoRoot),

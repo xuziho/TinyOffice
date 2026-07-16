@@ -11,6 +11,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+if ($env:TINYOFFICE_DEPLOYMENT_MODE -eq "production") {
+    throw "Refusing to reset PostgreSQL in a production TinyOffice deployment. Restore a verified backup or apply a forward migration instead."
+}
+
 function Show-Help {
     Write-Output @"
 Deletes and recreates the local TinyOffice PostgreSQL test database.

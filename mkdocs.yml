@@ -66,6 +66,7 @@ nav:
       - Skills / Runbooks: product/skills-runbooks.md
       - Console: product/console.md
       - Update Center: product/update-center.md
+      - Production Releases: product/production-releases.md
   - "04 Runtime Policy":
       - Prompt Policy: product/prompt-policy.md
       - Access: product/tool-safety.md

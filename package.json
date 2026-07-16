@@ -37,6 +37,7 @@
     "check:dependency-licenses": "node scripts/release/check-dependency-licenses.mjs",
     "dev:tinyoffice-web-shadcn": "npm run dev --prefix apps/tinyoffice-web-shadcn",
     "build:tinyoffice-web-shadcn": "npm run build --prefix apps/tinyoffice-web-shadcn",
+    "build:production-release": "node scripts/release/build-production-release.mjs",
     "check:tinyoffice-web-shadcn": "npm run check --prefix apps/tinyoffice-web-shadcn",
     "check:tinyoffice-web-shadcn:quality": "npm run check:quality --prefix apps/tinyoffice-web-shadcn",
     "dogfood:update-runtime": "powershell -ExecutionPolicy Bypass -File scripts/dogfood/update-runtime.ps1",
@@ -44,6 +45,7 @@
     "runtime:postgres:ensure": "powershell -ExecutionPolicy Bypass -File scripts/runtime/ensure-tinyoffice-postgres.ps1",
     "runtime:postgres:init-schema": "node --import tsx scripts/runtime/init-tinyoffice-postgres-schema.ts",
     "start": "node --import tsx scripts/runtime/run-tinyoffice.ts",
+    "start:production": "node --import tsx scripts/runtime/run-tinyoffice-production.ts",
     "auth:reset-owner": "node --import tsx scripts/runtime/reset-owner-auth.ts",
     "runtime:postgres:reset": "powershell -ExecutionPolicy Bypass -File scripts/runtime/reset-tinyoffice-postgres.ps1",
     "smoke:lock:acquire": "powershell -ExecutionPolicy Bypass -File scripts/runtime/acquire-smoke-lock.ps1",
@@ -56,18 +58,22 @@
   "devDependencies": {
     "@types/node": "^24.0.1",
     "@types/pg": "^8.20.0",
-    "tsx": "^4.20.3",
     "typebox": "^1.1.39",
     "typescript": "^5.8.3"
   },
   "dependencies": {
     "@better-auth/passkey": "1.6.23",
     "@earendil-works/pi-coding-agent": "0.80.6",
+    "@mozilla/readability": "0.6.0",
     "better-auth": "1.6.23",
     "hono": "^4.12.27",
+    "linkedom": "0.18.13",
     "pg": "^8.21.0",
     "socket.io": "^4.8.3",
     "tar": "^7.5.19",
+    "tsx": "^4.20.3",
+    "turndown": "7.2.4",
+    "undici": "8.7.0",
     "zod": "^4.4.3"
   }
 }

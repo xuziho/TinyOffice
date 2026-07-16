@@ -6,7 +6,7 @@
 
 迁移目标是让 TinyOffice 的协作运行时在新环境中恢复可用，而不是把旧机器状态原样塞进产品仓库。
 
-TinyOffice 仍处于 pre-release 阶段。当前 PostgreSQL 数据被视为可重建的开发/测试数据，不承诺历史 schema 兼容。数据库结构以当前 pre-release baseline 为准；旧测试库如果带有 retired migration history，应使用 reset 流程重建，而不是通过旧列、旧表、双字段兼容脚本继续迁移。
+TinyOffice 仍处于 Alpha 阶段，但数据分为两条明确边界。标记为 `production` 的真实使用实例属于受保护数据：从其首个 Release 基线开始，已发布 migration 只追加、不改写，升级不得以 reset 代替迁移。未标记为 production 的本地开发/测试数据库仍可重建；旧测试库如果带有 retired pre-release migration history，应使用 reset 流程重建，而不是把历史兼容残留带进产品结构。
 
 迁移应覆盖：
 
@@ -38,7 +38,7 @@ Company Blueprint 只用于 seed 新 Company。它不是隐藏 Company，不进�
 
 当新环境刚迁移、没有有效本地数据时，可以直接覆盖本地 runtime。覆盖前仍应保留一份备份，避免误删唯一数据源。
 
-开发期 PostgreSQL 结构不匹配时，优先使用 `npm run runtime:postgres:reset`。该命令会删除本地 TinyOffice PostgreSQL container 和 volume，再用当前 baseline 初始化 schema。不要为了保留测试数据新增历史兼容 migration。
+仅当本地开发/测试 PostgreSQL 结构不匹配时，才使用 `npm run runtime:postgres:reset`。该命令会删除本地 TinyOffice PostgreSQL container 和 volume，再用当前 baseline 初始化 schema；在 `TINYOFFICE_DEPLOYMENT_MODE=production` 下会明确拒绝执行。真实使用实例应停止升级、保留现场、验证备份并补充向前 migration。
 
 覆盖恢复后必须验证：
 

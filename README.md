@@ -43,6 +43,18 @@ npm start
 
 The setup command installs both the root runtime dependencies and the standalone shadcn frontend dependencies. Confirm `node --version` reports Node.js 22.19 or newer before setup; unsupported Node versions may allow installation with warnings but are not a valid TinyOffice runtime.
 
+### Real-use mini-host Alpha
+
+Do not deploy a real-use instance by continuously pulling arbitrary `main` state. Build an explicit production Release in a clean supported checkout:
+
+```powershell
+npm run build:production-release
+```
+
+The resulting `.release/tinyoffice-<version>-<commit>.tgz` and matching `.sha256` contain the built static frontend and runtime source, but exclude frontend development dependencies, tests, local Company data, credentials, and both `node_modules` trees. The commit-qualified Release id prevents different builds of the same package version from overwriting each other. The Linux executor at `scripts/release/install-production-release.sh` verifies that checksum, installs production dependencies on the target host, preserves shared data roots, creates a verified pre-update backup, applies pending migrations, switches the active Release, restarts the service, and checks `/ready`.
+
+See [Production Releases](docs/product/production-releases.md) before placing real data on a mini-host. Production instances require an explicit environment based on `deploy/tinyoffice.env.example`; never use `runtime:postgres:reset` as an update mechanism.
+
 TinyOffice serves the web app on `http://localhost:5175` and the runtime API on `http://127.0.0.1:8095`. Startup prints a private one-time local access URL; opening it creates the normal database-backed Owner session without a password or Windows Hello prompt. A deployment whose `TINYOFFICE_PUBLIC_ORIGIN` is an HTTPS domain instead requires Passkey bootstrap and sign-in. The browser then continues into Company onboarding; the repository does not ship a hidden user or default Company. See [Owner authentication](docs/product/owner-authentication.md) and the [first-user onboarding acceptance runbook](docs/developer/runbooks/first-user-onboarding.md).
 
 Useful checks:

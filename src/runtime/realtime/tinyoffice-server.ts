@@ -12,6 +12,8 @@ import {
 import { createTinyOfficeApi } from "../../api/tinyoffice-api.js";
 import { publishChatMessageCreated } from "../../api/tinyoffice-api/chat-helpers.js";
 import { handleTinyOfficeApiRequest } from "../../server/tinyoffice-api-server.js";
+import { serveTinyOfficeStaticWeb } from "../../server/tinyoffice-static-web.js";
+import { loadTinyOfficeReadiness } from "../deployment/tinyoffice-readiness.js";
 import { ChatCreateEntryService } from "../../collaboration/chat/chat-create-entry-service.js";
 import { ChatProjectionService } from "../../collaboration/chat/chat-projection-service.js";
 import { ChannelService } from "../../collaboration/channel/channel-service.js";
@@ -124,6 +126,7 @@ export interface TinyOfficeServerConfig {
   authSecret?: string;
   runtimeProvider?: NaturalLanguageResponseInput["runtimeProvider"];
   workControlPlaneIntervalMs?: number;
+  staticWebRoot?: string;
 }
 
 export interface TinyOfficeServerHandle {
@@ -1526,6 +1529,22 @@ export async function createTinyOfficeServer(
     }
 
     if (await handleTinyOfficeApiRequest(req, res, tinyOfficeApi)) {
+      return;
+    }
+
+    if (req.method === "GET" && req.url === "/ready") {
+      const readiness = await loadTinyOfficeReadiness({
+        databaseUrl: config.databaseUrl,
+        repoRoot: config.repoRoot,
+        ...(config.staticWebRoot ? { staticWebRoot: config.staticWebRoot } : {}),
+        deploymentMode: process.env.TINYOFFICE_DEPLOYMENT_MODE,
+        releaseVersion: process.env.TINYOFFICE_RELEASE_VERSION,
+      });
+      json(res, readiness.ok ? 200 : 503, readiness);
+      return;
+    }
+
+    if (config.staticWebRoot && await serveTinyOfficeStaticWeb(req, res, config.staticWebRoot)) {
       return;
     }
 

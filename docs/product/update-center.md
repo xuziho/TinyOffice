@@ -1,6 +1,6 @@
 # Update Center
 
-Operations / Updates at `/updates` is the product surface for controlled TinyOffice dependency updates. It separates upstream discovery from installation approval and keeps instance maintenance out of the Owner's personal Settings.
+Operations / Updates at `/updates` is the product surface for controlled TinyOffice Release and dependency updates. It separates upstream discovery from installation approval and keeps instance maintenance out of the Owner's personal Settings.
 
 ## Product Contract
 
@@ -26,4 +26,8 @@ The bundled manifest is a safe offline fallback. The remote manifest is the upda
 
 ## Current Boundary
 
-The first implementation provides live monitoring, approval state, runtime prerequisite checks, model catalog comparison, and the controlled executor boundary. The local development preview intentionally does not mutate its own checkout or restart itself. A deployment supervisor or future `tinyoffice update` coordinator must implement the executor before one-click installation is enabled in that deployment.
+The first implementation provides live PI monitoring, approval state, runtime prerequisite checks, model catalog comparison, and the controlled executor boundary. The local development preview intentionally does not mutate its own checkout or restart itself.
+
+The production Release foundation adds a versioned artifact, production-only dependency installation, static frontend serving, `/ready`, protected production reset behavior, shared persistent roots, and the guarded Linux executor in `scripts/release/install-production-release.sh`. During real-use Alpha, an external Codex operator may invoke that executor and diagnose exceptional failures. The browser still does not execute shell commands itself, and the current POST contract remains disabled until a separately supervised executor is configured.
+
+The next manifest revision will promote TinyOffice Release version, artifact checksum, schema compatibility, and rollback evidence to first-class update fields rather than treating PI as the only install target. See [Production Releases](production-releases.md).

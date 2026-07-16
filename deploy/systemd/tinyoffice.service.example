@@ -1,0 +1,16 @@
+[Unit]
+Description=TinyOffice production runtime
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/apps/tinyoffice/current
+EnvironmentFile=%h/apps/tinyoffice/shared/tinyoffice.env
+ExecStart=/usr/bin/npm run start:production
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=default.target

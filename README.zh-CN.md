@@ -41,6 +41,18 @@ npm run runtime:postgres:init-schema
 npm start
 ```
 
+### 真实使用的迷你主机 Alpha
+
+真实使用实例不要持续拉取含义不断变化的 `main`。应在受支持且干净的构建环境生成明确的生产 Release：
+
+```powershell
+npm run build:production-release
+```
+
+`.release/tinyoffice-<version>-<commit>.tgz` 和配套的 `.sha256` 包含构建后的前端静态文件和运行时代码，不包含前端开发依赖、测试、本地 Company 数据、密钥和两个 `node_modules`。带 commit 的 Release id 可以避免同一 package 版本的不同构建相互覆盖。Linux 执行器 `scripts/release/install-production-release.sh` 会先验证校验和，再在目标主机安装生产依赖、保留共享数据目录、创建并验证升级前备份、执行待处理 migration、切换 Release、重启并检查 `/ready`。
+
+在迷你主机保存真实数据前请阅读 [Production Releases](docs/product/production-releases.md)。生产实例必须使用基于 `deploy/tinyoffice.env.example` 的显式配置，绝不能把 `runtime:postgres:reset` 当作更新方式。
+
 `setup` 会同时安装根目录运行时依赖和独立 shadcn 前端依赖。执行前请确认 `node --version` 为 Node.js 22.19 或更高版本。
 
 TinyOffice Web 位于 `http://localhost:5175`，运行时 API 位于 `http://127.0.0.1:8095`。本机启动时，终端会打印一个私有的一次性访问链接；打开后会直接建立标准的数据库 Owner 会话，不需要输入密码，也不会弹出 Windows Hello。将 `TINYOFFICE_PUBLIC_ORIGIN` 配置为 HTTPS 域名后，远程访问则必须完成通行密钥初始化和登录。浏览器随后会继续进入 Company 创建流程；仓库不会附带隐藏用户或默认 Company。详细边界参阅 [Owner 认证](docs/product/owner-authentication.md)和[首次用户引导验收手册](docs/developer/runbooks/first-user-onboarding.md)。

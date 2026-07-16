@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactElement } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { TinyOfficeCurrentSession, UiLocalePreference } from "tinyoffice/frontend-api-contracts";
+import type { TinyOfficeCurrentSession, UiLocalePreference, UiThemePreference } from "tinyoffice/frontend-api-contracts";
 import { KeyRound, LogOut, MonitorSmartphone, ShieldCheck } from "lucide-react";
 import { getMyProfile, saveMyProfile } from "@/api/profileClient";
 import { chatQueryKeys } from "@/chat/chatQueryKeys";
@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AvatarSeedEditor } from "@/components/product/AvatarSeedEditor";
 import { authClient } from "@/auth/authClient";
 import { applyUiLocalePreference, currentUiLocale } from "@/i18n";
+import { applyUiThemePreference, UI_THEMES } from "@/theme";
 import { useTranslation } from "react-i18next";
 
 type SettingsSection = "profile" | "security";
@@ -25,21 +26,25 @@ export function SettingsPage({ currentSession }: { currentSession?: TinyOfficeCu
   const [displayName, setDisplayName] = useState("");
   const [avatarSeed, setAvatarSeed] = useState("");
   const [uiLocale, setUiLocale] = useState<UiLocalePreference>("system");
+  const [uiTheme, setUiTheme] = useState<UiThemePreference>("sakura");
   useEffect(() => {
     if (query.data) {
       setDisplayName(query.data.displayName);
       setAvatarSeed(query.data.avatarSeed);
       setUiLocale(query.data.uiLocale);
+      setUiTheme(query.data.uiTheme);
     }
   }, [query.data]);
   const save = useMutation({
-    mutationFn: () => saveMyProfile({ displayName, avatarSeed, uiLocale }),
+    mutationFn: () => saveMyProfile({ displayName, avatarSeed, uiLocale, uiTheme }),
     onSuccess: async (profile) => {
       queryClient.setQueryData(["my-profile"], profile);
       setDisplayName(profile.displayName);
       setAvatarSeed(profile.avatarSeed);
       setUiLocale(profile.uiLocale);
+      setUiTheme(profile.uiTheme);
       await applyUiLocalePreference(profile.uiLocale);
+      applyUiThemePreference(profile.uiTheme);
       await queryClient.invalidateQueries({ queryKey: chatQueryKeys.currentSession() });
       await queryClient.invalidateQueries({ queryKey: chatQueryKeys.all() });
     },
@@ -49,7 +54,7 @@ export function SettingsPage({ currentSession }: { currentSession?: TinyOfficeCu
     <ManagementPageHeader title={t("settings.title")} />
     <section className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden md:grid-cols-[280px_minmax(0,1fr)] md:grid-rows-1">
       <aside className="border-b bg-[var(--tiny-sidebar)] p-3 md:border-b-0 md:border-r"><SelectionList className="grid-cols-2 md:grid-cols-1"><SelectionRow selected={section === "profile"} title={t("settings.profile")} onClick={() => setSection("profile")} /><SelectionRow selected={section === "security"} title={t("settings.security")} onClick={() => setSection("security")} /></SelectionList></aside>
-      <div className="overflow-auto p-4 sm:p-6">{section === "profile" ? <ProfilePanel currentSession={currentSession} displayName={displayName} setDisplayName={setDisplayName} avatarSeed={avatarSeed} setAvatarSeed={setAvatarSeed} uiLocale={uiLocale} setUiLocale={setUiLocale} savePending={save.isPending} saveError={save.error} canSave={Boolean(query.data) && (displayName.trim() !== query.data?.displayName || avatarSeed !== query.data?.avatarSeed || uiLocale !== query.data?.uiLocale)} onSave={() => save.mutate()} /> : <SecurityPanel />}</div>
+      <div className="overflow-auto p-4 sm:p-6">{section === "profile" ? <ProfilePanel currentSession={currentSession} displayName={displayName} setDisplayName={setDisplayName} avatarSeed={avatarSeed} setAvatarSeed={setAvatarSeed} uiLocale={uiLocale} setUiLocale={setUiLocale} uiTheme={uiTheme} setUiTheme={setUiTheme} savePending={save.isPending} saveError={save.error} canSave={Boolean(query.data) && (displayName.trim() !== query.data?.displayName || avatarSeed !== query.data?.avatarSeed || uiLocale !== query.data?.uiLocale || uiTheme !== query.data?.uiTheme)} onSave={() => save.mutate()} /> : <SecurityPanel />}</div>
     </section>
   </main>;
 }
@@ -141,7 +146,7 @@ function formatSecurityDate(value: string | Date): string {
   return Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString(currentUiLocale());
 }
 
-function ProfilePanel({ currentSession, displayName, setDisplayName, avatarSeed, setAvatarSeed, uiLocale, setUiLocale, savePending, saveError, canSave, onSave }: {
+function ProfilePanel({ currentSession, displayName, setDisplayName, avatarSeed, setAvatarSeed, uiLocale, setUiLocale, uiTheme, setUiTheme, savePending, saveError, canSave, onSave }: {
   currentSession?: TinyOfficeCurrentSession;
   displayName: string;
   setDisplayName(value: string): void;
@@ -149,6 +154,8 @@ function ProfilePanel({ currentSession, displayName, setDisplayName, avatarSeed,
   setAvatarSeed(value: string): void;
   uiLocale: UiLocalePreference;
   setUiLocale(value: UiLocalePreference): void;
+  uiTheme: UiThemePreference;
+  setUiTheme(value: UiThemePreference): void;
   savePending: boolean;
   saveError: Error | null;
   canSave: boolean;
@@ -160,9 +167,14 @@ function ProfilePanel({ currentSession, displayName, setDisplayName, avatarSeed,
     {avatarSeed ? <AvatarSeedEditor memberId={currentSession?.user.id ?? "current-user"} displayName={displayName || t("onboarding.you")} avatarSeed={avatarSeed} disabled={savePending} onChange={setAvatarSeed} /> : null}
     <label className="grid gap-2 text-sm"><span className="font-medium">{t("settings.displayName")}</span><Input value={displayName} maxLength={80} onChange={(event) => setDisplayName(event.currentTarget.value)} /></label>
     <label className="grid gap-2 text-sm"><span className="font-medium">{t("settings.language")}</span><Select value={uiLocale} onValueChange={(value) => setUiLocale(value as UiLocalePreference)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="system">{t("settings.followSystem")}</SelectItem><SelectItem value="zh-CN">{t("settings.simplifiedChinese")}</SelectItem><SelectItem value="en">{t("settings.english")}</SelectItem></SelectContent></Select><span className="text-xs text-muted-foreground">{t("settings.languageDescription")}</span></label>
+    <label className="grid gap-2 text-sm"><span className="font-medium">{t("settings.colorTheme")}</span><Select value={uiTheme} onValueChange={(value) => setUiTheme(value as UiThemePreference)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{UI_THEMES.map((theme) => <SelectItem key={theme} value={theme}><span className="flex items-center gap-2"><ThemeSwatch theme={theme} />{t(`settings.theme.${theme}`)}</span></SelectItem>)}</SelectContent></Select><span className="text-xs text-muted-foreground">{t("settings.colorThemeDescription")}</span></label>
     <div className="tiny-settings-comparison grid sm:grid-cols-2"><ProfileValue label={t("settings.accountType")} value={t("common.owner")} /><ProfileValue label={t("settings.companyRole")} value={currentSession?.member?.role ?? t("settings.notAssigned")} /></div>
     <div className="flex items-center gap-3"><Button disabled={!canSave || savePending} onClick={onSave}>{t("settings.saveProfile")}</Button>{saveError ? <span className="text-sm text-[var(--tiny-danger-ink)]">{saveError.message}</span> : null}</div>
   </section>;
+}
+
+function ThemeSwatch({ theme }: { theme: UiThemePreference }): ReactElement {
+  return <span data-theme={theme} className="inline-flex shrink-0 gap-0.5" aria-hidden="true"><span className="size-3 rounded-sm border border-black/20 bg-[var(--tiny-action-surface)]" /><span className="size-3 rounded-sm border border-black/20 bg-[var(--tiny-selected-surface)]" /></span>;
 }
 
 function ProfileValue({ label, value }: { label: string; value: string }): ReactElement {

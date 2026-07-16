@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   display_name text NOT NULL,
   avatar_seed text,
   ui_locale text NOT NULL DEFAULT 'system' CHECK (ui_locale IN ('system', 'en', 'zh-CN')),
+  ui_theme text NOT NULL DEFAULT 'sakura' CHECK (ui_theme IN ('sakura', 'ocean', 'forest', 'violet', 'neutral')),
   profile_initialized_at timestamptz,
   current_company_id text REFERENCES companies(company_id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL,
@@ -1101,6 +1102,19 @@ ALTER TABLE user_profiles
 
 ALTER TABLE user_profiles
   ADD CONSTRAINT user_profiles_ui_locale_check CHECK (ui_locale IN ('system', 'en', 'zh-CN'));
+`,
+  },
+  {
+    id: "pg_017_user_ui_theme_20260716",
+    sql: `
+ALTER TABLE user_profiles
+  ADD COLUMN IF NOT EXISTS ui_theme text NOT NULL DEFAULT 'sakura';
+
+ALTER TABLE user_profiles
+  DROP CONSTRAINT IF EXISTS user_profiles_ui_theme_check;
+
+ALTER TABLE user_profiles
+  ADD CONSTRAINT user_profiles_ui_theme_check CHECK (ui_theme IN ('sakura', 'ocean', 'forest', 'violet', 'neutral'));
 `,
   },
 ];

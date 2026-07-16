@@ -36,7 +36,7 @@ function OwnerOnboardingContent({ session }: { session: TinyOfficeCurrentSession
   }, [profileQuery.data]);
 
   const saveProfile = useMutation({
-    mutationFn: () => saveMyProfile({ displayName, avatarSeed, uiLocale: profileQuery.data?.uiLocale ?? "system" }),
+    mutationFn: () => saveMyProfile({ displayName, avatarSeed, uiLocale: profileQuery.data?.uiLocale ?? "system", uiTheme: profileQuery.data?.uiTheme ?? "sakura" }),
     onSuccess: async (profile) => {
       queryClient.setQueryData(["my-profile"], profile);
       await queryClient.invalidateQueries({ queryKey: chatQueryKeys.currentSession() });
@@ -96,7 +96,7 @@ function OnboardingShell({ step, title, description, icon, children }: { step: s
     <main className="grid min-h-svh place-items-center bg-muted/20 p-5">
       <section className="w-full max-w-2xl overflow-hidden rounded-xl border bg-background shadow-sm">
         <header className="flex items-start gap-4 border-b p-6">
-          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--tiny-cyan)] [&_svg]:size-5">{icon}</span>
+          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--tiny-info-surface)] [&_svg]:size-5">{icon}</span>
           <div className="min-w-0">
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{step}</div>
             <h1 className="mt-1 text-xl font-semibold">{title}</h1>

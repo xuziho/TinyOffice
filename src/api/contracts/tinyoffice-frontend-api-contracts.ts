@@ -212,7 +212,8 @@ export type CompanyBrandingState = {
 };
 
 export type UiLocalePreference = "system" | "en" | "zh-CN";
-export type UserProfileState = { schema: "tinyoffice-user-profile"; version: 4; id: string; displayName: string; avatarSeed: string; uiLocale: UiLocalePreference; initialized: boolean };
+export type UiThemePreference = "sakura" | "ocean" | "forest" | "violet" | "neutral";
+export type UserProfileState = { schema: "tinyoffice-user-profile"; version: 5; id: string; displayName: string; avatarSeed: string; uiLocale: UiLocalePreference; uiTheme: UiThemePreference; initialized: boolean };
 
 export type TinyOfficeUpdateManifest = {
   schema: "tinyoffice-update-manifest";

@@ -25,10 +25,13 @@ test("a clean Owner profile remains explicitly uninitialized until it is saved",
   assert.equal(initial.initialized, false);
   assert.equal(initial.displayName, "Owner");
   assert.equal(initial.uiLocale, "system");
+  assert.equal(initial.uiTheme, "sakura");
 
-  const saved = await saveUserProfile({ repoRoot, userId: "owner-1", displayName: "Xu Ziho", avatarSeed: "owner-avatar", uiLocale: "zh-CN" });
+  const saved = await saveUserProfile({ repoRoot, userId: "owner-1", displayName: "Xu Ziho", avatarSeed: "owner-avatar", uiLocale: "zh-CN", uiTheme: "ocean" });
   assert.equal(saved.initialized, true);
   assert.equal(saved.uiLocale, "zh-CN");
+  assert.equal(saved.uiTheme, "ocean");
+  assert.equal((await loadUserProfile({ repoRoot, userId: "owner-1" })).uiTheme, "ocean");
   assert.equal((await loadUserProfile({ repoRoot, userId: "owner-1" })).displayName, "Xu Ziho");
 });
 
@@ -40,6 +43,7 @@ test("first Company creation inherits the initialized Owner profile identity", a
     displayName: "Xu Ziho",
     avatarSeed: "chosen-owner-avatar",
     uiLocale: "system",
+    uiTheme: "sakura",
   });
 
   const created = await createCompanyWithoutCarrier({
@@ -113,7 +117,7 @@ test("user avatar persists in the account profile and synchronizes the user's co
     await endCompanyPostgresPool(postgres.pool);
   }
 
-  const saved = await saveUserProfile({ repoRoot, userId: "xuziho", displayName: "Xu Ziho", avatarSeed: "chosen-avatar", uiLocale: "en" });
+  const saved = await saveUserProfile({ repoRoot, userId: "xuziho", displayName: "Xu Ziho", avatarSeed: "chosen-avatar", uiLocale: "en", uiTheme: "violet" });
   assert.equal(saved.avatarSeed, "chosen-avatar");
   assert.equal((await loadUserProfile({ repoRoot, userId: "xuziho" })).avatarSeed, "chosen-avatar");
 

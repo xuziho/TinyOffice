@@ -98,7 +98,7 @@ export function OwnerAuthGate({ children }: { children: ReactNode }) {
       <section className="w-full max-w-md rounded-2xl border border-[var(--tiny-line-soft)] bg-[var(--tiny-surface)] p-6 shadow-[3px_3px_0_var(--tiny-line-soft)]">
         <img src="/brand/tinyoffice-mark.svg" alt="TinyOffice" className="mb-5 size-14" />
         <div className="mb-5 flex items-start gap-3">
-          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--tiny-cyan)]"><ShieldCheck className="size-5" /></span>
+          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--tiny-info-surface)]"><ShieldCheck className="size-5" /></span>
           <div><h1 className="text-xl font-semibold">{t("auth.ownerAccess")}</h1><p className="mt-1 text-sm text-muted-foreground">{t("auth.ownerAccessDescription")}</p></div>
         </div>
         {!status && !error ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><LoaderCircle className="size-4 animate-spin" />{t("auth.checking")}</div> : null}

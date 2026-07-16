@@ -73,7 +73,7 @@ function DropdownMenuItem({
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        "group/dropdown-menu-item relative flex cursor-default items-center gap-1.5 rounded-md border border-transparent px-1.5 py-1 text-sm outline-hidden select-none focus:border-[var(--tiny-line-faint)] focus:bg-[var(--tiny-cyan)] focus:text-[var(--tiny-text)] data-inset:pl-7 data-[variant=destructive]:text-[var(--tiny-danger-ink)] data-[variant=destructive]:focus:border-[var(--tiny-danger-strong)] data-[variant=destructive]:focus:bg-[var(--tiny-danger)] data-[variant=destructive]:focus:text-[var(--tiny-danger-ink)] data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-[variant=destructive]:*:[svg]:text-[var(--tiny-danger-ink)]",
+        "group/dropdown-menu-item relative flex cursor-default items-center gap-1.5 rounded-md border border-transparent px-1.5 py-1 text-sm outline-hidden select-none focus:border-[var(--tiny-line-faint)] focus:bg-[var(--tiny-selected-surface)] focus:text-[var(--tiny-text)] data-inset:pl-7 data-[variant=destructive]:text-[var(--tiny-danger-ink)] data-[variant=destructive]:focus:border-[var(--tiny-danger-strong)] data-[variant=destructive]:focus:bg-[var(--tiny-danger)] data-[variant=destructive]:focus:text-[var(--tiny-danger-ink)] data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-[variant=destructive]:*:[svg]:text-[var(--tiny-danger-ink)]",
         className
       )}
       {...props}

@@ -32,6 +32,7 @@ import { getCompanyBranding } from "@/api/brandingClient";
 import { getCurrentSession, switchCurrentCompany } from "@/api/currentSessionClient";
 import { getMyProfile } from "@/api/profileClient";
 import { applyUiLocalePreference } from "@/i18n";
+import { applyUiThemePreference } from "@/theme";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BotIcon, BriefcaseBusinessIcon, ListChecks, MessageCircle, PlugZapIcon, SettingsIcon, UsersRound, Wrench } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type MouseEvent, type ReactElement } from "react";
@@ -83,7 +84,10 @@ export function App(): ReactElement {
   const pageSection = pageSectionForView(activeView);
   const brandingQuery = useQuery({ queryKey: chatQueryKeys.branding(currentCompanyId), enabled: Boolean(currentCompanyId), queryFn: () => getCompanyBranding({ companyId: currentCompanyId }) });
   useEffect(() => {
-    if (profileQuery.data) void applyUiLocalePreference(profileQuery.data.uiLocale);
+    if (profileQuery.data) {
+      void applyUiLocalePreference(profileQuery.data.uiLocale);
+      applyUiThemePreference(profileQuery.data.uiTheme);
+    }
   }, [profileQuery.data]);
   const switchCompanyMutation = useMutation({
     mutationFn: switchCurrentCompany,

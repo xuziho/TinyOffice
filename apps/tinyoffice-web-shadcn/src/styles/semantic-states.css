@@ -4,7 +4,7 @@
 }
 
 .tiny-soft-retro-shell .tiny-company-mark {
-  background: var(--tiny-cyan-strong);
+  background: var(--tiny-brand-surface);
 }
 
 .tiny-soft-retro-shell .tiny-rail-button:hover,
@@ -193,7 +193,7 @@
 }
 
 .tiny-soft-retro-shell *::-webkit-scrollbar-thumb:hover {
-  background: var(--tiny-cyan-strong);
+  background: var(--tiny-selected-strong);
 }
 
 /* Native disclosures and text links share the same keyboard and pointer feedback as shadcn controls. */
@@ -411,7 +411,7 @@
   font-weight: 520;
   line-height: 1.35;
 }
-.tiny-readonly-fact-mark { width: 7px; height: 7px; flex: 0 0 auto; border-radius: 2px; background: var(--tiny-cyan-strong); box-shadow: 1px 1px 0 color-mix(in srgb, var(--tiny-line) 62%, transparent); }
+.tiny-readonly-fact-mark { width: 7px; height: 7px; flex: 0 0 auto; border-radius: 2px; background: var(--tiny-selected-strong); box-shadow: 1px 1px 0 color-mix(in srgb, var(--tiny-line) 62%, transparent); }
 .tiny-page-attribute[data-slot="badge"] { border: 1px solid var(--tiny-line-soft); border-radius: 6px; background: var(--tiny-quiet); color: var(--tiny-text); font-weight: 700; }
 .tiny-capability-effect[data-slot="badge"] { border: 1px solid var(--tiny-line); border-radius: 6px; background: var(--tiny-selected-surface); color: var(--tiny-text); font-weight: 800; text-transform: capitalize; box-shadow: 1px 1px 0 color-mix(in srgb, var(--tiny-line) 56%, transparent); }
 .tiny-capability-effect.write[data-slot="badge"] { background: var(--tiny-yellow); }

@@ -5,6 +5,7 @@ import { once } from "node:events";
 
 import { createTinyOfficeServer } from "../../src/runtime/realtime/tinyoffice-server.js";
 import { defaultRuntimeProvider } from "../../src/runtime/provider/pi-runtime-provider.js";
+import { printOwnerAccessInstructions } from "./owner-access-instructions.js";
 import { createRuntimeShutdownCoordinator } from "./runtime-shutdown-coordinator.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -44,15 +45,11 @@ await once(runtime.server, "listening");
 
 console.log(`TinyOffice runtime API: http://127.0.0.1:${runtimePort}`);
 console.log(`Company worker scope: ${runtime.companyId ?? "selected by Owner session"}`);
-if (runtime.bootstrapToken) {
-  console.log("\nTinyOffice needs its first Owner passkey.");
-  console.log(`Open once: ${publicOrigin}/?bootstrap=${encodeURIComponent(runtime.bootstrapToken)}\n`);
-} else if (runtime.localAccessTicket) {
-  console.log("\nTinyOffice local Owner access is ready.");
-  console.log(`Open once: ${publicOrigin}/?localAccess=${encodeURIComponent(runtime.localAccessTicket)}\n`);
-} else {
-  console.log(`Open: ${publicOrigin}/`);
-}
+printOwnerAccessInstructions({
+  publicOrigin,
+  ...(runtime.bootstrapToken ? { bootstrapToken: runtime.bootstrapToken } : {}),
+  ...(runtime.localAccessTicket ? { localAccessTicket: runtime.localAccessTicket } : {}),
+});
 
 const web = spawnWeb();
 

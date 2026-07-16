@@ -78,3 +78,7 @@ jobs:
         run: npm run setup:ci
       - name: Run complete test suite
         run: npm test
+      - name: Run packaged production Release smoke
+        env:
+          TINYOFFICE_PRODUCTION_SMOKE_ADMIN_DATABASE_URL: postgresql://tinyoffice:tinyoffice_dev@127.0.0.1:5432/postgres?sslmode=disable
+        run: npm run smoke:production-release

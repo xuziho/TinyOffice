@@ -52,13 +52,13 @@
     "smoke:lock:release": "powershell -ExecutionPolicy Bypass -File scripts/runtime/release-smoke-lock.ps1",
     "smoke:chat-realtime-order": "node --import tsx scripts/runtime/smoke-chat-realtime-order.ts",
     "smoke:no-carrier-chat": "node --import tsx scripts/runtime/smoke-no-carrier-chat.ts",
+    "smoke:production-release": "node scripts/release/smoke-production-release.mjs",
     "smoke:standalone-frontend-browser": "node --import tsx scripts/runtime/run-smoke-standalone-frontend-browser.ts",
     "agentco": "node --import tsx src/cli/agentco.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.1",
     "@types/pg": "^8.20.0",
-    "typebox": "^1.1.39",
     "typescript": "^5.8.3"
   },
   "dependencies": {
@@ -72,6 +72,7 @@
     "socket.io": "^4.8.3",
     "tar": "^7.5.19",
     "tsx": "^4.20.3",
+    "typebox": "^1.1.39",
     "turndown": "7.2.4",
     "undici": "8.7.0",
     "zod": "^4.4.3"

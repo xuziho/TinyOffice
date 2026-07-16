@@ -151,7 +151,7 @@ function runtimeCompatibilityCheck(status: TinyOfficeUpdateStatus): TinyOfficeDo
       label: "Node runtime compatibility",
       status: "warn",
       summary: `Node ${status.runtime.nodeVersion} is installed, but ${status.runtime.minimumNodeVersion} or newer is required.`,
-      action: { label: "Review updates", href: "/settings" },
+      action: { label: "Review updates", href: "/updates" },
     };
 }
 
@@ -169,7 +169,7 @@ function approvalManifestCheck(status: TinyOfficeUpdateStatus): TinyOfficeDoctor
       status: "warn",
       summary: "The remote stable approval manifest is unavailable; the bundled fallback is read-only guidance and cannot authorize an install.",
       details: status.sources.warnings,
-      action: { label: "Review updates", href: "/settings" },
+      action: { label: "Review updates", href: "/updates" },
     };
 }
 
@@ -236,7 +236,7 @@ export function createTinyOfficeDoctorService(input: CreateTinyOfficeDoctorServi
               label: "Update diagnostics",
               status: "warn" as const,
               summary: error instanceof Error ? error.message : String(error),
-              action: { label: "Review updates", href: "/settings" },
+              action: { label: "Review updates", href: "/updates" },
             }];
           }
         })()

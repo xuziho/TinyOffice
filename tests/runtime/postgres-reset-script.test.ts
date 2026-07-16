@@ -25,4 +25,6 @@ test("local runtime postgres reset is an explicit destructive hard-migration com
   assert.match(resetScript, /init-tinyoffice-postgres-schema\.ts/);
   assert.match(resetScript, /tinyoffice-postgres/);
   assert.match(resetScript, /tinyoffice-postgres-data/);
+  assert.match(resetScript, /TINYOFFICE_DEPLOYMENT_MODE/);
+  assert.match(resetScript, /Refusing to reset PostgreSQL in a production TinyOffice deployment/);
 });

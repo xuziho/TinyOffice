@@ -25,7 +25,7 @@ Before first-Company onboarding, configure PI for the same operating-system acco
 Do not treat the presence or non-zero size of `auth.json` as proof of readiness: an empty JSON object is a valid file but exposes no models. Run this check as the service account from the active Release:
 
 ```bash
-cd /home/xu/apps/tinyoffice/current
+cd "${TINYOFFICE_APP_ROOT:?set TINYOFFICE_APP_ROOT}/current"
 node --import tsx --input-type=module <<'NODE'
 import { loadPiModelState } from "./src/runtime/company-config/employees-admin.ts";
 
@@ -38,7 +38,7 @@ console.log(availableModels.map(({ provider, id }) => `${provider}/${id}`).join(
 NODE
 ```
 
-Replace the application root when the deployment uses a different approved path. The command prints model identifiers, not credentials. An empty result means the deployment is not employee-runtime ready: Company onboarding will show only `Set later` for both the initial HR and System AI, and employees cannot run until PI authentication or a custom model definition is configured.
+Load the same host-level deployment environment used by the service before running the command. The command prints model identifiers, not credentials. An empty result means the deployment is not employee-runtime ready: Company onboarding will show only `Set later` for both the initial HR and System AI, and employees cannot run until PI authentication or a custom model definition is configured.
 
 ## Persistent instance boundary
 

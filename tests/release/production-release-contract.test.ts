@@ -41,4 +41,7 @@ test("release publication emits a stable manifest and the host updater re-verifi
   assert.match(workflow, /push:\s*[\s\S]*tags:/);
   assert.match(workflow, /gh release create/);
   assert.match(workflow, /tinyoffice-stable\.json/);
+  const smokeIndex = workflow.indexOf("Smoke packaged production artifact");
+  const manifestIndex = workflow.indexOf("Build stable channel manifest from the verified artifact");
+  assert.ok(smokeIndex >= 0 && manifestIndex > smokeIndex, "The stable manifest must describe the final smoke-tested archive.");
 });

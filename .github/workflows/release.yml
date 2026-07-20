@@ -59,14 +59,14 @@ jobs:
           npm test
       - name: Build immutable production artifact
         run: npm run build:production-release
-      - name: Build stable channel manifest
-        env:
-          TINYOFFICE_RELEASE_DOWNLOAD_BASE_URL: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}
-        run: npm run build:release-manifest
       - name: Smoke packaged production artifact
         env:
           TINYOFFICE_PRODUCTION_SMOKE_ADMIN_DATABASE_URL: postgresql://tinyoffice:tinyoffice_dev@127.0.0.1:5432/postgres?sslmode=disable
         run: npm run smoke:production-release
+      - name: Build stable channel manifest from the verified artifact
+        env:
+          TINYOFFICE_RELEASE_DOWNLOAD_BASE_URL: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}
+        run: npm run build:release-manifest
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}

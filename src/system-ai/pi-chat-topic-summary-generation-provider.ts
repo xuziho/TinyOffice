@@ -4,12 +4,12 @@ import {
   AuthStorage,
   createAgentSession,
   DEFAULT_HTTP_IDLE_TIMEOUT_MS,
-  DefaultResourceLoader,
   getAgentDir,
   ModelRegistry,
   SessionManager,
   SettingsManager,
 } from "../runtime/pi/pi-coding-agent-sdk.js";
+import { createSystemAiResourceLoader } from "../runtime/pi/pi-resource-isolation.js";
 import type {
   SystemAiChatTopicSummaryGenerationProvider,
   SystemAiChatTopicSummaryGenerationRequest,
@@ -85,12 +85,10 @@ async function runPiPrompt(input: PiChatTopicSummaryPromptInput & { repoRoot?: s
     );
   }
   const cwd = input.repoRoot || process.cwd();
-  const resourceLoader = new DefaultResourceLoader({
+  const resourceLoader = createSystemAiResourceLoader({
     cwd,
     agentDir,
-    noContextFiles: true,
-    noSkills: true,
-    systemPromptOverride: () => input.systemPrompt,
+    systemPrompt: input.systemPrompt,
   });
   await resourceLoader.reload();
   const settingsManager = SettingsManager.inMemory({

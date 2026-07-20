@@ -111,9 +111,9 @@ test("locally registered PI tools are declared in the runtime boundary contract"
   }
 });
 
-test("host-owned collaboration tools use PI inline extension factories", async () => {
-  const transportSource = await readFile(
-    path.join(repoRoot, "src/runtime/pi/persistent-pi-session-transport.ts"),
+test("host-owned runtime tools use the isolated approved PI extension manifest", async () => {
+  const isolationSource = await readFile(
+    path.join(repoRoot, "src/runtime/pi/pi-resource-isolation.ts"),
     "utf8",
   );
   const employeeHomeSource = await readFile(
@@ -121,6 +121,14 @@ test("host-owned collaboration tools use PI inline extension factories", async (
     "utf8",
   );
 
-  assert.match(transportSource, /extensionFactories:\s*\[\{[\s\S]*?tinyoffice-collaboration-actions[\s\S]*?collaborationActionsExtension/);
+  assert.match(isolationSource, /noExtensions:\s*true/);
+  assert.match(isolationSource, /noPromptTemplates:\s*true/);
+  assert.match(isolationSource, /noThemes:\s*true/);
+  assert.match(isolationSource, /tinyoffice-collaboration-actions/);
+  assert.match(isolationSource, /tinyoffice-tool-guard/);
+  assert.match(isolationSource, /tinyoffice-webfetch/);
+  assert.match(isolationSource, /tinyoffice-websearch/);
+  assert.match(isolationSource, /tinyoffice-context-harness/);
   assert.doesNotMatch(employeeHomeSource, /tinyoffice-collaboration-actions/);
+  assert.doesNotMatch(employeeHomeSource, /settings\.json/);
 });

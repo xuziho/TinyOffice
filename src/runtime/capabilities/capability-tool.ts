@@ -26,6 +26,8 @@ import {
   listSkillsForCapability,
   mutateSkillForCapability,
 } from "./skill-capability-service.js";
+import { McpRuntimeGateway } from "../../mcp/mcp-runtime-gateway.js";
+import { McpAdminService } from "../../mcp/mcp-admin-service.js";
 
 export interface TinyOfficeCapabilityCallToolInput {
   repoRoot: string;
@@ -43,6 +45,7 @@ export interface TinyOfficeCapabilityCallToolInput {
   messageId?: string;
   chatEntryId?: string;
   sessionKey?: string;
+  signal?: AbortSignal;
 }
 
 export interface TinyOfficeCapabilityCallToolResult {
@@ -449,6 +452,60 @@ export async function executeTinyOfficeCapabilityCallTool(
         "Treat non-2xx responses as failed delivery and preserve the idempotency fields on retry.",
         "Do not automatically turn every external event into a Task; the target employee triages it through the Intake scene.",
       ],
+    };
+  } else if (request.entry.id === "mcp.tools.list") {
+    if (!request.companyId) throw new Error("mcp.tools.list requires companyId.");
+    const memberId = requiredString(input.runtimeEmployeeId, "runtimeEmployeeId");
+    const discovery = await new McpRuntimeGateway(input.repoRoot).discoverAssignedTools({
+      companyId: request.companyId,
+      memberId,
+      signal: input.signal,
+    });
+    result = {
+      schema: "tinyoffice-mcp-tool-catalog",
+      version: 1,
+      companyId: request.companyId,
+      memberId,
+      ...discovery,
+    };
+  } else if (request.entry.id === "mcp.tool.call") {
+    if (!request.companyId) throw new Error("mcp.tool.call requires companyId.");
+    const memberId = requiredString(input.runtimeEmployeeId, "runtimeEmployeeId");
+    const connectionId = requiredString(request.body.connectionId, "connectionId");
+    const toolName = requiredString(request.body.toolName, "toolName");
+    const argumentsValue = objectBody(request.body.arguments);
+    result = {
+      schema: "tinyoffice-mcp-tool-result",
+      version: 1,
+      companyId: request.companyId,
+      memberId,
+      connectionId,
+      toolName,
+      result: await new McpRuntimeGateway(input.repoRoot).callAssignedTool({
+        companyId: request.companyId,
+        memberId,
+        connectionId,
+        toolName,
+        arguments: argumentsValue,
+        sessionKey: input.sessionKey,
+        signal: input.signal,
+      }),
+    };
+  } else if (request.entry.id === "mcp.admin.describe") {
+    if (!request.companyId) throw new Error("mcp.admin.describe requires companyId.");
+    result = await new McpAdminService(input.repoRoot).loadState(request.companyId);
+  } else if (request.entry.id === "mcp.admin.configure") {
+    if (!request.companyId) throw new Error("mcp.admin.configure requires companyId.");
+    const operation = requiredString(request.body.operation, "operation");
+    const configuration = objectBody(request.body.configuration);
+    const service = new McpAdminService(input.repoRoot);
+    if (operation === "save_server") await service.saveServer(configuration);
+    else if (operation === "save_connection") await service.saveConnection(configuration);
+    else if (operation === "save_assignment") await service.saveAssignment(request.companyId, configuration);
+    else throw new Error("mcp.admin.configure operation must be save_server, save_connection, or save_assignment.");
+    result = {
+      schema: "tinyoffice-mcp-configuration-result", version: 1,
+      companyId: request.companyId, operation, state: await service.loadState(request.companyId),
     };
   } else if (request.entry.id === "skill.list") {
     if (!request.companyId) throw new Error("skill.list requires companyId.");

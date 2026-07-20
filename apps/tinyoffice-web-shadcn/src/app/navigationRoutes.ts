@@ -1,6 +1,6 @@
 import type { MouseEvent } from "react";
 
-export type AppView = "access" | "backup" | "capabilities" | "chat" | "company" | "doctor" | "employees" | "integrations" | "prompt" | "sessions" | "settings" | "skills" | "system-ai" | "tasks" | "updates";
+export type AppView = "access" | "backup" | "capabilities" | "chat" | "company" | "doctor" | "employees" | "integrations" | "mcp" | "prompt" | "sessions" | "settings" | "skills" | "system-ai" | "tasks" | "updates";
 
 const appViewByPathSegment: Readonly<Record<string, AppView>> = {
   access: "access",
@@ -11,6 +11,7 @@ const appViewByPathSegment: Readonly<Record<string, AppView>> = {
   doctor: "doctor",
   employees: "employees",
   integrations: "integrations",
+  mcp: "mcp",
   prompt: "prompt",
   sessions: "sessions",
   settings: "settings",
@@ -63,6 +64,8 @@ export function appViewHref(view: AppView): string {
       return "/employees";
     case "integrations":
       return "/integrations";
+    case "mcp":
+      return "/mcp";
     case "prompt":
       return "/prompt";
     case "sessions":
@@ -209,7 +212,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isAppView(value: string): value is AppView {
-  return ["access", "backup", "capabilities", "chat", "company", "doctor", "employees", "integrations", "prompt", "sessions", "settings", "skills", "system-ai", "tasks", "updates"].includes(value);
+  return ["access", "backup", "capabilities", "chat", "company", "doctor", "employees", "integrations", "mcp", "prompt", "sessions", "settings", "skills", "system-ai", "tasks", "updates"].includes(value);
 }
 
 function isChatSurface(value: unknown): value is ChatSurfaceRoute {

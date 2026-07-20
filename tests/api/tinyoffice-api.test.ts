@@ -3602,6 +3602,8 @@ test("TinyOffice Node API adapter recognizes current product company routes", ()
   assert.equal(isTinyOfficeApiRequest("/api/companies/acme/work"), true);
   assert.equal(isTinyOfficeApiRequest("/api/companies/acme/doctor"), true);
   assert.equal(isTinyOfficeApiRequest("/api/companies/acme/capabilities"), true);
+  assert.equal(isTinyOfficeApiRequest("/api/companies/acme/mcp"), true);
+  assert.equal(isTinyOfficeApiRequest("/api/companies/acme/mcp/check"), true);
   assert.equal(isTinyOfficeApiRequest("/api/companies/acme/skills"), true);
   assert.equal(isTinyOfficeApiRequest("/api/companies/acme/branding/logo"), true);
   assert.equal(isTinyOfficeApiRequest("/api/tinyoffice/profile"), true);

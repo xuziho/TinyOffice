@@ -34,7 +34,7 @@ import { getMyProfile } from "@/api/profileClient";
 import { applyUiLocalePreference } from "@/i18n";
 import { applyUiThemePreference } from "@/theme";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BotIcon, BriefcaseBusinessIcon, ListChecks, MessageCircle, PlugZapIcon, SettingsIcon, UsersRound, Wrench } from "lucide-react";
+import { BlocksIcon, BotIcon, BriefcaseBusinessIcon, ListChecks, MessageCircle, PlugZapIcon, SettingsIcon, UsersRound, Wrench } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type MouseEvent, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import type { CompaniesAdminViewModel, TinyOfficeCurrentSession } from "tinyoffice/frontend-api-contracts";
@@ -49,6 +49,7 @@ const ChatWorkspaceRoute = lazy(() => import("@/chat/ChatWorkspaceRoute").then((
 const DoctorPage = lazy(() => import("@/doctor/DoctorPage").then((module) => ({ default: module.DoctorPage })));
 const EmployeesPage = lazy(() => import("@/employees/EmployeesPage").then((module) => ({ default: module.EmployeesPage })));
 const IntegrationsPage = lazy(() => import("@/integrations/IntegrationsPage").then((module) => ({ default: module.IntegrationsPage })));
+const McpPage = lazy(() => import("@/mcp/McpPage").then((module) => ({ default: module.McpPage })));
 const OwnerOnboardingPage = lazy(() => import("@/onboarding/OwnerOnboardingPage").then((module) => ({ default: module.OwnerOnboardingPage })));
 const PromptPolicyPage = lazy(() => import("@/prompt/PromptPolicyPage").then((module) => ({ default: module.PromptPolicyPage })));
 const SessionsPage = lazy(() => import("@/sessions/SessionsPage").then((module) => ({ default: module.SessionsPage })));
@@ -239,6 +240,9 @@ export function App(): ReactElement {
             <ViewButton view="integrations" label={t("nav.integrations")} active={activeView === "integrations"} disabled={needsInitialization} onClick={() => selectView("integrations")}>
               <PlugZapIcon />
             </ViewButton>
+            <ViewButton view="mcp" label={t("nav.mcp")} active={activeView === "mcp"} disabled={needsInitialization} onClick={() => selectView("mcp")}>
+              <BlocksIcon />
+            </ViewButton>
             <ViewButton view="system-ai" label={t("nav.aiRuntime")} active={isAiRuntimeView(activeView)} disabled={needsInitialization} onClick={() => selectView("system-ai")}>
               <BotIcon />
             </ViewButton>
@@ -264,6 +268,8 @@ export function App(): ReactElement {
             <CompanySkillsPage currentSession={currentSession} />
           ) : activeView === "integrations" ? (
             <IntegrationsPage />
+          ) : activeView === "mcp" ? (
+            <McpPage currentSession={currentSession} />
           ) : activeView === "prompt" ? (
             <PromptPolicyPage currentSession={currentSession} />
           ) : activeView === "system-ai" ? (

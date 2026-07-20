@@ -7,7 +7,7 @@ This page defines how TinyOffice expands employee capability without turning the
 | Surface | Product status | Authority |
 | --- | --- | --- |
 | TinyOffice Skills | Supported | Company or Employee scope in TinyOffice. |
-| TinyOffice-managed MCP | Planned product surface | Deployment installation plus Company or Employee assignment. |
+| TinyOffice-managed MCP | Foundation implemented | Deployment installation plus Company or Employee assignment. |
 | Internal PI extensions | Supported implementation detail | Code-owned approved manifest. |
 | Arbitrary PI Marketplace extensions | Not supported | Must be reviewed and adapted before entering the approved manifest. |
 
@@ -25,16 +25,28 @@ Startup fails explicitly if an approved extension fails to load or does not regi
 
 System AI calls are stricter: they are independent in-memory calls with no history, extensions, skills, prompt templates, themes, context files, or tools.
 
-## MCP Direction
+## MCP Product Model
 
-MCP will be implemented as a provider-neutral TinyOffice gateway rather than a global PI package installation.
+MCP is implemented as a provider-neutral TinyOffice gateway rather than a global PI package installation.
 
-The planned durable objects are:
+The durable objects are:
 
 1. **MCP Server**: deployment-level transport and launch definition.
 2. **MCP Connection**: one concrete credential/account instance for a server.
 3. **MCP Assignment**: Company- or Employee-scoped access to a connection.
 
-Installing an MCP server does not automatically expose it to every Company. Runtime discovery is assignment-based. The prompt receives only a compact capability summary; full tool schemas are discovered lazily through the gateway so large MCP catalogs do not inflate every turn.
+Installing an MCP server does not automatically expose it to every Company. Runtime discovery is assignment-based. The model-visible capability registry names `mcp.tools.list` and `mcp.tool.call`; full MCP tool schemas are loaded only when an employee calls the list capability, so large MCP catalogs do not inflate every turn. If one assigned connection is unavailable, tools from healthy connections remain discoverable and the failed connection is returned separately in `unavailableConnections`.
 
-The first MCP implementation must preserve abort, timeout, tool evidence, Company isolation, name-collision handling, and restart behavior. It must not rely on a generic PI MCP adapter as the product authority.
+The standalone `/mcp` page is the explicit Owner management surface. It configures deployment-level servers and connections, then assigns a connection to one Company or one runtime-capable employee. MCP is not hidden under External Intake because Intake transports events into TinyOffice while MCP gives employees outbound tools.
+
+Connection records store environment-variable references, never credential values. A stdio environment entry maps the variable name expected by the MCP server to a host environment variable. An HTTP header entry maps a header name to a host environment variable. The browser can see reference names and whether they resolve, but never receives the resolved value.
+
+The runtime creates and closes an MCP client around each discovery or call. This gives restart-safe behavior without holding opaque cross-turn client state. Calls have a finite timeout and accept runtime cancellation. Tool names remain paired with `connectionId`, which avoids collisions between servers without rewriting server-owned tool names. Every call records started and terminal audit evidence, but the evidence contains only argument names and value types plus result shape metadata. TinyOffice does not persist argument values, MCP content bodies, or resolved credentials in MCP audit rows; error strings are bounded and credential-redacted.
+
+Assignment is the product authority boundary. Once the Owner assigns a connection, ordinary employee use does not add an invented generic business-confirmation layer. The MCP tool itself may still expose its own protocol or application semantics.
+
+Operators may also ask an employee to configure MCP in Chat. The employee first reads `mcp.admin.describe`, validates and presents the exact command or URL, environment-reference names, scope, and affected employees, and then uses `mcp.admin.configure` only after explicit operator confirmation. This path writes the same durable objects as the `/mcp` page; it does not edit PI global configuration or accept secret values in Chat.
+
+## Current Limit
+
+The first foundation supports stdio and Streamable HTTP definitions entered through the Owner page or a confirmed Chat capability. OAuth browser handshakes, an MCP marketplace, automated package provenance review, server update automation, and per-tool allow/deny overrides are not yet product behavior. They must build on the same Server / Connection / Assignment boundary rather than bypass it through global PI configuration.

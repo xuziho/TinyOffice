@@ -21,7 +21,7 @@ Stable responsibilities:
 
 Company is the user-visible tenant boundary. Current product routes and APIs require explicit Company context.
 
-The global rail separates daily work from lower-frequency console areas. Only `Chat` and `Tasks` stay in the upper primary group. `Workforce`, `Organization`, `Integrations`, `AI & Runtime`, and `Operations` are direct rail destinations rather than children of a generic Admin menu. Workforce owns Employees and Company Skills. AI & Runtime groups System AI, Prompt, Access, and read-only Capabilities. Operations groups Runtime Sessions, Health, Backup & Restore, and Updates. Health opens the existing read-only Doctor route. Settings remains the account destination and owns only the current account profile and security.
+The global rail separates daily work from lower-frequency console areas. Only `Chat` and `Tasks` stay in the upper primary group. `Workforce`, `Organization`, `Integrations`, `MCP`, `AI & Runtime`, and `Operations` are direct rail destinations rather than children of a generic Admin menu. Workforce owns Employees and Company Skills. AI & Runtime groups System AI, Prompt, Access, and read-only Capabilities. Operations groups Runtime Sessions, Health, Backup & Restore, and Updates. Health opens the existing read-only Doctor route. Settings remains the account destination and owns only the current account profile and security.
 
 Workforce, AI & Runtime, and Operations expose their sibling pages in a shared page-level navigation strip. This common shell does not merge their routes, APIs, forms, permissions, or data ownership. Organization and Integrations remain independent pages because Company lifecycle and external intake setup are different responsibilities.
 
@@ -35,6 +35,7 @@ The shared shell uses three non-overlapping levels: the section title identifies
 | Chat | Current rebuilt shadcn surface | Chat Projection, Conversation, and Message APIs |
 | Company Lifecycle | Organization rail entry at `/company` | PostgreSQL `companies`, Prompt Policy defaults, Access defaults |
 | Integrations | Integrations rail entry at `/integrations` | External Intake setup guidance |
+| MCP | MCP rail entry at `/mcp` | Deployment MCP servers and connections plus Company/Employee assignments |
 | Settings | Current bottom rail module at `/settings` | Account profile and Owner security |
 | Updates | Operations > Updates at `/updates` | Update status from npm and the TinyOffice stable approval manifest |
 | Tasks | Current `Tasks` rail module at `/tasks` | Work repositories and Tasks view model |

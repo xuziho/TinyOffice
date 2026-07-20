@@ -22,3 +22,34 @@ test("Intake integration contract is machine-readable to AI employees", async ()
   assert.match(JSON.stringify(contract), /targetMemberId/);
   assert.match(JSON.stringify(contract), /sourceEventId/);
 });
+
+test("MCP configuration requires explicit operator confirmation before any host definition changes", async () => {
+  await assert.rejects(
+    () => executeTinyOfficeCapabilityCallTool({
+      repoRoot: process.cwd(), companyId: "ziho-e-com", capabilityId: "mcp.admin.configure",
+      input: { companyId: "ziho-e-com", operation: "save_server", configuration: { serverId: "demo" } },
+      conversationId: "conversation-1", runtimeEmployeeId: "mira",
+    }),
+    /requires operator confirmation/,
+  );
+});
+
+test("MCP configuration applies an explicitly confirmed provider-neutral server definition", async () => {
+  const call = await executeTinyOfficeCapabilityCallTool({
+    repoRoot: process.cwd(), companyId: "ziho-e-com", capabilityId: "mcp.admin.configure",
+    input: {
+      companyId: "ziho-e-com",
+      operation: "save_server",
+      configuration: {
+        serverId: "test-ai-config", displayName: "Test AI Config", transport: "stdio",
+        command: "npx", args: ["-y", "@example/test-mcp"], enabled: false,
+      },
+    },
+    confirmation: { accepted: true },
+    conversationId: "conversation-1", runtimeEmployeeId: "mira",
+  });
+  assert.equal(call.status, "allowed");
+  const result = call.result as { operation: string; state: { servers: Array<{ serverId: string; enabled: boolean }> } };
+  assert.equal(result.operation, "save_server");
+  assert.equal(result.state.servers.find((server) => server.serverId === "test-ai-config")?.enabled, false);
+});

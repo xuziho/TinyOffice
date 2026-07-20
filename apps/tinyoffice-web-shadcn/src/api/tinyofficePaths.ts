@@ -96,6 +96,10 @@ export function companyCapabilitiesPath(companyId: string): string {
   return `/api/companies/${encodeURIComponent(required(companyId, "companyId"))}/capabilities`;
 }
 
+export function companyMcpPath(companyId: string): string {
+  return `/api/companies/${encodeURIComponent(required(companyId, "companyId"))}/mcp`;
+}
+
 export function companyBrandingPath(companyId: string): string {
   return `/api/companies/${encodeURIComponent(required(companyId, "companyId"))}/branding`;
 }

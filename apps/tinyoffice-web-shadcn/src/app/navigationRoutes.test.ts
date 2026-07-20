@@ -29,6 +29,7 @@ test("appViewHref returns stable top-level module paths", () => {
   assert.equal(appViewHref("prompt"), "/prompt");
   assert.equal(appViewHref("access"), "/access");
   assert.equal(appViewHref("capabilities"), "/capabilities");
+  assert.equal(appViewHref("mcp"), "/mcp");
   assert.equal(appViewHref("doctor"), "/doctor");
   assert.equal(appViewHref("sessions"), "/sessions");
   assert.equal(appViewHref("settings"), "/settings");

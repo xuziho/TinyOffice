@@ -44,6 +44,8 @@ TinyOffice system operations such as Channel creation, Work creation, and Skill 
 - TinyOffice has no user-managed system Skill scope. Company Skills cannot cross Company boundaries, and Employee Skills affect only their target member.
 - Skills / Runbooks do not provide an employee-level checkbox configuration UI.
 - Observed tool calls are not the same thing as complete loaded tool policy.
+- Skills are the supported instruction/workflow extension surface. They do not load arbitrary PI Extension hooks or bypass the code-owned runtime extension manifest.
+- External systems and tool catalogs belong to the separate TinyOffice-managed MCP boundary; they are not encoded as Skills.
 
 ## Technical Docs
 

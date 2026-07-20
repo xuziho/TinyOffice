@@ -1,7 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
-import collaborationActionsExtension from "../../collaboration/pi/collaboration-actions-extension.js";
 import {
   loadEmployeeRuntimeConfig,
   type EmployeeRuntimeConfig,
@@ -11,7 +10,6 @@ import {
   AuthStorage,
   configureHttpDispatcher,
   createAgentSession,
-  DefaultResourceLoader,
   DEFAULT_HTTP_IDLE_TIMEOUT_MS,
   getAgentDir,
   ModelRegistry,
@@ -38,6 +36,10 @@ import {
   loadEmployeeInstructionFiles,
   loadEmployeeSkillPaths,
 } from "./persistent-pi-employee-agent-prompt-resources.js";
+import {
+  assertApprovedRuntimeExtensions,
+  createEmployeeResourceLoader,
+} from "./pi-resource-isolation.js";
 import {
   canFallbackToSse,
   errorMessage,
@@ -147,13 +149,16 @@ export class DefaultPiSessionTransport implements PiSessionTransport {
         })
       : [];
     const promptBlocks = input.promptBlocks || [];
+    const repoRoot = input.employeeHomePath
+      ? repoRootFromEmployeeHome(input.employeeHomePath)
+      : input.cwd;
     const runtimeConfig = input.employeeHomePath
       ? await loadEmployeeRuntimeConfig(companyScopeFromEmployeeHome(input.employeeHomePath))
       : { version: 1 as const, thinkingLevel: "minimal" as const };
     this.toolGuardEnv = input.employeeHomePath
       ? {
           PI_TOOL_GUARD_POLICY_JSON: JSON.stringify(
-            await loadToolGuardPolicy(repoRootFromEmployeeHome(input.employeeHomePath), {
+            await loadToolGuardPolicy(repoRoot, {
               companyId: companyScopeFromEmployeeHome(input.employeeHomePath).companyId,
             }),
           ),
@@ -162,23 +167,19 @@ export class DefaultPiSessionTransport implements PiSessionTransport {
 
     await configurePiHttpDispatcherOnce();
 
-    const loader = new DefaultResourceLoader({
+    const loader = createEmployeeResourceLoader({
       cwd: input.cwd,
       agentDir: getAgentDir(),
-      noContextFiles: true,
-      noSkills: true,
-      additionalSkillPaths: skillPaths,
-      extensionFactories: [{
-        name: "tinyoffice-collaboration-actions",
-        factory: collaborationActionsExtension,
-      }],
-      systemPromptOverride: () => input.systemPromptAppend,
-      appendSystemPromptOverride: () => [
+      repoRoot,
+      skillPaths,
+      systemPrompt: input.systemPromptAppend,
+      appendSystemPrompt: [
         ...formatEmployeeInstructionAppend(employeeInstructionFiles),
         ...formatCompanyPromptBlocks(promptBlocks),
       ],
     });
     await loader.reload();
+    assertApprovedRuntimeExtensions(loader.getExtensions(), repoRoot);
     const loadedSkills = loader.getSkills().skills
       .map((skill: { name: string }) => skill.name)
       .sort();

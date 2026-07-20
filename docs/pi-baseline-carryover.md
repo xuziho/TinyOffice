@@ -1,72 +1,41 @@
-# PI 基座能力承接
+# PI 基座与扩展边界
 
-这份文档只回答一个问题：
+TinyOffice 使用 PI Coding Agent 作为当前 Runtime provider，但 TinyOffice 的产品运行边界不等于一套可以任意安装 PI Marketplace Extension 的 PI CLI。
 
-`新项目现在如何直接复用已经完成的 PI 基座能力。`
+## 当前结论
 
-## 结论
+TinyOffice 员工 Runtime 只加载代码中明确批准的内部扩展：
 
-PI 基座现在已经足够当作新项目起点使用。
+| 内部扩展 | 作用 |
+| --- | --- |
+| `pi-tool-guard` | 低层文件与命令工具的 Access 边界。 |
+| `pi-web-tools` | `webfetch` 与 `websearch`。 |
+| `tinyoffice-collaboration-actions` | Handoff、Work/Intake 完成动作、Capability 与 Runtime Memory 工具。 |
+| `pi-context-harness` | 上下文压缩、continuation 与工具结果收敛。 |
 
-你需要的资产分成三类：
+这些扩展由 TinyOffice Runtime 源码直接注册。宿主机的 `~/.pi/agent/settings.json`、员工工作区的 `.pi/settings.json`、全局 extensions 目录和项目 extensions 目录都不是 TinyOffice Runtime 的加载权威。
 
-1. 本地 `pi-web-tools` package
-2. 本地 `pi-tool-guard` package
-3. 本地 `pi-context-harness` package
+员工自有 Skills 仍通过 TinyOffice 的 Company / Employee Skill 边界显式加载；它们不依赖 PI 全局配置。
 
-## 本地 PI 能力包
+System AI 的标题与 Topic Summary 调用是独立、无历史调用，并且不加载 Extension、Skill、Prompt Template、Theme、Context File 或 Tool。
 
-这些 package 都是 PI 自身能力增强，原则上可以离开本系统单独安装使用：
+## 为什么不直接开放 PI Marketplace
 
-- `packages/pi-web-tools`
-- `packages/pi-tool-guard`
-- `packages/pi-context-harness`
+PI Extension 可以注册工具，也可以拦截上下文、模型请求、工具调用、压缩和 session 生命周期。有些扩展依赖 PI 的终端 UI、模型切换或自身权限模型。这些行为可能绕过 TinyOffice 的公司隔离、固定员工模型、Access、Handoff、Work 和 Evidence 规则。
 
-`pi-web-tools` 提供：
+因此当前产品承诺是：
 
-- `webfetch`
-- `websearch`
+- 正式支持 TinyOffice Skills；
+- 后续正式支持 TinyOffice-managed MCP；
+- 不承诺任意 PI Marketplace Extension 可以直接安装到 TinyOffice；
+- 若某个 PI Extension 有明确价值，先由 TinyOffice 评估并适配，再加入内部批准清单。
 
-`pi-tool-guard` 提供本地工具调用安全边界。
+## 本地 PI CLI 与 TinyOffice Runtime
 
-`pi-context-harness` 提供当前 session 内的上下文压缩与 continuation 辅助。
+开发者仍然可以在独立的 PI CLI 环境里试验本地 packages，但 `pi install -l ...` 只影响那套 PI CLI 环境，不会改变 TinyOffice 产品 Runtime 的批准清单。
 
-## 建议安装方式
+不要通过修改员工工作区 `.pi/settings.json` 给 TinyOffice 员工增加 Extension。需要增加产品能力时，应选择以下边界之一：
 
-在新项目目录里，把这个 package 装进 PI：
-
-```bash
-pi install -l ./packages/pi-web-tools
-pi install -l ./packages/pi-tool-guard
-pi install -l ./packages/pi-context-harness
-```
-
-## 运行时说明
-
-### `webfetch`
-
-- 不需要外部 API key
-
-### `websearch`
-
-支持：
-
-- `TAVILY_API_KEYS`
-- `TAVILY_API_KEY`
-- `BRAVE_API_KEY`
-
-可选 provider override：
-
-```bash
-export PI_WEBSEARCH_PROVIDER="tavily"
-```
-
-## 现在不做的事
-
-这一步先不要求：
-
-- 发布 npm 公共包
-- 重写 PI web tools package
-- 把本地 `pi-tool-guard` 或 `pi-context-harness` 合并进 `pi-web-tools`
-
-这几件事都不该阻塞新项目启动。
+1. 可复用工作方法：创建 Company 或 Employee Skill；
+2. 外部系统工具：接入 TinyOffice-managed MCP；
+3. Runtime 基础能力：经过代码审查后加入内部批准扩展清单。

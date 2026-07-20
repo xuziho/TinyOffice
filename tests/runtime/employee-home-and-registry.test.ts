@@ -109,15 +109,11 @@ test("loads DB employees with workspace paths", async () => {
   assert.equal(nora?.profile.presenceMode, "resident");
   assert.equal(Object.hasOwn(nora || {}, "mattermostAccount"), false);
 
-  const workspacePiSettings = JSON.parse(
-    await readFile(
+  await assert.rejects(
+    readFile(
       path.join(rootPath, "nora-automation", "workspace", ".pi", "settings.json"),
       "utf8",
     ),
-  ) as { packages: string[] };
-  assert.deepEqual(workspacePiSettings.packages, [
-    "../../../../../../packages/pi-tool-guard",
-    "../../../../../../packages/pi-web-tools",
-    "../../../../../../packages/pi-context-harness",
-  ]);
+    (error: NodeJS.ErrnoException) => error.code === "ENOENT",
+  );
 });

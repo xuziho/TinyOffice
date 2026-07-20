@@ -1,4 +1,4 @@
-import { mkdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { PresenceMode } from "../../collaboration/runtime/presence-mode.js";
@@ -31,38 +31,6 @@ export interface EmployeeHome {
   profile: EmployeeHomeProfile;
   resourcePolicy: EmployeeResourcePolicy;
   runtime?: EmployeeRuntimeConfig;
-}
-
-async function ensureWorkspacePiSettings(input: {
-  repoRoot: string;
-  workspacePath: string;
-}) {
-  const workspacePiPath = path.join(input.workspacePath, ".pi");
-  const settingsPath = path.join(workspacePiPath, "settings.json");
-
-  const settings = {
-    packages: [
-      toPosixPath(path.relative(
-        workspacePiPath,
-        path.join(input.repoRoot, "packages", "pi-tool-guard"),
-      )),
-      toPosixPath(path.relative(
-        workspacePiPath,
-        path.join(input.repoRoot, "packages", "pi-web-tools"),
-      )),
-      toPosixPath(path.relative(
-        workspacePiPath,
-        path.join(input.repoRoot, "packages", "pi-context-harness"),
-      )),
-    ],
-  };
-
-  await mkdir(workspacePiPath, { recursive: true });
-  await writeFile(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
-}
-
-function toPosixPath(value: string): string {
-  return value.split(path.sep).join(path.posix.sep);
 }
 
 function assertProfile(
@@ -134,11 +102,6 @@ export async function loadEmployeeHome(input: {
   } else if (!workspaceStats.isDirectory()) {
     throw new Error(`workspace is not a directory in ${homePath}.`);
   }
-
-  await ensureWorkspacePiSettings({
-    repoRoot: input.repoRoot,
-    workspacePath,
-  });
 
   if (path.basename(homePath) !== profileJson.employeeId) {
     throw new Error(

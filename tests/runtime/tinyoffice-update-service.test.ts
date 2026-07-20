@@ -55,22 +55,73 @@ test("approved TinyOffice Release is blocked when Node is too old", async () => 
   assert.equal(status.runtime.compatible, false);
 });
 
-test("failed Release discovery never falls back to an installable target", async () => {
+test("transient Release discovery timeout recovers on one bounded retry", async () => {
   const repoRoot = await updateFixture();
+  let releaseAttempts = 0;
   const service = new TinyOfficeUpdateService({
     repoRoot,
     deploymentMode: "production",
     nodeVersion: "22.19.0",
     fetch: async (url) => {
       if (String(url).includes("registry.npmjs.org")) return Response.json({ version: "0.80.6" });
-      if (String(url).includes("releases/latest")) return new Response("offline", { status: 503, statusText: "Offline" });
+      if (String(url).includes("releases/latest")) {
+        releaseAttempts += 1;
+        if (releaseAttempts === 1) throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
+        return Response.json(releaseManifest());
+      }
       return Response.json(piManifest("0.80.6"));
     },
   });
   const status = await service.loadStatus();
+  assert.equal(releaseAttempts, 2);
+  assert.equal(status.release.state, "ready_to_install");
+  assert.equal(status.sources.releaseManifestSource, "remote");
+  assert.deepEqual(status.sources.warnings, []);
+});
+
+test("failed Release discovery never falls back to an installable target", async () => {
+  const repoRoot = await updateFixture();
+  let releaseAttempts = 0;
+  const service = new TinyOfficeUpdateService({
+    repoRoot,
+    deploymentMode: "production",
+    nodeVersion: "22.19.0",
+    fetch: async (url) => {
+      if (String(url).includes("registry.npmjs.org")) return Response.json({ version: "0.80.6" });
+      if (String(url).includes("releases/latest")) {
+        releaseAttempts += 1;
+        return new Response("offline", { status: 503, statusText: "Offline" });
+      }
+      return Response.json(piManifest("0.80.6"));
+    },
+  });
+  const status = await service.loadStatus();
+  assert.equal(releaseAttempts, 2);
   assert.equal(status.release.state, "check_failed");
   assert.equal(status.sources.releaseManifestSource, "unavailable");
   assert.equal(status.installation.enabled, false);
+});
+
+test("malformed Release JSON fails immediately without retry", async () => {
+  const repoRoot = await updateFixture();
+  let releaseAttempts = 0;
+  const service = new TinyOfficeUpdateService({
+    repoRoot,
+    deploymentMode: "production",
+    nodeVersion: "22.19.0",
+    fetch: async (url) => {
+      if (String(url).includes("registry.npmjs.org")) return Response.json({ version: "0.80.6" });
+      if (String(url).includes("releases/latest")) {
+        releaseAttempts += 1;
+        return new Response("{", { status: 200, headers: { "Content-Type": "application/json" } });
+      }
+      return Response.json(piManifest("0.80.6"));
+    },
+  });
+  const status = await service.loadStatus();
+  assert.equal(releaseAttempts, 1);
+  assert.equal(status.release.state, "check_failed");
+  assert.match(status.sources.warnings.join("\n"), /Release manifest could not be refreshed/);
 });
 
 test("update service submits only the exact approved Release", async () => {

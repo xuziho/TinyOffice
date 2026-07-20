@@ -13,6 +13,8 @@ const PI_PACKAGE = "@earendil-works/pi-coding-agent" as const;
 const DEFAULT_NPM_REGISTRY_URL = "https://registry.npmjs.org/@earendil-works%2Fpi-coding-agent/latest";
 const DEFAULT_PI_APPROVAL_MANIFEST_URL = "https://raw.githubusercontent.com/xuziho/TinyOffice/main/updates/stable.json";
 const DEFAULT_RELEASE_MANIFEST_URL = "https://github.com/xuziho/TinyOffice/releases/latest/download/tinyoffice-stable.json";
+const UPDATE_SOURCE_TIMEOUT_MS = 8_000;
+const UPDATE_SOURCE_ATTEMPTS = 2;
 
 export interface TinyOfficeUpdateExecutor {
   start(input: { targetRelease: TinyOfficeReleaseChannelManifest["release"] }): Promise<TinyOfficeUpdateJob> | TinyOfficeUpdateJob;
@@ -201,10 +203,29 @@ export class TinyOfficeUpdateService {
   }
 
   private async fetchJson<T>(url: string): Promise<T> {
-    const response = await this.fetchImpl(url, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(8_000) });
-    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`.trim());
-    return await response.json() as T;
+    for (let attempt = 1; attempt <= UPDATE_SOURCE_ATTEMPTS; attempt += 1) {
+      let response: Response;
+      try {
+        response = await this.fetchImpl(url, {
+          headers: { Accept: "application/json" },
+          signal: AbortSignal.timeout(UPDATE_SOURCE_TIMEOUT_MS),
+        });
+      } catch (error) {
+        if (attempt < UPDATE_SOURCE_ATTEMPTS) continue;
+        throw error;
+      }
+      if (!response.ok) {
+        if (attempt < UPDATE_SOURCE_ATTEMPTS && isRetryableUpdateSourceStatus(response.status)) continue;
+        throw new Error(`${response.status} ${response.statusText}`.trim());
+      }
+      return await response.json() as T;
+    }
+    throw new Error("Update source request exhausted without a result");
   }
+}
+
+function isRetryableUpdateSourceStatus(status: number): boolean {
+  return status === 408 || status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
 }
 
 export function validateReleaseManifest(value: TinyOfficeReleaseChannelManifest): void {

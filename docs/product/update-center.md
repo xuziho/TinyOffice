@@ -16,6 +16,8 @@ Operations / Updates at `/updates` is the product surface for controlled TinyOff
 
 `GET /api/tinyoffice/updates` returns the installed TinyOffice and PI versions, npm latest version, approved version, Node compatibility, model catalog changes, source warnings, and installation eligibility.
 
+Each remote update source receives one bounded retry when the first attempt fails with a transport error, timeout, rate limit, or retryable server response. Non-retryable HTTP responses, malformed JSON, and invalid manifests fail immediately. If both attempts fail, the update check remains fail-closed and cannot authorize installation.
+
 `POST /api/tinyoffice/updates` requests installation of the exact currently approved version. It fails closed when no external update executor is configured, the runtime is incompatible, update sources cannot be checked, or the approved version is already installed.
 
 Both routes require the current TinyOffice user session. They are instance-scoped rather than Company-scoped because application code and runtime dependencies are shared by every Company.

@@ -338,6 +338,48 @@ test("chat projection uses the first message body as the entry preview", async (
   );
 });
 
+test("chat projection loads visible entry previews concurrently", async () => {
+  let activeReads = 0;
+  let maxActiveReads = 0;
+  const conversations = ["one", "two", "three"].map((suffix) => conversation({
+    conversationId: `conversation-topic-${suffix}`,
+    title: `Topic ${suffix}`,
+    conversationKind: "topic",
+    topicId: `topic-${suffix}`,
+    chatChannelId: "ops",
+    participants: [
+      memberParticipant("acme", `conversation-topic-${suffix}`, "iris-growth", "Iris"),
+      memberParticipant("acme", `conversation-topic-${suffix}`, "nora-automation", "Nora"),
+    ],
+  }));
+  const service = new ChatProjectionService({
+    conversationSource: {
+      async listConversations() {
+        return { conversations };
+      },
+    },
+    channelSource: {
+      async listChannelsForViewer() {
+        return [channel()];
+      },
+    },
+    messageSource: {
+      async listMessages(companyId, conversationId) {
+        activeReads += 1;
+        maxActiveReads = Math.max(maxActiveReads, activeReads);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        activeReads -= 1;
+        return messagePage(companyId, conversationId, `Preview for ${conversationId}`);
+      },
+    },
+  });
+
+  const page = await service.listChatProjection("acme", { participantKind: "company_member", memberId: "iris-growth" });
+
+  assert.equal(page.entries.length, 3);
+  assert.ok(maxActiveReads > 1, `expected concurrent preview reads, observed ${maxActiveReads}`);
+});
+
 test("chat projection hides archived topic conversations from active entry lists", async () => {
   const archived = conversation({
     conversationId: "conversation-topic-archived",

@@ -63,7 +63,13 @@ New Chat behavior must enter through the narrowest matching boundary. Do not add
 
 Production builds emit a Vite manifest and run `scripts/check-bundle-size.mjs`. The initial JavaScript entry must remain below 450 KiB and every async JavaScript chunk below 400 KiB. Raising these budgets requires an explicit architecture decision; a page import should normally remain behind its route boundary.
 
+Route boundaries are prefetched when the operator points at or focuses a rail/section destination. This keeps code splitting intact while normally completing the async module fetch before the click. Topic rows similarly prefetch the selected room's authoritative Message query on pointer intent.
+
 TanStack Query is the frontend server-state foundation. API reads are Query hooks, writes are mutations, and mutation/realtime updates must invalidate or update the relevant Query keys. Do not create parallel long-lived server-state stores with React `useState`, ad-hoc caches, or UI component state.
+
+The Chat loading boundary covers only the current session, Chat Projection, and selected room Messages. Directory, employee runtime summary, Tasks, Activity, and Access requests load progressively and must not hold the whole workspace behind a generic loading screen. Stable Chat reads use short, explicit freshness windows so returning to a recently viewed surface does not immediately repeat the same HTTP work; persisted realtime events still invalidate affected authoritative queries.
+
+Room sends use TanStack Query's mutation cache as a short-lived optimistic layer. The composer releases the submitted draft immediately, inserts one `deliveryState: pending` Message at the final timeline position, and then replaces that exact row with the durable `POST .../messages` response. A failed request removes the pending row and restores the submitted draft. The backend response remains authoritative; this pending row is neither persisted nor a second message model. Successful sends update only the affected room Message cache and Projection, not current session, Company Directory, or employee runtime summary.
 
 The realtime client connects to the current socket.io path `/api/realtime/socket.io`. Realtime persisted-data events are notifications, not a second data model. The default pattern is to invalidate the relevant Query keys and let HTTP clients refetch authoritative data:
 

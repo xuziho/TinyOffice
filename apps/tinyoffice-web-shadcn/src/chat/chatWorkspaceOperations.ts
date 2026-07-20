@@ -87,7 +87,7 @@ export async function sendReplyToSelectedRoom(
   value: ComposerSubmitValue,
   model: ChatShellModel,
   session: TinyOfficeCurrentSession | undefined,
-): Promise<unknown> {
+): Promise<Awaited<ReturnType<typeof sendChatRoomMessage>>> {
   const companyId = requiredTinyOfficeValue(model.companyId, "companyId");
   const roomId = requiredTinyOfficeValue(model.selectedRoomId, "roomId");
   const actorMemberId = requiredTinyOfficeValue(session?.member?.memberId, "actorMemberId");

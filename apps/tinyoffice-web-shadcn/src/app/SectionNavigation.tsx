@@ -9,10 +9,12 @@ export function SectionNavigation({
   activeView,
   section,
   onSelect,
+  onPreload,
 }: {
   activeView: AppView;
   section: PageSection;
   onSelect(view: AppView): void;
+  onPreload?(view: AppView): void;
 }): ReactElement {
   const { t } = useTranslation();
   const sectionTitle = t(section.titleKey);
@@ -34,6 +36,8 @@ export function SectionNavigation({
             <a
               href={appViewHref(item.view)}
               aria-current={item.view === activeView ? "page" : undefined}
+              onPointerEnter={() => onPreload?.(item.view)}
+              onFocus={() => onPreload?.(item.view)}
               onClick={(event) => {
                 event.preventDefault();
                 onSelect(item.view);

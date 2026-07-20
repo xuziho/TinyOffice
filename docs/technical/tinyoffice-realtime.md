@@ -81,6 +81,8 @@ Chat realtime is notification-first. REST remains authoritative for projection, 
 
 The standalone shadcn web app subscribes to the current socket.io route and imports the shared `tinyoffice/realtime-contracts` type. Persisted-data events invalidate TanStack Query keys; HTTP clients then refetch authoritative data. Streaming draft events stay in the run-state layer. Process trace append events refresh Activity queries under the selected room/source-message scope. Final persisted Messages still reconcile through `chat.message.created` and the normal Message/Projection APIs.
 
+The sender may render its own outgoing Message optimistically while the Message POST is in flight. This does not change the notification-first contract: the optimistic row is keyed separately, has `deliveryState: pending`, and is atomically replaced by the durable Message returned from the same REST mutation. If `chat.message.created` wins the race and its invalidation refetches the durable Message first, reconciliation de-duplicates the durable id instead of appending another row.
+
 ## Run Lifecycle And Cancel Boundary
 
 An AI reply run is the realtime-visible unit of work for send-button pending state, stop/cancel controls, streaming drafts, Session evidence, and process-trace linkage.

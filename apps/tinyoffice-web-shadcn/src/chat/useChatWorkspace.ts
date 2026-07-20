@@ -5,7 +5,7 @@ import { getCurrentSession } from "@/api/currentSessionClient";
 import { getCompanyDirectory } from "@/api/directoryClient";
 import { getEmployeeRuntimeSummary } from "@/api/employeeRuntimeSummaryClient";
 import { getTasksViewModel } from "@/api/tasksClient";
-import type { AccessRequestDecision, AccessRequestDto, ChatChannelMemberDto, ChatProjectionPage, CompanyDirectoryMemberEntryDto, RuntimeActivity, TinyOfficeCurrentSession } from "tinyoffice/frontend-api-contracts";
+import type { AccessRequestDecision, AccessRequestDto, ChatChannelMemberDto, ChatProjectionPage, CompanyDirectoryMemberEntryDto, MessagePage, RuntimeActivity, TinyOfficeCurrentSession } from "tinyoffice/frontend-api-contracts";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildChatShellModel, type ChatShellModel, type ChatShellSurface } from "./chatShellModel";
 import { accessRequestsForRoom } from "./chatAccessRequests";
@@ -17,6 +17,7 @@ import { chatQueryKeys } from "./chatQueryKeys";
 import { latestActivitySourceForMessages } from "./messageActivitySource";
 import { useChatRealtime } from "./useChatRealtime";
 import type { ComposerSubmitValue } from "./mentionComposerModel";
+import { appendOptimisticMessage, optimisticChatMessage, reconcileOptimisticMessage, removeOptimisticMessage } from "./optimisticChatMessage";
 import {
   activitySourceSummaryForSelection,
   addMembersToSelectedChannel,
@@ -55,6 +56,10 @@ type ActivityDisplaySnapshot = {
 };
 
 const EMPTY_RUNTIME_ACTIVITY: RuntimeActivity = { items: [] };
+const CHAT_PROJECTION_STALE_TIME_MS = 15_000;
+const CHAT_MESSAGES_STALE_TIME_MS = 15_000;
+const CHAT_DIRECTORY_STALE_TIME_MS = 60_000;
+const CURRENT_SESSION_STALE_TIME_MS = 5 * 60_000;
 
 export function activityQueryPlaceholderData(previousData: RuntimeActivity | undefined): RuntimeActivity | undefined {
   return previousData;
@@ -130,6 +135,7 @@ export function useChatWorkspace(input: { requestedRoomId?: string; currentSessi
     queryKey: chatQueryKeys.currentSession(),
     queryFn: getCurrentSession,
     enabled: !input.sessionOwnedByParent,
+    staleTime: CURRENT_SESSION_STALE_TIME_MS,
   });
 
   const session = input.currentSession ?? sessionQuery.data;
@@ -141,18 +147,21 @@ export function useChatWorkspace(input: { requestedRoomId?: string; currentSessi
     queryKey: chatQueryKeys.projection(companyId, viewer),
     queryFn: () => getChatProjection({ companyId, ...viewer }),
     enabled: hasCompanyScope,
+    staleTime: CHAT_PROJECTION_STALE_TIME_MS,
   });
 
   const directoryQuery = useQuery({
     queryKey: chatQueryKeys.directory(companyId),
     queryFn: () => getCompanyDirectory({ companyId }),
     enabled: hasCompanyScope,
+    staleTime: CHAT_DIRECTORY_STALE_TIME_MS,
   });
 
   const employeeRuntimeSummaryQuery = useQuery({
     queryKey: chatQueryKeys.employeeRuntimeSummary(companyId),
     queryFn: () => getEmployeeRuntimeSummary({ companyId }),
     enabled: hasCompanyScope,
+    staleTime: 5_000,
   });
 
   const tasksQueryInput = {
@@ -186,6 +195,7 @@ export function useChatWorkspace(input: { requestedRoomId?: string; currentSessi
     queryKey: chatQueryKeys.roomMessages(companyId, baseModel.selectedRoomId, viewer),
     queryFn: () => listChatRoomMessages({ companyId, roomId: baseModel.selectedRoomId, ...viewer }),
     enabled: Boolean(hasCompanyScope && baseModel.selectedRoomId),
+    staleTime: CHAT_MESSAGES_STALE_TIME_MS,
   });
 
   const activeRunQuery = useQuery({
@@ -220,6 +230,7 @@ export function useChatWorkspace(input: { requestedRoomId?: string; currentSessi
     queryFn: () => getAccessRequests({ companyId }),
     enabled: hasCompanyScope,
     refetchInterval: 3000,
+    staleTime: 3_000,
   });
 
   const model = useMemo(
@@ -331,7 +342,7 @@ export function useChatWorkspace(input: { requestedRoomId?: string; currentSessi
 
   useEffect(() => {
     const roomId = model.selectedRoomId;
-    const lastReadMessageId = messagesQuery.data?.messages.at(-1)?.messageId;
+    const lastReadMessageId = messagesQuery.data?.messages.filter((message) => message.deliveryState !== "pending").at(-1)?.messageId;
     if (!companyId || !roomId || !lastReadMessageId || markReadMutation.isPending) {
       return;
     }
@@ -362,8 +373,44 @@ export function useChatWorkspace(input: { requestedRoomId?: string; currentSessi
 
   const sendReplyMutation = useMutation({
     mutationFn: (value: ComposerSubmitValue) => sendReplyToSelectedRoom(value, model, session),
-    onSuccess: async () => {
-      await invalidateChatWorkspace(queryClient, companyId, model.selectedRoomId);
+    onMutate: async (value: ComposerSubmitValue) => {
+      const roomId = model.selectedRoomId;
+      if (!companyId || !roomId || !session) {
+        return undefined;
+      }
+      const queryKey = chatQueryKeys.roomMessages(companyId, roomId, viewer);
+      await queryClient.cancelQueries({ queryKey });
+      const optimisticMessageId = `optimistic:${crypto.randomUUID()}`;
+      const createdAt = new Date().toISOString();
+      queryClient.setQueryData<MessagePage>(
+        queryKey,
+        (current) => appendOptimisticMessage(current, optimisticChatMessage({
+          companyId,
+          roomId,
+          session,
+          value,
+          messageId: optimisticMessageId,
+          createdAt,
+        })),
+      );
+      return { queryKey, optimisticMessageId, roomId };
+    },
+    onError: (_error, _value, context) => {
+      if (context) {
+        queryClient.setQueryData<MessagePage>(
+          context.queryKey,
+          (current) => removeOptimisticMessage(current, context.optimisticMessageId),
+        );
+      }
+    },
+    onSuccess: async (sent, _value, context) => {
+      if (context) {
+        queryClient.setQueryData<MessagePage>(
+          context.queryKey,
+          (current) => reconcileOptimisticMessage(current, context.optimisticMessageId, sent.message),
+        );
+      }
+      await queryClient.invalidateQueries({ queryKey: chatQueryKeys.projectionScope(companyId) });
     },
   });
 
@@ -585,15 +632,18 @@ export function useChatWorkspace(input: { requestedRoomId?: string; currentSessi
     setActivitySelection({ sourceMessageId });
   }, []);
 
-  const workspaceQueries = !input.sessionOwnedByParent
+  const allWorkspaceQueries = !input.sessionOwnedByParent
     ? [sessionQuery, projectionQuery, directoryQuery, employeeRuntimeSummaryQuery, tasksQuery, messagesQuery, activityQuery, accessRequestsQuery]
     : [projectionQuery, directoryQuery, employeeRuntimeSummaryQuery, tasksQuery, messagesQuery, activityQuery, accessRequestsQuery];
+  const criticalWorkspaceQueries = !input.sessionOwnedByParent
+    ? [sessionQuery, projectionQuery, messagesQuery]
+    : [projectionQuery, messagesQuery];
 
   return {
     model,
     currentSession: session,
-    status: statusFromQueries(workspaceQueries),
-    error: errorFromQueries(workspaceQueries) ?? mutationError(markReadMutation.error) ?? mutationError(createEntryMutation.error) ?? mutationError(sendReplyMutation.error) ?? mutationError(updateTitleMutation.error) ?? mutationError(archiveEntryMutation.error) ?? mutationError(createChannelMutation.error) ?? mutationError(updateChannelDetailsMutation.error) ?? mutationError(addChannelMembersMutation.error) ?? mutationError(removeChannelMemberMutation.error) ?? mutationError(dissolveChannelMutation.error) ?? mutationError(cancelRunMutation.error) ?? mutationError(resolveAccessRequestMutation.error),
+    status: statusFromQueries(criticalWorkspaceQueries),
+    error: errorFromQueries(allWorkspaceQueries) ?? mutationError(markReadMutation.error) ?? mutationError(createEntryMutation.error) ?? mutationError(sendReplyMutation.error) ?? mutationError(updateTitleMutation.error) ?? mutationError(archiveEntryMutation.error) ?? mutationError(createChannelMutation.error) ?? mutationError(updateChannelDetailsMutation.error) ?? mutationError(addChannelMembersMutation.error) ?? mutationError(removeChannelMemberMutation.error) ?? mutationError(dissolveChannelMutation.error) ?? mutationError(cancelRunMutation.error) ?? mutationError(resolveAccessRequestMutation.error),
     loadWorkspace,
     selectSurface,
     selectEntry,

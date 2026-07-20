@@ -95,9 +95,17 @@ export function RoomReplyComposer({
   const uploadedAttachmentIds = pendingImages
     .map((image) => image.attachmentId)
     .filter((attachmentId): attachmentId is string => Boolean(attachmentId));
+  const uploadedAttachments = pendingImages.flatMap((image) => image.attachmentId ? [{
+    attachmentId: image.attachmentId,
+    fileName: image.fileName,
+    mimeType: image.mimeType,
+    byteLength: image.file.size,
+    previewUrl: image.previewObjectUrl,
+  }] : []);
   const submitValue = buildComposerSubmitValue({
     draft,
     uploadedAttachmentIds,
+    uploadedAttachments,
     mentionCandidates,
     selectedMentionCandidates,
   });
@@ -195,13 +203,20 @@ export function RoomReplyComposer({
     }
     setIsSending(true);
     setError(undefined);
+    const submittedDraft = draft;
+    const submittedMentions = selectedMentionCandidates;
+    setDraft("");
+    setSelectedMentionCandidates([]);
+    setMentionMenuOpen(false);
     try {
       await onSendReply(submitValue);
-      setDraft("");
-      setSelectedMentionCandidates([]);
-      setMentionMenuOpen(false);
       clearPendingImages();
     } catch (caught) {
+      setDraft((current) => current.trim() ? `${submittedDraft}\n${current}` : submittedDraft);
+      setSelectedMentionCandidates((current) => [
+        ...submittedMentions,
+        ...current.filter((candidate) => !submittedMentions.some((submitted) => submitted.memberId === candidate.memberId)),
+      ]);
       setError(composerErrorMessage(caught));
     } finally {
       setIsSending(false);

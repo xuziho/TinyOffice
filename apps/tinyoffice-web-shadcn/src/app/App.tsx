@@ -41,23 +41,64 @@ import type { CompaniesAdminViewModel, TinyOfficeCurrentSession } from "tinyoffi
 import { isAiRuntimeView, isOperationsView, isWorkforceView, pageSectionForView } from "./navigationStructure";
 import { SectionNavigation } from "./SectionNavigation";
 
-const AccessPage = lazy(() => import("@/access/AccessPage").then((module) => ({ default: module.AccessPage })));
-const CompanyLifecyclePage = lazy(() => import("./CompanyLifecyclePage").then((module) => ({ default: module.CompanyLifecyclePage })));
-const BackupPage = lazy(() => import("@/backup/BackupPage").then((module) => ({ default: module.BackupPage })));
-const CapabilitiesPage = lazy(() => import("@/capabilities/CapabilitiesPage").then((module) => ({ default: module.CapabilitiesPage })));
-const ChatWorkspaceRoute = lazy(() => import("@/chat/ChatWorkspaceRoute").then((module) => ({ default: module.ChatWorkspaceRoute })));
-const DoctorPage = lazy(() => import("@/doctor/DoctorPage").then((module) => ({ default: module.DoctorPage })));
-const EmployeesPage = lazy(() => import("@/employees/EmployeesPage").then((module) => ({ default: module.EmployeesPage })));
-const IntegrationsPage = lazy(() => import("@/integrations/IntegrationsPage").then((module) => ({ default: module.IntegrationsPage })));
-const McpPage = lazy(() => import("@/mcp/McpPage").then((module) => ({ default: module.McpPage })));
-const OwnerOnboardingPage = lazy(() => import("@/onboarding/OwnerOnboardingPage").then((module) => ({ default: module.OwnerOnboardingPage })));
-const PromptPolicyPage = lazy(() => import("@/prompt/PromptPolicyPage").then((module) => ({ default: module.PromptPolicyPage })));
-const SessionsPage = lazy(() => import("@/sessions/SessionsPage").then((module) => ({ default: module.SessionsPage })));
-const SettingsPage = lazy(() => import("@/settings/SettingsPage").then((module) => ({ default: module.SettingsPage })));
-const CompanySkillsPage = lazy(() => import("@/skills/CompanySkillsPage").then((module) => ({ default: module.CompanySkillsPage })));
-const SystemAiPage = lazy(() => import("@/system-ai/SystemAiPage").then((module) => ({ default: module.SystemAiPage })));
-const TasksPage = lazy(() => import("@/tasks/TasksPage").then((module) => ({ default: module.TasksPage })));
-const UpdatesPage = lazy(() => import("@/updates/UpdatesPage").then((module) => ({ default: module.UpdatesPage })));
+const loadAccessPage = () => import("@/access/AccessPage").then((module) => ({ default: module.AccessPage }));
+const loadCompanyLifecyclePage = () => import("./CompanyLifecyclePage").then((module) => ({ default: module.CompanyLifecyclePage }));
+const loadBackupPage = () => import("@/backup/BackupPage").then((module) => ({ default: module.BackupPage }));
+const loadCapabilitiesPage = () => import("@/capabilities/CapabilitiesPage").then((module) => ({ default: module.CapabilitiesPage }));
+const loadChatWorkspaceRoute = () => import("@/chat/ChatWorkspaceRoute").then((module) => ({ default: module.ChatWorkspaceRoute }));
+const loadDoctorPage = () => import("@/doctor/DoctorPage").then((module) => ({ default: module.DoctorPage }));
+const loadEmployeesPage = () => import("@/employees/EmployeesPage").then((module) => ({ default: module.EmployeesPage }));
+const loadIntegrationsPage = () => import("@/integrations/IntegrationsPage").then((module) => ({ default: module.IntegrationsPage }));
+const loadMcpPage = () => import("@/mcp/McpPage").then((module) => ({ default: module.McpPage }));
+const loadOwnerOnboardingPage = () => import("@/onboarding/OwnerOnboardingPage").then((module) => ({ default: module.OwnerOnboardingPage }));
+const loadPromptPolicyPage = () => import("@/prompt/PromptPolicyPage").then((module) => ({ default: module.PromptPolicyPage }));
+const loadSessionsPage = () => import("@/sessions/SessionsPage").then((module) => ({ default: module.SessionsPage }));
+const loadSettingsPage = () => import("@/settings/SettingsPage").then((module) => ({ default: module.SettingsPage }));
+const loadCompanySkillsPage = () => import("@/skills/CompanySkillsPage").then((module) => ({ default: module.CompanySkillsPage }));
+const loadSystemAiPage = () => import("@/system-ai/SystemAiPage").then((module) => ({ default: module.SystemAiPage }));
+const loadTasksPage = () => import("@/tasks/TasksPage").then((module) => ({ default: module.TasksPage }));
+const loadUpdatesPage = () => import("@/updates/UpdatesPage").then((module) => ({ default: module.UpdatesPage }));
+
+const AccessPage = lazy(loadAccessPage);
+const CompanyLifecyclePage = lazy(loadCompanyLifecyclePage);
+const BackupPage = lazy(loadBackupPage);
+const CapabilitiesPage = lazy(loadCapabilitiesPage);
+const ChatWorkspaceRoute = lazy(loadChatWorkspaceRoute);
+const DoctorPage = lazy(loadDoctorPage);
+const EmployeesPage = lazy(loadEmployeesPage);
+const IntegrationsPage = lazy(loadIntegrationsPage);
+const McpPage = lazy(loadMcpPage);
+const OwnerOnboardingPage = lazy(loadOwnerOnboardingPage);
+const PromptPolicyPage = lazy(loadPromptPolicyPage);
+const SessionsPage = lazy(loadSessionsPage);
+const SettingsPage = lazy(loadSettingsPage);
+const CompanySkillsPage = lazy(loadCompanySkillsPage);
+const SystemAiPage = lazy(loadSystemAiPage);
+const TasksPage = lazy(loadTasksPage);
+const UpdatesPage = lazy(loadUpdatesPage);
+
+const viewModuleLoaders: Partial<Record<AppView, () => Promise<unknown>>> = {
+  access: loadAccessPage,
+  backup: loadBackupPage,
+  capabilities: loadCapabilitiesPage,
+  chat: loadChatWorkspaceRoute,
+  company: loadCompanyLifecyclePage,
+  doctor: loadDoctorPage,
+  employees: loadEmployeesPage,
+  integrations: loadIntegrationsPage,
+  mcp: loadMcpPage,
+  prompt: loadPromptPolicyPage,
+  sessions: loadSessionsPage,
+  settings: loadSettingsPage,
+  skills: loadCompanySkillsPage,
+  "system-ai": loadSystemAiPage,
+  tasks: loadTasksPage,
+  updates: loadUpdatesPage,
+};
+
+function preloadView(view: AppView): void {
+  void viewModuleLoaders[view]?.();
+}
 
 export function App(): ReactElement {
   const { t } = useTranslation();
@@ -257,7 +298,7 @@ export function App(): ReactElement {
         </nav>
         <section className={`min-w-0 flex-1 overflow-hidden ${activeView === "chat" || activeView === "tasks" ? "" : "tiny-soft-retro-product"}`}>
           <div className={pageSection ? "grid h-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden" : "h-full overflow-hidden"}>
-          {pageSection ? <SectionNavigation activeView={activeView} section={pageSection} onSelect={selectView} /> : null}
+          {pageSection ? <SectionNavigation activeView={activeView} section={pageSection} onSelect={selectView} onPreload={preloadView} /> : null}
           <div className="h-full min-h-0 overflow-hidden">
           <Suspense fallback={<RouteLoadingFallback />}>
           {activeView === "company" ? (
@@ -445,6 +486,8 @@ function ViewButton({
       <a
         href={disabled ? undefined : href}
         aria-disabled={disabled || undefined}
+        onPointerEnter={() => preloadView(view)}
+        onFocus={() => preloadView(view)}
         onClick={(event: MouseEvent<HTMLAnchorElement>) => {
           if (disabled) {
             event.preventDefault();

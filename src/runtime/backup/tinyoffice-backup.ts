@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile, cp, rename } from "node:fs/promises";
+import { copyFile, cp, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rm, stat, writeFile, rename } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -119,6 +119,34 @@ async function exists(target: string): Promise<boolean> {
   try { await stat(target); return true; } catch { return false; }
 }
 
+async function copyManagedRoot(source: string, destination: string): Promise<void> {
+  const resolvedRoot = await realpath(source);
+  if (!(await stat(resolvedRoot)).isDirectory()) throw new Error(`Managed backup root is not a directory: ${source}`);
+  await copyManagedDirectory(resolvedRoot, destination, resolvedRoot);
+}
+
+async function copyManagedDirectory(source: string, destination: string, resolvedRoot: string): Promise<void> {
+  await mkdir(destination, { recursive: true });
+  const entries = await readdir(source, { withFileTypes: true });
+  for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+    const sourcePath = path.join(source, entry.name);
+    const destinationPath = path.join(destination, entry.name);
+    const entryStat = await lstat(sourcePath);
+    if (entryStat.isSymbolicLink()) {
+      throw new Error(`Managed backup root contains an unsupported symbolic link: ${path.relative(resolvedRoot, sourcePath)}`);
+    }
+    if (entryStat.isDirectory()) {
+      await copyManagedDirectory(sourcePath, destinationPath, resolvedRoot);
+      continue;
+    }
+    if (entryStat.isFile()) {
+      await copyFile(sourcePath, destinationPath);
+      continue;
+    }
+    throw new Error(`Managed backup root contains an unsupported filesystem entry: ${path.relative(resolvedRoot, sourcePath)}`);
+  }
+}
+
 export async function createTinyOfficeBackup(input: {
   repoRoot: string;
   outputDirectory?: string;
@@ -148,7 +176,7 @@ export async function createTinyOfficeBackup(input: {
     for (const root of roots) {
       const present = await exists(root.absolute);
       fileRoots.push({ source: root.source, relativePath: root.relativePath, present });
-      if (present) await cp(root.absolute, path.join(stagingRoot, root.relativePath), { recursive: true, preserveTimestamps: true });
+      if (present) await copyManagedRoot(root.absolute, path.join(stagingRoot, root.relativePath));
     }
 
     const packageJson = JSON.parse(await readFile(path.join(input.repoRoot, "package.json"), "utf8")) as { version?: string };

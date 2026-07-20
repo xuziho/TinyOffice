@@ -105,3 +105,10 @@ test("standalone management pages share one header composition", () => {
     assert.match(source, /<ManagementPageHeader\b/);
   }
 });
+
+test("the shared page slot inherits the application viewport height", () => {
+  const app = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
+
+  assert.match(app, /<div className="h-full min-h-0 overflow-hidden">/);
+  assert.match(css, /html,[\s\S]*?body,[\s\S]*?#root\s*\{[\s\S]*?height:\s*100%;[\s\S]*?overflow:\s*hidden;/);
+});

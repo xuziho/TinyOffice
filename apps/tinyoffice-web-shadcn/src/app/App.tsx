@@ -258,7 +258,7 @@ export function App(): ReactElement {
         <section className={`min-w-0 flex-1 overflow-hidden ${activeView === "chat" || activeView === "tasks" ? "" : "tiny-soft-retro-product"}`}>
           <div className={pageSection ? "grid h-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden" : "h-full overflow-hidden"}>
           {pageSection ? <SectionNavigation activeView={activeView} section={pageSection} onSelect={selectView} /> : null}
-          <div className="min-h-0 overflow-hidden">
+          <div className="h-full min-h-0 overflow-hidden">
           <Suspense fallback={<RouteLoadingFallback />}>
           {activeView === "company" ? (
             <CompanyLifecyclePage currentSession={currentSession} />

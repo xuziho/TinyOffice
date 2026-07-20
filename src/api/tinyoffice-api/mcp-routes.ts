@@ -20,26 +20,6 @@ export function registerMcpRoutes(app: Hono, options: TinyOfficeApiOptions): voi
     const companyId = api.companyIdFromContext(c);
     return api.jsonResponse(c, await service(options).loadState(companyId));
   });
-  app.put("/api/companies/:companyId/mcp/servers", async (c) => {
-    const companyId = api.companyIdFromContext(c);
-    await service(options).saveServer(await body(c));
-    return api.jsonResponse(c, await service(options).loadState(companyId));
-  });
-  app.put("/api/companies/:companyId/mcp/connections", async (c) => {
-    const companyId = api.companyIdFromContext(c);
-    await service(options).saveConnection(await body(c));
-    return api.jsonResponse(c, await service(options).loadState(companyId));
-  });
-  app.put("/api/companies/:companyId/mcp/assignments", async (c) => {
-    const companyId = api.companyIdFromContext(c);
-    await service(options).saveAssignment(companyId, await body(c));
-    return api.jsonResponse(c, await service(options).loadState(companyId));
-  });
-  app.delete("/api/companies/:companyId/mcp/assignments/:assignmentId", async (c) => {
-    const companyId = api.companyIdFromContext(c);
-    await service(options).deleteAssignment(companyId, c.req.param("assignmentId"));
-    return api.jsonResponse(c, await service(options).loadState(companyId));
-  });
   app.post("/api/companies/:companyId/mcp/check", async (c) => {
     const companyId = api.companyIdFromContext(c);
     const input = await body(c);

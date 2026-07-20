@@ -37,7 +37,7 @@ The durable objects are:
 
 Installing an MCP server does not automatically expose it to every Company. Runtime discovery is assignment-based. The model-visible capability registry names `mcp.tools.list` and `mcp.tool.call`; full MCP tool schemas are loaded only when an employee calls the list capability, so large MCP catalogs do not inflate every turn. If one assigned connection is unavailable, tools from healthy connections remain discoverable and the failed connection is returned separately in `unavailableConnections`.
 
-The standalone `/mcp` page is the explicit Owner management surface. It configures deployment-level servers and connections, then assigns a connection to one Company or one runtime-capable employee. MCP is not hidden under External Intake because Intake transports events into TinyOffice while MCP gives employees outbound tools.
+The standalone `/mcp` page is a read-only Owner visibility surface. It shows deployment-level servers and connections plus Company and Employee assignments, but it does not expose manual configuration forms. MCP is not hidden under External Intake because Intake transports events into TinyOffice while MCP gives employees outbound tools.
 
 Connection records store environment-variable references, never credential values. A stdio environment entry maps the variable name expected by the MCP server to a host environment variable. An HTTP header entry maps a header name to a host environment variable. The browser can see reference names and whether they resolve, but never receives the resolved value.
 
@@ -45,8 +45,8 @@ The runtime creates and closes an MCP client around each discovery or call. This
 
 Assignment is the product authority boundary. Once the Owner assigns a connection, ordinary employee use does not add an invented generic business-confirmation layer. The MCP tool itself may still expose its own protocol or application semantics.
 
-Operators may also ask an employee to configure MCP in Chat. The employee first reads `mcp.admin.describe`, validates and presents the exact command or URL, environment-reference names, scope, and affected employees, and then uses `mcp.admin.configure` only after explicit operator confirmation. This path writes the same durable objects as the `/mcp` page; it does not edit PI global configuration or accept secret values in Chat.
+Operators configure MCP by asking an employee in Chat. The employee first reads `mcp.admin.describe`, validates and presents the exact command or URL, environment-reference names, scope, and affected employees, and then uses `mcp.admin.configure` only after explicit operator confirmation. This capability path is the only active product path that writes MCP Server, Connection, and Assignment objects; it does not edit PI global configuration or accept secret values in Chat.
 
 ## Current Limit
 
-The first foundation supports stdio and Streamable HTTP definitions entered through the Owner page or a confirmed Chat capability. OAuth browser handshakes, an MCP marketplace, automated package provenance review, server update automation, and per-tool allow/deny overrides are not yet product behavior. They must build on the same Server / Connection / Assignment boundary rather than bypass it through global PI configuration.
+The first foundation supports stdio and Streamable HTTP definitions created through a confirmed Chat capability and inspected through the Owner page. OAuth browser handshakes, an MCP marketplace, automated package provenance review, server update automation, and per-tool allow/deny overrides are not yet product behavior. They must build on the same Server / Connection / Assignment boundary rather than bypass it through global PI configuration.

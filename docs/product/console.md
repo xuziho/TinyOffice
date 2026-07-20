@@ -35,7 +35,7 @@ The shared shell uses three non-overlapping levels: the section title identifies
 | Chat | Current rebuilt shadcn surface | Chat Projection, Conversation, and Message APIs |
 | Company Lifecycle | Organization rail entry at `/company` | PostgreSQL `companies`, Prompt Policy defaults, Access defaults |
 | Integrations | Integrations rail entry at `/integrations` | External Intake setup guidance |
-| MCP | MCP rail entry at `/mcp` | Deployment MCP servers and connections plus Company/Employee assignments |
+| MCP | Read-only MCP rail entry at `/mcp`; confirmed Chat configures changes | Deployment MCP servers and connections plus Company/Employee assignments |
 | Settings | Current bottom rail module at `/settings` | Account profile and Owner security |
 | Updates | Operations > Updates at `/updates` | Update status from npm and the TinyOffice stable approval manifest |
 | Tasks | Current `Tasks` rail module at `/tasks` | Work repositories and Tasks view model |

@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { deleteMcpAssignment, getMcpState, saveMcpAssignment, saveMcpConnection, saveMcpServer } from "./mcpClient";
+import { getMcpState } from "./mcpClient";
 
-test("MCP client uses the company-scoped management boundary", async () => {
+test("MCP client exposes only the company-scoped read model", async () => {
   const requests: Array<{ url: string; init?: RequestInit }> = [];
   const previousFetch = globalThis.fetch;
   const previousWindow = globalThis.window;
@@ -18,10 +18,6 @@ test("MCP client uses the company-scoped management boundary", async () => {
 
   try {
     await getMcpState({ companyId: "acme" });
-    await saveMcpServer({ companyId: "acme", body: { serverId: "demo" } });
-    await saveMcpConnection({ companyId: "acme", body: { connectionId: "demo-main" } });
-    await saveMcpAssignment({ companyId: "acme", body: { connectionId: "demo-main" } });
-    await deleteMcpAssignment({ companyId: "acme", assignmentId: "assignment/1" });
   } finally {
     globalThis.fetch = previousFetch;
     globalThis.window = previousWindow;
@@ -29,9 +25,5 @@ test("MCP client uses the company-scoped management boundary", async () => {
 
   assert.deepEqual(requests.map((request) => [request.url, request.init?.method ?? "GET"]), [
     ["http://127.0.0.1:5175/api/companies/acme/mcp", "GET"],
-    ["http://127.0.0.1:5175/api/companies/acme/mcp/servers", "PUT"],
-    ["http://127.0.0.1:5175/api/companies/acme/mcp/connections", "PUT"],
-    ["http://127.0.0.1:5175/api/companies/acme/mcp/assignments", "PUT"],
-    ["http://127.0.0.1:5175/api/companies/acme/mcp/assignments/assignment%2F1", "DELETE"],
   ]);
 });

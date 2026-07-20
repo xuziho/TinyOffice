@@ -58,6 +58,8 @@ CREATE TABLE IF NOT EXISTS member_runtime_profiles (
   FOREIGN KEY (company_id, member_id) REFERENCES company_members(company_id, id) ON DELETE CASCADE
 );
 
+${buildMcpFoundationSchemaSql()}
+
 CREATE TABLE IF NOT EXISTS chat_channels (
   company_id text NOT NULL REFERENCES companies(company_id) ON DELETE CASCADE,
   channel_id text NOT NULL,
@@ -784,6 +786,87 @@ ON system_ai_audit_events(company_id, capability, status, occurred_at);
 `;
 }
 
+function buildMcpFoundationSchemaSql(): string {
+  return `
+CREATE TABLE IF NOT EXISTS mcp_servers (
+  server_id text PRIMARY KEY,
+  display_name text NOT NULL CHECK (btrim(display_name) <> ''),
+  transport text NOT NULL CHECK (transport IN ('stdio', 'streamable_http')),
+  command text,
+  args_json jsonb NOT NULL DEFAULT '[]'::jsonb,
+  url text,
+  enabled boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL,
+  updated_at timestamptz NOT NULL,
+  CONSTRAINT mcp_servers_transport_config_check CHECK (
+    (transport = 'stdio' AND command IS NOT NULL AND btrim(command) <> '' AND url IS NULL)
+    OR
+    (transport = 'streamable_http' AND url IS NOT NULL AND btrim(url) <> '' AND command IS NULL)
+  )
+);
+
+CREATE TABLE IF NOT EXISTS mcp_connections (
+  connection_id text PRIMARY KEY,
+  server_id text NOT NULL REFERENCES mcp_servers(server_id) ON DELETE CASCADE,
+  display_name text NOT NULL CHECK (btrim(display_name) <> ''),
+  env_refs_json jsonb NOT NULL DEFAULT '{}'::jsonb,
+  header_refs_json jsonb NOT NULL DEFAULT '{}'::jsonb,
+  enabled boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL,
+  updated_at timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_mcp_connections_server
+ON mcp_connections(server_id);
+
+CREATE TABLE IF NOT EXISTS mcp_assignments (
+  company_id text NOT NULL REFERENCES companies(company_id) ON DELETE CASCADE,
+  assignment_id text NOT NULL,
+  connection_id text NOT NULL REFERENCES mcp_connections(connection_id) ON DELETE CASCADE,
+  scope_kind text NOT NULL CHECK (scope_kind IN ('company', 'employee')),
+  member_id text,
+  enabled boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL,
+  updated_at timestamptz NOT NULL,
+  PRIMARY KEY (company_id, assignment_id),
+  FOREIGN KEY (company_id, member_id) REFERENCES company_members(company_id, id) ON DELETE CASCADE,
+  CONSTRAINT mcp_assignments_scope_check CHECK (
+    (scope_kind = 'company' AND member_id IS NULL)
+    OR
+    (scope_kind = 'employee' AND member_id IS NOT NULL AND btrim(member_id) <> '')
+  )
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_mcp_assignments_company_connection
+ON mcp_assignments(company_id, connection_id)
+WHERE scope_kind = 'company';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_mcp_assignments_employee_connection
+ON mcp_assignments(company_id, connection_id, member_id)
+WHERE scope_kind = 'employee';
+CREATE INDEX IF NOT EXISTS idx_mcp_assignments_member
+ON mcp_assignments(company_id, member_id)
+WHERE enabled = true;
+
+CREATE TABLE IF NOT EXISTS mcp_tool_audit_events (
+  company_id text NOT NULL REFERENCES companies(company_id) ON DELETE CASCADE,
+  event_id text NOT NULL,
+  connection_id text NOT NULL REFERENCES mcp_connections(connection_id),
+  member_id text NOT NULL,
+  session_key text,
+  tool_name text NOT NULL CHECK (btrim(tool_name) <> ''),
+  status text NOT NULL CHECK (status IN ('started', 'succeeded', 'failed', 'canceled', 'timed_out')),
+  input_json jsonb,
+  output_json jsonb,
+  duration_ms integer CHECK (duration_ms IS NULL OR duration_ms >= 0),
+  error text,
+  created_at timestamptz NOT NULL,
+  completed_at timestamptz,
+  PRIMARY KEY (company_id, event_id),
+  FOREIGN KEY (company_id, member_id) REFERENCES company_members(company_id, id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_mcp_tool_audit_events_member_created
+ON mcp_tool_audit_events(company_id, member_id, created_at DESC);
+`;
+}
+
 export const postgresSchemaMigrations: PostgresSchemaMigration[] = [
   {
     id: "pg_001_pre_release_baseline_20260704_chat_member_identity",
@@ -1116,5 +1199,9 @@ ALTER TABLE user_profiles
 ALTER TABLE user_profiles
   ADD CONSTRAINT user_profiles_ui_theme_check CHECK (ui_theme IN ('sakura', 'ocean', 'forest', 'violet', 'neutral'));
 `,
+  },
+  {
+    id: "pg_018_mcp_foundation_20260720",
+    sql: buildMcpFoundationSchemaSql(),
   },
 ];

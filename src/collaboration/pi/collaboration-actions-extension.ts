@@ -303,7 +303,7 @@ export default function collaborationActionsExtension(pi: ExtensionAPI) {
     label: "TinyOffice Capability Call",
     description: "Execute a registered TinyOffice capability from the current employee runtime context.",
     parameters: TinyOfficeCapabilityCallParams,
-    async execute(_toolCallId: string, params: unknown) {
+    async execute(_toolCallId: string, params: unknown, signal: AbortSignal) {
       const typed = params as {
         capabilityId?: unknown;
         input?: unknown;
@@ -323,6 +323,7 @@ export default function collaborationActionsExtension(pi: ExtensionAPI) {
         messageId: context?.messageId,
         chatEntryId: context?.chatEntryId,
         sessionKey: context?.sessionKey,
+        signal,
         capabilityId: typed.capabilityId,
         input: typed.input,
         confirmation: typed.confirmation,

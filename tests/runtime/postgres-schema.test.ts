@@ -64,6 +64,10 @@ test("postgres initial schema covers active tables and excludes retired legacy t
     "handoff_replay_ledger",
     "system_ai_provider_configs",
     "system_ai_audit_events",
+    "mcp_servers",
+    "mcp_connections",
+    "mcp_assignments",
+    "mcp_tool_audit_events",
   ]) {
     assert.match(sql, new RegExp("CREATE TABLE IF NOT EXISTS " + tableName + "\\b"));
   }
@@ -127,6 +131,8 @@ test("postgres initial schema scopes shared runtime tables by company", () => {
     "handoff_replay_ledger",
     "system_ai_provider_configs",
     "system_ai_audit_events",
+    "mcp_assignments",
+    "mcp_tool_audit_events",
   ];
 
   assert.match(sql, /CREATE TABLE IF NOT EXISTS companies \(\s+company_id text PRIMARY KEY,/);
@@ -240,6 +246,7 @@ test("postgres migrations include the baseline and Channel role hard cut without
       "pg_015_company_member_identity_integrity_20260715",
       "pg_016_user_ui_locale_20260716",
       "pg_017_user_ui_theme_20260716",
+      "pg_018_mcp_foundation_20260720",
     ],
   );
   assert.equal(postgresSchemaMigrations[0]?.sql, buildInitialPostgresSchemaSql());
@@ -265,6 +272,9 @@ test("postgres migrations include the baseline and Channel role hard cut without
   assert.match(migrationSql, /company_members_role_nonempty/);
   assert.match(migrationSql, /user_profiles_ui_locale_check/);
   assert.match(migrationSql, /user_profiles_ui_theme_check/);
+  assert.match(migrationSql, /CREATE TABLE IF NOT EXISTS mcp_servers/);
+  assert.match(migrationSql, /mcp_servers_transport_config_check/);
+  assert.match(migrationSql, /mcp_assignments_scope_check/);
   assert.doesNotMatch(migrationSql, /assignee_employee_id|created_by_employee_id|handoff_from_employee_id/);
   assert.doesNotMatch(migrationSql, /requested_by_employee_id|requested_approver_id|resolved_by_participant_id|actor_employee_id/);
   assert.doesNotMatch(createTableSql(migrationSql, "work_tasks"), /owner_employee_id/);
@@ -314,6 +324,7 @@ test("postgres migration runner applies pending migrations transactionally", asy
     "pg_015_company_member_identity_integrity_20260715",
     "pg_016_user_ui_locale_20260716",
     "pg_017_user_ui_theme_20260716",
+    "pg_018_mcp_foundation_20260720",
   ]);
   assert.ok(client.queries.some((query) => query === "BEGIN"));
   assert.ok(client.queries.some((query) => /CREATE TABLE IF NOT EXISTS schema_migrations/.test(query)));
@@ -345,6 +356,7 @@ test("postgres migration runner applies current migrations after the baseline", 
     "pg_015_company_member_identity_integrity_20260715",
     "pg_016_user_ui_locale_20260716",
     "pg_017_user_ui_theme_20260716",
+    "pg_018_mcp_foundation_20260720",
   ]);
   assert.ok(client.queries.some((query) => /ALTER TABLE chat_channel_members\s+DROP COLUMN IF EXISTS role/.test(query)));
   assert.ok(client.queries.some((query) => /CREATE TABLE IF NOT EXISTS work_blocked_recovery_requests/.test(query)));
@@ -370,6 +382,7 @@ test("postgres migration runner skips current migrations when already applied", 
     "pg_015_company_member_identity_integrity_20260715",
     "pg_016_user_ui_locale_20260716",
     "pg_017_user_ui_theme_20260716",
+    "pg_018_mcp_foundation_20260720",
   ]);
 
   const result = await runPostgresSchemaMigrations(client);

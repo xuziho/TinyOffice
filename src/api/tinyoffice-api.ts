@@ -17,6 +17,7 @@ import { registerEmployeeRuntimeSummaryRoutes } from "./tinyoffice-api/employee-
 import { registerIntakeRoutes } from "./tinyoffice-api/intake-routes.js";
 import { registerMemberRuntimeRoutes } from "./tinyoffice-api/member-runtime-routes.js";
 import { registerMemberDirectoryRoutes } from "./tinyoffice-api/member-directory-routes.js";
+import { registerMcpRoutes } from "./tinyoffice-api/mcp-routes.js";
 import { registerPromptPolicyRoutes } from "./tinyoffice-api/prompt-policy-routes.js";
 import { registerRecruitmentRoutes } from "./tinyoffice-api/recruitment-routes.js";
 import { registerRuntimeModelsRoutes } from "./tinyoffice-api/runtime-models-routes.js";
@@ -89,6 +90,7 @@ export function createTinyOfficeApi(options: TinyOfficeApiOptions): Hono {
   registerMemberDirectoryRoutes(app, options);
   registerMemberRuntimeRoutes(app, options);
   registerCapabilitiesRoutes(app, options);
+  registerMcpRoutes(app, options);
   registerBrandingRoutes(app, options);
   registerRuntimeModelsRoutes(app, options);
   registerRecruitmentRoutes(app, options);

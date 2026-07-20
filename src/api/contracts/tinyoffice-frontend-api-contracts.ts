@@ -1633,3 +1633,47 @@ export type TasksRunActionResult = {
   status: TasksRunStatus;
   message: string;
 };
+
+export type McpServerView = {
+  serverId: string;
+  displayName: string;
+  transport: "stdio" | "streamable_http";
+  command?: string;
+  args: string[];
+  url?: string;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type McpConnectionView = {
+  connectionId: string;
+  serverId: string;
+  displayName: string;
+  envRefs: Record<string, string>;
+  headerRefs: Record<string, string>;
+  resolvedEnvironment: Record<string, boolean>;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type McpAssignmentView = {
+  companyId: string;
+  assignmentId: string;
+  connectionId: string;
+  scopeKind: "company" | "employee";
+  memberId?: string;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type McpAdminView = {
+  schema: "tinyoffice-mcp-admin";
+  version: 1;
+  companyId: string;
+  servers: McpServerView[];
+  connections: McpConnectionView[];
+  assignments: McpAssignmentView[];
+};

@@ -16,6 +16,7 @@ export const chatQueryKeys = {
   backups: () => ["tinyoffice", "backups"] as const,
   branding: (companyId?: string) => ["tinyoffice", "company-branding", companyId ?? ""] as const,
   capabilities: (companyId?: string) => ["tinyoffice", "capabilities", companyId ?? ""] as const,
+  mcp: (companyId?: string) => ["tinyoffice", "mcp", companyId ?? ""] as const,
   companySkills: (companyId?: string) => ["tinyoffice", "company-skills", companyId ?? ""] as const,
   companySkill: (companyId?: string, skillId?: string) => [
     ...chatQueryKeys.companySkills(companyId),

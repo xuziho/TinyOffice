@@ -289,12 +289,16 @@ export class ChatProjectionService {
       containers.set(container.containerId, container);
     }
 
-    for (const conversation of source.conversations) {
+    const visibleConversations = source.conversations.filter((conversation) => {
       ensureChatEntryCompanyScope({ companyId: scopedCompanyId, resourceCompanyId: conversation.companyId });
-      if (!isChatParticipantAllowed(conversation, viewer)) {
-        continue;
-      }
-      const summary = await this.firstMessagePreview(scopedCompanyId, conversation);
+      return isChatParticipantAllowed(conversation, viewer);
+    });
+    const summaries = await Promise.all(
+      visibleConversations.map((conversation) => this.firstMessagePreview(scopedCompanyId, conversation)),
+    );
+
+    for (const [index, conversation] of visibleConversations.entries()) {
+      const summary = summaries[index];
       const isArchivedTopic = conversation.conversationKind === "topic" && conversation.topic?.status === "archived";
       const projectedTopicEntry = topicEntry(conversation, viewer, summary, isArchivedTopic);
       if (projectedTopicEntry) {

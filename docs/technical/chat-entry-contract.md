@@ -214,6 +214,8 @@ Chat runtime breakpoint audit:
 
 When a create-entry mutation returns, the frontend may seed the returned `container` and `entry` into its local projection cache before refetching. This prevents the shell from flashing back to an unknown `Entries` fallback while the backend projection refresh catches up. The backend projection remains the source of truth after refetch.
 
+Projection preview reads for visible entries execute concurrently while preserving the Conversation order returned by the authoritative source. A slow first-message preview must not serialize every other Topic/DM row in the workspace projection.
+
 The projection validates every outgoing container and entry with the Chat Entry boundary guard. Public payloads must not contain Mattermost carrier field names such as `teamId`, `team_id`, `channelId`, `channel_id`, `postId`, `post_id`, `rootPostId`, `root_id`, `userId`, or `user_id`.
 
 ## Consumer Expectations

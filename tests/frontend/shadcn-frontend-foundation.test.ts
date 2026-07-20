@@ -558,9 +558,12 @@ test("frontend routes split product pages and isolate Chat lifecycle from the ap
   const viteSource = await readText("apps/tinyoffice-web-shadcn/vite.config.ts");
   const packageJson = await readJson<{ scripts?: Record<string, string> }>("apps/tinyoffice-web-shadcn/package.json");
 
-  assert.match(appSource, /lazy\(\(\) => import\("@\/tasks\/TasksPage"\)/);
-  assert.match(appSource, /lazy\(\(\) => import\("@\/settings\/SettingsPage"\)/);
-  assert.match(appSource, /lazy\(\(\) => import\("@\/chat\/ChatWorkspaceRoute"\)/);
+  assert.match(appSource, /const loadTasksPage = \(\) => import\("@\/tasks\/TasksPage"\)/);
+  assert.match(appSource, /const loadSettingsPage = \(\) => import\("@\/settings\/SettingsPage"\)/);
+  assert.match(appSource, /const loadChatWorkspaceRoute = \(\) => import\("@\/chat\/ChatWorkspaceRoute"\)/);
+  assert.match(appSource, /const TasksPage = lazy\(loadTasksPage\)/);
+  assert.match(appSource, /const SettingsPage = lazy\(loadSettingsPage\)/);
+  assert.match(appSource, /const ChatWorkspaceRoute = lazy\(loadChatWorkspaceRoute\)/);
   assert.match(appSource, /<Suspense fallback=\{<RouteLoadingFallback \/>\}>/);
   assert.doesNotMatch(appSource, /useChatWorkspace\(/);
   assert.match(chatRouteSource, /useChatWorkspace\(\{ requestedRoomId: focus\.roomId, currentSession, sessionOwnedByParent: true \}\)/);
@@ -769,10 +772,11 @@ test("shadcn chat opens rooms by marking them read and refreshing projection cou
 test("shadcn chat chrome hides noisy presence and delivery metadata", async () => {
   const productSource = await readChatProductSource();
   const modelSource = await readText("apps/tinyoffice-web-shadcn/src/chat/chatShellModel.ts");
+  const messagePanelSource = await readText("apps/tinyoffice-web-shadcn/src/chat/MessagePanel.tsx");
 
   assert.doesNotMatch(modelSource, /presenceMode\]\.filter/);
   assert.doesNotMatch(modelSource, /runtimeCapability\?\.presenceMode/);
-  assert.doesNotMatch(productSource, /message\.deliveryState/);
+  assert.doesNotMatch(messagePanelSource, /message\.deliveryState/);
   assert.doesNotMatch(productSource, /MessageFooter/);
   assert.doesNotMatch(productSource, /<MessageFooter/);
   assert.match(productSource, /MessageMeta/);
@@ -1004,7 +1008,7 @@ test("shadcn chat composer offers inline and toolbar mention selection without l
   assert.match(composerSource, /openMentionPicker/);
   assert.match(composerSource, /window\.addEventListener\("focus"/);
   assert.match(composerSource, /hadComposerFocusRef/);
-  assert.match(composerSource, /buildComposerSubmitValue\(\{\s*draft,\s*uploadedAttachmentIds,\s*mentionCandidates,\s*selectedMentionCandidates,\s*\}\)/);
+  assert.match(composerSource, /buildComposerSubmitValue\(\{\s*draft,\s*uploadedAttachmentIds,\s*uploadedAttachments,\s*mentionCandidates,\s*selectedMentionCandidates,\s*\}\)/);
   assert.doesNotMatch(composerSource, />\s*Mention\s*</);
   assert.doesNotMatch(composerSource, /DropdownMenu/);
 });

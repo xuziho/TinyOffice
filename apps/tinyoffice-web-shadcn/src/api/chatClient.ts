@@ -10,6 +10,7 @@ import type {
   DissolveChatChannelRequest,
   DissolveChatChannelResponse,
   MessagePage,
+  MessageDto,
   RemoveChatChannelMemberRequest,
   TinyOfficeContextParams,
   UpdateChatChannelDetailsRequest,
@@ -81,6 +82,10 @@ export async function markChatRoomRead(input: {
   });
 }
 
+export type SendChatRoomMessageResponse = {
+  message: MessageDto;
+};
+
 export async function sendChatRoomMessage(input: {
   companyId?: string;
   roomId?: string;
@@ -89,14 +94,14 @@ export async function sendChatRoomMessage(input: {
   body: string;
   mentionedMemberIds?: string[];
   attachmentIds?: string[];
-}): Promise<unknown> {
+}): Promise<SendChatRoomMessageResponse> {
   const companyId = required(input.companyId, "companyId");
   const roomId = required(input.roomId, "roomId");
   const trimmedBody = input.body.trim();
   if (!trimmedBody && !input.attachmentIds?.length) {
     throw new Error("body or attachmentIds is required");
   }
-  return requestJson<unknown>(`${chatRoomPath(companyId, roomId)}/messages`, {
+  return requestJson<SendChatRoomMessageResponse>(`${chatRoomPath(companyId, roomId)}/messages`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

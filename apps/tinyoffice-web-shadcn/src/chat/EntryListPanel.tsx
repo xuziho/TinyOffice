@@ -1,4 +1,6 @@
 import { Button } from "@/components/ui/button";
+import { listChatRoomMessages } from "@/api/chatClient";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   MessageScroller,
   MessageScrollerContent,
@@ -11,6 +13,7 @@ import { ArchiveIcon, RotateCcwIcon } from "lucide-react";
 import { useEffect, useState, type ReactElement, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { ChatShellModel } from "./chatShellModel";
+import { chatQueryKeys } from "./chatQueryKeys";
 import { StartEntryButton } from "./Composer";
 import { SystemMessage } from "./SystemMessage";
 import {
@@ -124,7 +127,7 @@ function EntryListSurface({
                 {showArchived ? (
                   <ArchivedTopicRow entry={entry} onRestoreEntry={onRestoreEntry} />
                 ) : (
-                  <EntryTopicRow entry={entry} onSelectEntry={onSelectEntry} onArchiveEntry={onArchiveEntry} />
+                  <EntryTopicRow entry={entry} viewerMemberId={model.viewerMemberId} onSelectEntry={onSelectEntry} onArchiveEntry={onArchiveEntry} />
                 )}
               </MessageScrollerItem>
             ))}
@@ -160,18 +163,36 @@ function ArchivedTopicRow({ entry, onRestoreEntry }: {
 
 function EntryTopicRow({
   entry,
+  viewerMemberId,
   onSelectEntry,
   onArchiveEntry,
 }: {
   entry: ChatShellModel["directoryEntries"][number];
+  viewerMemberId?: string;
   onSelectEntry(entryId: string): void;
   onArchiveEntry(entryId: string): Promise<void>;
 }): ReactElement {
   const [isArchiveConfirming, setIsArchiveConfirming] = useState(false);
+  const queryClient = useQueryClient();
   const href = chatRoomHref({
     roomId: entry.openTarget.roomId,
     surface: entry.openTarget.kind === "dm_session_entry_room" ? "direct" : "channel",
   });
+  const prefetchMessages = () => {
+    if (!entry.companyId || !entry.openTarget.roomId) {
+      return;
+    }
+    const viewer = viewerMemberId ? { memberId: viewerMemberId } : {};
+    void queryClient.prefetchQuery({
+      queryKey: chatQueryKeys.roomMessages(entry.companyId, entry.openTarget.roomId, viewer),
+      queryFn: () => listChatRoomMessages({
+        companyId: entry.companyId,
+        roomId: entry.openTarget.roomId,
+        ...viewer,
+      }),
+      staleTime: 15_000,
+    });
+  };
 
   return (
     <div
@@ -181,6 +202,8 @@ function EntryTopicRow({
         ? "tiny-topic-row group grid min-w-0 cursor-pointer grid-cols-[minmax(0,1fr)_5.75rem_1.75rem_4.75rem] items-center gap-2 px-2 py-2.5 text-left font-normal"
         : "tiny-topic-row group grid min-w-0 cursor-pointer grid-cols-[minmax(0,1fr)_5.75rem_1.75rem_2.125rem] items-center gap-2 px-2 py-2.5 text-left font-normal"}
       onClick={() => onSelectEntry(entry.entryId)}
+      onPointerEnter={prefetchMessages}
+      onPointerDown={prefetchMessages}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();

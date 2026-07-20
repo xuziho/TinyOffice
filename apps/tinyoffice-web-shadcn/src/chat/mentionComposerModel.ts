@@ -13,11 +13,21 @@ export type ComposerSubmitValue = {
   body: string;
   mentionedMemberIds: string[];
   attachmentIds?: string[];
+  optimisticAttachments?: ComposerAttachmentPreview[];
+};
+
+export type ComposerAttachmentPreview = {
+  attachmentId: string;
+  fileName: string;
+  mimeType: string;
+  byteLength: number;
+  previewUrl: string;
 };
 
 export function buildComposerSubmitValue(input: {
   draft: string;
   uploadedAttachmentIds: string[];
+  uploadedAttachments?: ComposerAttachmentPreview[];
   mentionCandidates: MentionCandidate[];
   selectedMentionCandidates: MentionCandidate[];
 }): ComposerSubmitValue | undefined {
@@ -33,6 +43,7 @@ export function buildComposerSubmitValue(input: {
       ...input.selectedMentionCandidates,
     ]),
     ...(attachmentIds.length ? { attachmentIds } : {}),
+    ...(input.uploadedAttachments?.length ? { optimisticAttachments: input.uploadedAttachments } : {}),
   };
 }
 

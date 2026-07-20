@@ -3,12 +3,19 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("public Alpha setup installs both runtime and standalone frontend dependencies", async () => {
-  const packageJson = JSON.parse(await readFile("package.json", "utf8")) as {
-    version?: string;
-    scripts?: Record<string, string>;
-  };
+  const [packageJson, packageLock] = await Promise.all([
+    readFile("package.json", "utf8").then((value) => JSON.parse(value)) as Promise<{
+      version?: string;
+      scripts?: Record<string, string>;
+    }>,
+    readFile("package-lock.json", "utf8").then((value) => JSON.parse(value)) as Promise<{
+      version?: string;
+      packages?: Record<string, { version?: string }>;
+    }>,
+  ]);
 
-  assert.equal(packageJson.version, "0.1.0-alpha.1");
+  assert.equal(packageLock.version, packageJson.version);
+  assert.equal(packageLock.packages?.[""]?.version, packageJson.version);
   assert.match(packageJson.scripts?.setup ?? "", /npm ci/);
   assert.match(packageJson.scripts?.setup ?? "", /--prefix apps\/tinyoffice-web-shadcn/);
   assert.match(packageJson.scripts?.["setup:ci"] ?? "", /--ignore-scripts/);

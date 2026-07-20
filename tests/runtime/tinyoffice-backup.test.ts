@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -52,5 +52,53 @@ test("removes an incomplete archive when database export fails", async () => {
     }), /dump failed/);
   } finally {
     await rm(repoRoot, { recursive: true, force: true });
+  }
+});
+
+test("backs up production managed roots through absolute directory symlinks", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "tinyoffice-backup-links-"));
+  const repoRoot = path.join(root, "release");
+  const sharedRoot = path.join(root, "shared");
+  const output = path.join(sharedRoot, "backups");
+  await mkdir(path.join(repoRoot, ".data"), { recursive: true });
+  await mkdir(path.join(sharedRoot, "companies", "acme"), { recursive: true });
+  await mkdir(path.join(sharedRoot, "data-companies", "acme"), { recursive: true });
+  await writeFile(path.join(repoRoot, "package.json"), JSON.stringify({ version: "1.2.3" }));
+  await writeFile(path.join(sharedRoot, "companies", "acme", "AGENTS.md"), "# Acme\n");
+  await writeFile(path.join(sharedRoot, "data-companies", "acme", "state.json"), "{}\n");
+  await symlink(path.join(sharedRoot, "companies"), path.join(repoRoot, "companies"), process.platform === "win32" ? "junction" : "dir");
+  await symlink(path.join(sharedRoot, "data-companies"), path.join(repoRoot, ".data", "companies"), process.platform === "win32" ? "junction" : "dir");
+  const runner: BackupCommandRunner = {
+    async run(_command, args) {
+      await writeFile(args[args.indexOf("--file") + 1], "postgres-custom-dump");
+    },
+  };
+  try {
+    const receipt = await createTinyOfficeBackup({ repoRoot, outputDirectory: output, databaseUrl: "postgres://test", commandRunner: runner });
+    const manifest = await verifyTinyOfficeBackup(receipt.path);
+    assert.ok(manifest.files.some((file) => file.relativePath === "files/companies/acme/AGENTS.md"));
+    assert.ok(manifest.files.some((file) => file.relativePath === "files/data-companies/acme/state.json"));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("rejects nested symbolic links inside a managed backup root", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "tinyoffice-backup-unsafe-link-"));
+  const repoRoot = path.join(root, "release");
+  const outside = path.join(root, "outside");
+  await mkdir(path.join(repoRoot, "companies", "acme"), { recursive: true });
+  await mkdir(outside, { recursive: true });
+  await writeFile(path.join(repoRoot, "package.json"), JSON.stringify({ version: "1.2.3" }));
+  await writeFile(path.join(outside, "secret.txt"), "must not be copied");
+  await symlink(outside, path.join(repoRoot, "companies", "acme", "outside"), process.platform === "win32" ? "junction" : "dir");
+  try {
+    await assert.rejects(createTinyOfficeBackup({
+      repoRoot,
+      databaseUrl: "postgres://test",
+      commandRunner: { async run(_command, args) { await writeFile(args[args.indexOf("--file") + 1], "postgres-custom-dump"); } },
+    }), /unsupported symbolic link/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
   }
 });

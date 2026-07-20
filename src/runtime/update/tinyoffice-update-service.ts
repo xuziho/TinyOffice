@@ -8,13 +8,16 @@ import type {
   TinyOfficeUpdateManifest,
   TinyOfficeUpdateStatus,
 } from "../../api/contracts/tinyoffice-frontend-api-contracts.js";
+import {
+  DEFAULT_PI_APPROVAL_MANIFEST_URL,
+  DEFAULT_RELEASE_MANIFEST_URL,
+  fetchJson,
+  loadPiApprovalManifestFromSource,
+  loadReleaseManifestFromSource,
+} from "./tinyoffice-update-source.js";
 
 const PI_PACKAGE = "@earendil-works/pi-coding-agent" as const;
 const DEFAULT_NPM_REGISTRY_URL = "https://registry.npmjs.org/@earendil-works%2Fpi-coding-agent/latest";
-const DEFAULT_PI_APPROVAL_MANIFEST_URL = "https://raw.githubusercontent.com/xuziho/TinyOffice/main/updates/stable.json";
-const DEFAULT_RELEASE_MANIFEST_URL = "https://github.com/xuziho/TinyOffice/releases/latest/download/tinyoffice-stable.json";
-const UPDATE_SOURCE_TIMEOUT_MS = 8_000;
-const UPDATE_SOURCE_ATTEMPTS = 2;
 
 export interface TinyOfficeUpdateExecutor {
   start(input: { targetRelease: TinyOfficeReleaseChannelManifest["release"] }): Promise<TinyOfficeUpdateJob> | TinyOfficeUpdateJob;
@@ -42,13 +45,19 @@ export class TinyOfficeUpdateService {
   private readonly npmRegistryUrl: string;
   private readonly approvalManifestUrl: string;
   private readonly releaseManifestUrl: string;
+  private readonly approvalManifestUsesGithubApi: boolean;
+  private readonly releaseManifestUsesGithubApi: boolean;
   private readonly now: () => Date;
 
   constructor(private readonly options: TinyOfficeUpdateServiceOptions) {
     this.fetchImpl = options.fetch ?? globalThis.fetch;
     this.npmRegistryUrl = options.npmRegistryUrl ?? process.env.TINYOFFICE_NPM_REGISTRY_URL?.trim() ?? DEFAULT_NPM_REGISTRY_URL;
-    this.approvalManifestUrl = options.approvalManifestUrl ?? process.env.TINYOFFICE_UPDATE_MANIFEST_URL?.trim() ?? DEFAULT_PI_APPROVAL_MANIFEST_URL;
-    this.releaseManifestUrl = options.releaseManifestUrl ?? process.env.TINYOFFICE_RELEASE_MANIFEST_URL?.trim() ?? DEFAULT_RELEASE_MANIFEST_URL;
+    const configuredApprovalManifestUrl = options.approvalManifestUrl ?? process.env.TINYOFFICE_UPDATE_MANIFEST_URL?.trim();
+    const configuredReleaseManifestUrl = options.releaseManifestUrl ?? process.env.TINYOFFICE_RELEASE_MANIFEST_URL?.trim();
+    this.approvalManifestUrl = configuredApprovalManifestUrl || DEFAULT_PI_APPROVAL_MANIFEST_URL;
+    this.releaseManifestUrl = configuredReleaseManifestUrl || DEFAULT_RELEASE_MANIFEST_URL;
+    this.approvalManifestUsesGithubApi = !configuredApprovalManifestUrl;
+    this.releaseManifestUsesGithubApi = !configuredReleaseManifestUrl;
     this.now = options.now ?? (() => new Date());
   }
 
@@ -65,9 +74,9 @@ export class TinyOfficeUpdateService {
     let npmLatestVersion: string | undefined;
 
     const [piManifestResult, npmResult, releaseManifestResult] = await Promise.allSettled([
-      this.fetchJson<TinyOfficeUpdateManifest>(this.approvalManifestUrl),
+      this.loadPiApprovalManifest(),
       this.fetchJson<{ version?: unknown }>(this.npmRegistryUrl),
-      this.fetchJson<TinyOfficeReleaseChannelManifest>(this.releaseManifestUrl),
+      this.loadReleaseManifest(),
     ]);
     if (piManifestResult.status === "fulfilled") {
       try {
@@ -202,30 +211,23 @@ export class TinyOfficeUpdateService {
     return uniqueSorted([...source.matchAll(/\bid:\s*["']([^"']+)["']/g)].map((match) => `openai-codex/${match[1]}`));
   }
 
-  private async fetchJson<T>(url: string): Promise<T> {
-    for (let attempt = 1; attempt <= UPDATE_SOURCE_ATTEMPTS; attempt += 1) {
-      let response: Response;
-      try {
-        response = await this.fetchImpl(url, {
-          headers: { Accept: "application/json" },
-          signal: AbortSignal.timeout(UPDATE_SOURCE_TIMEOUT_MS),
-        });
-      } catch (error) {
-        if (attempt < UPDATE_SOURCE_ATTEMPTS) continue;
-        throw error;
-      }
-      if (!response.ok) {
-        if (attempt < UPDATE_SOURCE_ATTEMPTS && isRetryableUpdateSourceStatus(response.status)) continue;
-        throw new Error(`${response.status} ${response.statusText}`.trim());
-      }
-      return await response.json() as T;
-    }
-    throw new Error("Update source request exhausted without a result");
+  private async loadPiApprovalManifest(): Promise<TinyOfficeUpdateManifest> {
+    return await loadPiApprovalManifestFromSource({
+      fetchImpl: this.fetchImpl,
+      ...(this.approvalManifestUsesGithubApi ? {} : { directManifestUrl: this.approvalManifestUrl }),
+    });
   }
-}
 
-function isRetryableUpdateSourceStatus(status: number): boolean {
-  return status === 408 || status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
+  private async loadReleaseManifest(): Promise<TinyOfficeReleaseChannelManifest> {
+    return await loadReleaseManifestFromSource({
+      fetchImpl: this.fetchImpl,
+      ...(this.releaseManifestUsesGithubApi ? {} : { directManifestUrl: this.releaseManifestUrl }),
+    });
+  }
+
+  private async fetchJson<T>(url: string): Promise<T> {
+    return await fetchJson<T>(url, { fetchImpl: this.fetchImpl });
+  }
 }
 
 export function validateReleaseManifest(value: TinyOfficeReleaseChannelManifest): void {

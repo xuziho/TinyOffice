@@ -18,6 +18,7 @@ import { latestActivitySourceForMessages } from "./messageActivitySource";
 import { useChatRealtime } from "./useChatRealtime";
 import type { ComposerSubmitValue } from "./mentionComposerModel";
 import { appendOptimisticMessage, optimisticChatMessage, reconcileOptimisticMessage, removeOptimisticMessage } from "./optimisticChatMessage";
+import { createRealtimeInvalidationCoalescer } from "./realtimeInvalidationCoalescer";
 import {
   activitySourceSummaryForSelection,
   addMembersToSelectedChannel,
@@ -130,6 +131,9 @@ export function useChatWorkspace(input: { requestedRoomId?: string; currentSessi
   const [chatRunState, setChatRunState] = useState(emptyChatRunState);
   const [composerNotice, setComposerNotice] = useState<string | undefined>();
   const markedReadKey = useRef<string | undefined>(undefined);
+  const activityInvalidations = useMemo(() => createRealtimeInvalidationCoalescer(), []);
+
+  useEffect(() => () => activityInvalidations.dispose(), [activityInvalidations]);
 
   const sessionQuery = useQuery({
     queryKey: chatQueryKeys.currentSession(),
@@ -310,9 +314,11 @@ export function useChatWorkspace(input: { requestedRoomId?: string; currentSessi
   const handleRealtimeEvent = useCallback((event: Parameters<typeof applyChatRunRealtimeEvent>[1]) => {
     setChatRunState((current) => applyChatRunRealtimeEvent(current, event));
     if (event.type === "chat.process_trace.appended") {
-      void queryClient.invalidateQueries({ queryKey: chatQueryKeys.roomActivityScope(event.companyId, event.roomId) });
+      activityInvalidations.invalidate(`${event.companyId}:${event.roomId}`, () => {
+        void queryClient.invalidateQueries({ queryKey: chatQueryKeys.roomActivityScope(event.companyId, event.roomId) });
+      });
     }
-  }, [queryClient]);
+  }, [activityInvalidations, queryClient]);
 
   useChatRealtime({
     companyId,

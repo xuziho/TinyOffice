@@ -141,4 +141,11 @@ test("employee status loader aggregates only the requested company's Work, Sessi
   assert.equal(JSON.stringify(model).includes("Support company"), false);
   assert.equal(JSON.stringify(model).includes("default-root"), true);
   assert.equal(JSON.stringify(model).includes("support-root"), false);
+
+  const concurrentLoads = await Promise.all(Array.from({ length: 40 }, () => loadEmployeeStatusViewModel({
+    repoRoot,
+    companyId: DEFAULT_COMPANY_ID,
+    employeeId,
+  })));
+  assert.equal(concurrentLoads.every((candidate) => candidate === concurrentLoads[0]), true);
 });

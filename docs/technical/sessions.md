@@ -92,9 +92,9 @@ Price and response count are not part of the main Sessions usage display.
 
 Sessions uses React-driven HTTP snapshot refresh against `/api/companies/:companyId/sessions/view-model`. Runtime realtime events remain the backend invalidation signal for session persistence, but the retired native HTML client is no longer the current user-facing refresh path:
 
-1. The page connects to `/api/runtime/ws`; retired Mattermost plugin proxy pages no longer provide a `/plugins/com.tinyoffice.collaboration/api/v1/runtime/ws` product path.
+1. The shadcn app receives runtime notifications through the current socket.io realtime route; retired Mattermost plugin proxy pages are not a product path.
 2. Runtime persistence broadcasts `session.updated` or `session.completed`.
-3. The browser receives the event and refetches the list/detail HTTP snapshot.
+3. The browser receives the event and coalesces dense invalidations before refetching the list/detail HTTP snapshot. Process Trace append events refresh Sessions evidence without also refreshing the employee runtime summary.
 4. The HTTP snapshot remains authoritative; WebSocket payloads are lightweight invalidation notices, not streamed detail state.
 
 ## Tests

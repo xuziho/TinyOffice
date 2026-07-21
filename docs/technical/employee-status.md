@@ -7,6 +7,7 @@ This page records the implementation boundary for the Chat-scoped Employee Runti
 | Module | Responsibility |
 | --- | --- |
 | `src/runtime/employee-status/employee-status-loader.ts` | Aggregates internal runtime/work status evidence. |
+| `src/runtime/employee-status/postgres-employee-status-reader.ts` | Reads the exact Work, Session, Topic, and dispatch-lease rows needed by the summary through one bounded PostgreSQL connection. It must not open full mutable repositories or load historical evidence collections. |
 | `src/runtime/employee-status/employee-status-view-model.ts` | Builds the internal page-shaped status read model used as a source projection. This is not a public API contract. |
 | `src/runtime/employee-status/employee-runtime-summary.ts` | Projects the internal read model into the narrow Chat runtime summary contract. |
 | `src/api/tinyoffice-api/employee-runtime-summary-routes.ts` | Exposes the Chat-scoped summary API route. |
@@ -24,7 +25,9 @@ This page records the implementation boundary for the Chat-scoped Employee Runti
 | Topic ownership | ChannelTopic owner. |
 | Dispatch lease evidence | `work_dispatch_leases`, joined by the most relevant WorkRun. |
 
-The summary is a read model. It does not persist new facts itself.
+The summary is a read model. It does not persist new facts itself. Concurrent requests for the same company, employee filter, sort, and route shape share one in-flight load. Its PostgreSQL reader executes a narrow snapshot over `work_tasks`, `work_schedules`, `work_runs`, `work_dispatch_leases`, `session_records`, and `channel_topics`; it intentionally does not load Work revisions/events, Session events, Process Trace, collaboration actions, memory summaries, retention state, or Topic handoff history.
+
+Employee directory/config loading completes before the status snapshot acquires its PostgreSQL client. The snapshot owns one connection and releases it in one `finally` boundary; it must not hold one repository client while waiting for another repository or pool. Shared runtime pools use finite connection-acquisition and query timeouts so saturation fails explicitly instead of leaving product APIs pending indefinitely.
 
 ## Runtime Summary API
 

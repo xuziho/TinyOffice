@@ -4,11 +4,12 @@ import {
   resolveRuntimeDatabaseConfig,
   type RuntimeDatabaseConfigEnv,
 } from "../company-config/company-database-config.js";
+import { runPostgresSchemaMigrations } from "../company-config/postgres-company-database.js";
 import {
-  runPostgresSchemaMigrations,
-} from "../company-config/postgres-company-database.js";
-import {
+  DEFAULT_POSTGRES_CONNECTION_TIMEOUT_MS,
+  DEFAULT_POSTGRES_QUERY_TIMEOUT_MS,
   endCompanyPostgresPool,
+  PostgresConnectionUnavailableError,
 } from "../company-config/postgres-runtime-connection.js";
 import type { ProcessTraceEvent } from "../contracts/process-trace-event.js";
 import { PostgresRuntimeSessionRepository } from "./postgres-runtime-session-repository.js";
@@ -212,6 +213,9 @@ async function createDefaultPostgresPool(databaseUrl: string) {
     allowExitOnIdle: true,
     max: 1,
     idleTimeoutMillis: 10,
+    connectionTimeoutMillis: DEFAULT_POSTGRES_CONNECTION_TIMEOUT_MS,
+    query_timeout: DEFAULT_POSTGRES_QUERY_TIMEOUT_MS,
+    statement_timeout: DEFAULT_POSTGRES_QUERY_TIMEOUT_MS,
   }) as PostgresPoolLike & {
     end?(): Promise<void>;
   };
@@ -229,7 +233,13 @@ export class RuntimeSessionRepository {
     const pool = options.createPostgresPool
       ? options.createPostgresPool(postgresUrl)
       : await createDefaultPostgresPool(postgresUrl);
-    const client = await pool.connect();
+    let client: Awaited<ReturnType<typeof pool.connect>>;
+    try {
+      client = await pool.connect();
+    } catch (error) {
+      await endCompanyPostgresPool(pool);
+      throw new PostgresConnectionUnavailableError(error);
+    }
     try {
       await runPostgresSchemaMigrations(client);
       return await PostgresRuntimeSessionRepository.open({ client, pool, companyId });

@@ -43,7 +43,7 @@ function seenCursors(value: unknown): ChannelTopic["seenCursors"] {
   return value as ChannelTopic["seenCursors"];
 }
 
-function topicFromRow(row: Record<string, unknown>): ChannelTopic {
+export function topicFromRow(row: Record<string, unknown>): ChannelTopic {
   const ownerId = String(row.owner_member_id);
   const participantIds = stringArray(row.participant_member_ids_json);
   const roomId = typeof row.room_id === "string" && row.room_id ? row.room_id : undefined;

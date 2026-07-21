@@ -25,7 +25,7 @@ export function errorStatus(error: unknown): number {
   const statusCode = typeof (error as { statusCode?: unknown })?.statusCode === "number"
     ? (error as { statusCode: number }).statusCode
     : undefined;
-  if (statusCode && statusCode >= 400 && statusCode < 500) {
+  if (statusCode && statusCode >= 400 && statusCode < 600) {
     return statusCode;
   }
   if (

@@ -200,11 +200,20 @@ export interface RuntimeSessionRepositoryLike {
 
 export interface RuntimeSessionRepositoryOpenOptions {
   companyId?: string;
+  sessionRecordId?: string;
+  domains?: RuntimeSessionStorageDomain[];
   env?: RuntimeDatabaseConfigEnv;
   createPostgresPool?: (databaseUrl: string) => PostgresPoolLike & {
     end?(): Promise<void>;
   };
 }
+
+export type RuntimeSessionStorageDomain =
+  | "sessions"
+  | "processTrace"
+  | "collaborationActions"
+  | "memory"
+  | "retention";
 
 async function createDefaultPostgresPool(databaseUrl: string) {
   const pg = await import("pg");
@@ -242,7 +251,13 @@ export class RuntimeSessionRepository {
     }
     try {
       await runPostgresSchemaMigrations(client);
-      return await PostgresRuntimeSessionRepository.open({ client, pool, companyId });
+      return await PostgresRuntimeSessionRepository.open({
+        client,
+        pool,
+        companyId,
+        sessionRecordId: options.sessionRecordId,
+        domains: options.domains,
+      });
     } catch (error) {
       client.release();
       await endCompanyPostgresPool(pool);

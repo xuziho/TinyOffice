@@ -247,6 +247,7 @@ test("postgres migrations include the baseline and Channel role hard cut without
       "pg_016_user_ui_locale_20260716",
       "pg_017_user_ui_theme_20260716",
       "pg_018_mcp_foundation_20260720",
+      "pg_019_process_trace_correlation_columns_20260721",
     ],
   );
   assert.equal(postgresSchemaMigrations[0]?.sql, buildInitialPostgresSchemaSql());
@@ -275,6 +276,8 @@ test("postgres migrations include the baseline and Channel role hard cut without
   assert.match(migrationSql, /CREATE TABLE IF NOT EXISTS mcp_servers/);
   assert.match(migrationSql, /mcp_servers_transport_config_check/);
   assert.match(migrationSql, /mcp_assignments_scope_check/);
+  assert.match(migrationSql, /ADD COLUMN IF NOT EXISTS run_id text/);
+  assert.match(migrationSql, /idx_process_trace_source_message_timestamp/);
   assert.doesNotMatch(migrationSql, /assignee_employee_id|created_by_employee_id|handoff_from_employee_id/);
   assert.doesNotMatch(migrationSql, /requested_by_employee_id|requested_approver_id|resolved_by_participant_id|actor_employee_id/);
   assert.doesNotMatch(createTableSql(migrationSql, "work_tasks"), /owner_employee_id/);
@@ -325,6 +328,7 @@ test("postgres migration runner applies pending migrations transactionally", asy
     "pg_016_user_ui_locale_20260716",
     "pg_017_user_ui_theme_20260716",
     "pg_018_mcp_foundation_20260720",
+    "pg_019_process_trace_correlation_columns_20260721",
   ]);
   assert.ok(client.queries.some((query) => query === "BEGIN"));
   assert.ok(client.queries.some((query) => /CREATE TABLE IF NOT EXISTS schema_migrations/.test(query)));
@@ -357,6 +361,7 @@ test("postgres migration runner applies current migrations after the baseline", 
     "pg_016_user_ui_locale_20260716",
     "pg_017_user_ui_theme_20260716",
     "pg_018_mcp_foundation_20260720",
+    "pg_019_process_trace_correlation_columns_20260721",
   ]);
   assert.ok(client.queries.some((query) => /ALTER TABLE chat_channel_members\s+DROP COLUMN IF EXISTS role/.test(query)));
   assert.ok(client.queries.some((query) => /CREATE TABLE IF NOT EXISTS work_blocked_recovery_requests/.test(query)));
@@ -383,6 +388,7 @@ test("postgres migration runner skips current migrations when already applied", 
     "pg_016_user_ui_locale_20260716",
     "pg_017_user_ui_theme_20260716",
     "pg_018_mcp_foundation_20260720",
+    "pg_019_process_trace_correlation_columns_20260721",
   ]);
 
   const result = await runPostgresSchemaMigrations(client);

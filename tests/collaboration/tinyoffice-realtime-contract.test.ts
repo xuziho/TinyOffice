@@ -204,6 +204,53 @@ test("collaboration realtime contract exposes ephemeral Chat reply deltas withou
   assertTinyOfficeRealtimeEvent(event);
 });
 
+test("collaboration realtime contract separates live Activity from its persistence watermark", () => {
+  const observed = createTinyOfficeRealtimeEvent({
+    type: "chat.activity.observed",
+    companyId: "acme",
+    conversationId: "conversation-topic-launch",
+    roomId: "conversation-topic-launch",
+    runId: "chat-run-1",
+    sourceMessageId: "message-1",
+    targetMemberId: "aster",
+    sessionKey: "aster|chat_topic_room|conversation-topic-launch",
+    sequenceInRun: 2,
+    activity: {
+      items: [{
+        id: "activity:run_started:chat-run-1",
+        kind: "run_started",
+        title: "Run started",
+        raw: { eventIds: ["trace-1"], events: [] },
+      }],
+    },
+  }, {
+    eventId: "event-activity-observed",
+    occurredAt: "2026-07-21T01:00:00.000Z",
+    sequence: 4,
+  });
+  const persisted = createTinyOfficeRealtimeEvent({
+    type: "chat.activity.persisted",
+    companyId: "acme",
+    conversationId: "conversation-topic-launch",
+    roomId: "conversation-topic-launch",
+    runId: "chat-run-1",
+    sourceMessageId: "message-1",
+    targetMemberId: "aster",
+    persistedThroughSequence: 2,
+  }, {
+    eventId: "event-activity-persisted",
+    occurredAt: "2026-07-21T01:00:00.100Z",
+    sequence: 5,
+  });
+
+  assert.equal(observed.type, "chat.activity.observed");
+  assert.equal(observed.activity.items[0]?.kind, "run_started");
+  assert.equal(persisted.type, "chat.activity.persisted");
+  assert.equal(persisted.persistedThroughSequence, 2);
+  assertTinyOfficeRealtimeEvent(observed);
+  assertTinyOfficeRealtimeEvent(persisted);
+});
+
 test("collaboration realtime contract rejects legacy public eventKey on Chat runtime events", () => {
   assert.throws(
     () =>

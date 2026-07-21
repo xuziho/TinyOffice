@@ -1,7 +1,8 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { rm } from "node:fs/promises";
 import path from "node:path";
 
-import { endCompanyPostgresPool, openConfiguredPostgresConnection } from "../../runtime/company-config/postgres-runtime-connection.js";
+import { endCompanyPostgresPool, openConfiguredPostgresConnection, PostgresConnectionUnavailableError } from "../../runtime/company-config/postgres-runtime-connection.js";
 import type {
   CompanyPostgresClient,
   CompanyPostgresOpenOptions,
@@ -33,12 +34,19 @@ function timestamp(value: unknown): string {
 }
 
 export class PostgresChannelRepository implements ChannelRepository {
+  private readonly transactionClient = new AsyncLocalStorage<CompanyPostgresClient>();
+
   private constructor(
     private readonly client: CompanyPostgresClient,
     private readonly pool: CompanyPostgresPoolLike,
     private readonly companyId: string,
     private readonly deleteAttachmentFiles: (localPaths: string[]) => Promise<void> = async () => undefined,
-  ) {}
+    private readonly borrowPerOperation = false,
+  ) {
+    if (borrowPerOperation) {
+      client.release();
+    }
+  }
 
   static async open(repoRoot: string, options: PostgresChannelRepositoryOpenOptions): Promise<PostgresChannelRepository> {
     const companyId = normalizeCompanyId(options.companyId);
@@ -51,18 +59,74 @@ export class PostgresChannelRepository implements ChannelRepository {
       postgres.pool,
       companyId,
       (localPaths) => deleteLocalChatAttachmentFiles(repoRoot, companyId, localPaths),
+      true,
     );
   }
 
   close(): void {
-    this.client.release();
+    if (!this.borrowPerOperation) {
+      this.client.release();
+    }
     void endCompanyPostgresPool(this.pool);
   }
 
-  async upsertChannel(channel: ChatChannelRecord): Promise<ChatChannelRecord> {
-    await this.client.query("BEGIN");
+  private async query<T = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<{ rows: T[] }> {
+    const transactionClient = this.transactionClient.getStore();
+    if (transactionClient) {
+      return transactionClient.query<T>(sql, params);
+    }
+    if (!this.borrowPerOperation) {
+      return this.client.query<T>(sql, params);
+    }
+    const client = await this.borrowClient();
     try {
-      await this.client.query(
+      return await client.query<T>(sql, params);
+    } finally {
+      client.release();
+    }
+  }
+
+  private async borrowClient(): Promise<CompanyPostgresClient> {
+    try {
+      return await this.pool.connect();
+    } catch (error) {
+      throw new PostgresConnectionUnavailableError(error);
+    }
+  }
+
+  private async withTransaction<T>(run: () => Promise<T>): Promise<T> {
+    if (!this.borrowPerOperation) {
+      await this.client.query("BEGIN");
+      try {
+        const result = await run();
+        await this.client.query("COMMIT");
+        return result;
+      } catch (error) {
+        await this.client.query("ROLLBACK").catch(() => undefined);
+        throw error;
+      }
+    }
+    const client = await this.borrowClient();
+    try {
+      return await this.transactionClient.run(client, async () => {
+        await client.query("BEGIN");
+        try {
+          const result = await run();
+          await client.query("COMMIT");
+          return result;
+        } catch (error) {
+          await client.query("ROLLBACK").catch(() => undefined);
+          throw error;
+        }
+      });
+    } finally {
+      client.release();
+    }
+  }
+
+  async upsertChannel(channel: ChatChannelRecord): Promise<ChatChannelRecord> {
+    await this.withTransaction(async () => {
+      await this.query(
         `INSERT INTO chat_channels (
   company_id, channel_id, title, summary, created_at, updated_at
 )
@@ -80,12 +144,12 @@ ON CONFLICT (company_id, channel_id) DO UPDATE SET
           channel.updatedAt,
         ],
       );
-      await this.client.query(
+      await this.query(
         "DELETE FROM chat_channel_members WHERE company_id = $1 AND channel_id = $2",
         [channel.companyId, channel.chatChannelId],
       );
       for (const member of channel.members) {
-        await this.client.query(
+        await this.query(
           `INSERT INTO chat_channel_members (
   company_id, channel_id, member_id, display_name, joined_at
 )
@@ -99,19 +163,14 @@ VALUES ($1, $2, $3, $4, $5)`,
           ],
         );
       }
-      await this.client.query("COMMIT");
-    } catch (error) {
-      await this.client.query("ROLLBACK").catch(() => undefined);
-      throw error;
-    }
+    });
     return await this.requireChannel(channel.companyId, channel.chatChannelId);
   }
 
   async deleteChannel(companyId: string, channelId: string): Promise<void> {
     let orphanedAttachmentPaths: string[] = [];
-    await this.client.query("BEGIN");
-    try {
-      const activeExecutions = await this.client.query<{ conversation_id: string }>(
+    await this.withTransaction(async () => {
+      const activeExecutions = await this.query<{ conversation_id: string }>(
         `SELECT DISTINCT conversation.conversation_id
 FROM conversations conversation
 JOIN session_events event
@@ -134,7 +193,7 @@ LIMIT 1`,
         error.statusCode = 409;
         throw error;
       }
-      await this.client.query(
+      await this.query(
         `UPDATE work_tasks task
 SET metadata_json = COALESCE(task.metadata_json, '{}'::jsonb) || jsonb_build_object(
       'sourceConversationUnavailable', true,
@@ -151,7 +210,7 @@ WHERE task.company_id = $1
   )`,
         [companyId, channelId],
       );
-      await this.client.query(
+      await this.query(
         `UPDATE governance_approvals approval
 SET status = 'canceled',
     decision_note = 'Source Channel was dissolved.',
@@ -169,7 +228,7 @@ WHERE approval.company_id = $1
   )`,
         [companyId, channelId],
       );
-      await this.client.query(
+      await this.query(
         `DELETE FROM approval_grants grant_row
 WHERE grant_row.company_id = $1
   AND grant_row.context_kind = 'channel_topic'
@@ -182,7 +241,7 @@ WHERE grant_row.company_id = $1
   )`,
         [companyId, channelId],
       );
-      const deletedAttachments = await this.client.query<{ local_path: string }>(
+      const deletedAttachments = await this.query<{ local_path: string }>(
         `DELETE FROM chat_attachments attachment
 WHERE attachment.company_id = $1
   AND EXISTS (
@@ -213,22 +272,18 @@ RETURNING attachment.local_path`,
         [companyId, channelId],
       );
       orphanedAttachmentPaths = deletedAttachments.rows.map((row) => row.local_path);
-      await this.client.query(
+      await this.query(
         `DELETE FROM conversations
 WHERE company_id = $1
   AND conversation_kind = 'topic'
   AND topic_state_json ->> 'chatChannelId' = $2`,
         [companyId, channelId],
       );
-      await this.client.query(
+      await this.query(
         "DELETE FROM chat_channels WHERE company_id = $1 AND channel_id = $2",
         [companyId, channelId],
       );
-      await this.client.query("COMMIT");
-    } catch (error) {
-      await this.client.query("ROLLBACK").catch(() => undefined);
-      throw error;
-    }
+    });
     try {
       await this.deleteAttachmentFiles(orphanedAttachmentPaths);
     } catch (error) {
@@ -238,7 +293,7 @@ WHERE company_id = $1
   }
 
   async listChannelsForViewer(companyId: string, viewer: ChannelParticipantIdentitySelector): Promise<ChatChannelRecord[]> {
-    const rows = await this.client.query<{ channel_id: string }>(
+    const rows = await this.query<{ channel_id: string }>(
       `SELECT DISTINCT c.channel_id
 FROM chat_channels c
 JOIN chat_channel_members m ON m.company_id = c.company_id AND m.channel_id = c.channel_id
@@ -258,7 +313,7 @@ ORDER BY c.channel_id ASC`,
   }
 
   async listChannelsForCompany(companyId: string): Promise<ChatChannelRecord[]> {
-    const rows = await this.client.query<{ channel_id: string }>(
+    const rows = await this.query<{ channel_id: string }>(
       `SELECT channel_id
 FROM chat_channels
 WHERE company_id = $1
@@ -276,7 +331,7 @@ ORDER BY title ASC, channel_id ASC`,
   }
 
   async getChannel(companyId: string, channelId: string): Promise<ChatChannelRecord | undefined> {
-    const channelRows = await this.client.query<Record<string, unknown>>(
+    const channelRows = await this.query<Record<string, unknown>>(
       "SELECT * FROM chat_channels WHERE company_id = $1 AND channel_id = $2",
       [companyId, channelId],
     );
@@ -284,7 +339,7 @@ ORDER BY title ASC, channel_id ASC`,
     if (!channel) {
       return undefined;
     }
-    const memberRows = await this.client.query<Record<string, unknown>>(
+    const memberRows = await this.query<Record<string, unknown>>(
       `SELECT
   m.*,
   COALESCE(member.display_name, m.display_name) AS authoritative_display_name,

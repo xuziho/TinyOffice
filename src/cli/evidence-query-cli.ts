@@ -141,7 +141,10 @@ export async function openEvidenceQueryRepositories(repoRoot: string): Promise<E
   const companyId = normalizeCompanyId(process.env.TINYOFFICE_COMPANY_ID);
   const directory = await CompanyDirectoryRepository.open(repoRoot, { companyId });
   const work = await WorkRepository.open(repoRoot, { companyId });
-  const runtime = await RuntimeSessionRepository.open(repoRoot, { companyId });
+  const runtime = await RuntimeSessionRepository.open(repoRoot, {
+    companyId,
+    domains: ["sessions", "processTrace", "collaborationActions", "memory"],
+  });
   const governanceConnection = await openConfiguredPostgresConnection(repoRoot);
   if (!governanceConnection) {
     throw new Error("Evidence query governance storage requires PostgreSQL runtime configuration.");

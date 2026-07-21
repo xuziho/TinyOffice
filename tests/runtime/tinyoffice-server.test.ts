@@ -9,7 +9,7 @@ import { DEFAULT_COMPANY_ID } from "../../src/runtime/company-config/postgres-sc
 import {
   createRuntimeProcessTracePublisher,
 } from "../../src/runtime/realtime/tinyoffice-server.js";
-import { listProcessTraceEvents } from "../../src/runtime/realtime/process-trace-store.js";
+import { drainProcessTraceWriters, listProcessTraceEvents } from "../../src/runtime/realtime/process-trace-store.js";
 import { defaultRuntimePostgresTestDatabaseUrl, resetRuntimePostgresTables } from "./postgres-test-utils.js";
 
 test("TinyOffice runtime server mounts authenticated Chat and company directory APIs", async () => {
@@ -104,6 +104,7 @@ test("real Chat runtime process trace publisher persists stable trace ids", asyn
         sequenceInRun: 1,
       },
     });
+    await drainProcessTraceWriters(repoRoot);
 
     const events = await listProcessTraceEvents(repoRoot, DEFAULT_COMPANY_ID, {
       processTraceId: "tinyoffice-chat-process:nora-automation|chat_direct_room|conversation-preview:message-preview:delta",

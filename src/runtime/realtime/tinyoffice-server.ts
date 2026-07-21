@@ -113,7 +113,7 @@ import type { ChatAttachmentApiService } from "../../api/tinyoffice-api/contract
 import { createTinyOfficeChatRuntimeDispatchSink } from "../chat/tinyoffice-chat-runtime-dispatch.js";
 import { PostgresChatTopicChainRepository } from "../chat/chat-topic-chain-repository.js";
 import type { TinyOfficeChatRuntimeProcessTracePublisher } from "../chat/tinyoffice-chat-runtime-dispatch.js";
-import { listProcessTraceEvents, ProcessTracePublisher } from "./process-trace-store.js";
+import { drainProcessTraceWriters, listProcessTraceEvents, ProcessTracePublisher } from "./process-trace-store.js";
 import {
   attachTinyOfficeRealtimeGateway,
   TINYOFFICE_REALTIME_SOCKET_IO_PATH,
@@ -582,28 +582,48 @@ export function createRuntimeProcessTracePublisher(
   companyId: string,
   realtimePublisher?: ReturnType<typeof attachTinyOfficeRealtimeGateway>,
 ): TinyOfficeChatRuntimeProcessTracePublisher {
-  const publisher = new ProcessTracePublisher(repoRoot, companyId);
-  async function publishAndNotify(event: Parameters<ProcessTracePublisher["publish"]>[0]) {
-    const stored = await publisher.publish(event);
-    const employeeId = stored.employeeId || stored.sessionKey.split("|")[0]?.trim();
-    if (!employeeId) {
-      return stored;
-    }
-    realtimePublisher?.publish({
-      type: "process_trace.appended",
-      companyId,
-      processTraceId: stored.id,
-      employeeId,
-      sessionKey: stored.sessionKey,
-    });
-    return stored;
-  }
+  const publisher = new ProcessTracePublisher(repoRoot, companyId, {
+    onPersisted(stored) {
+      const employeeId = stored.employeeId || stored.sessionKey.split("|")[0]?.trim();
+      if (employeeId) {
+        realtimePublisher?.publish({
+          type: "process_trace.appended",
+          companyId,
+          processTraceId: stored.id,
+          employeeId,
+          sessionKey: stored.sessionKey,
+        });
+      }
+      const targetMemberId = typeof stored.metadata?.targetMemberId === "string"
+        ? stored.metadata.targetMemberId
+        : undefined;
+      const chainId = typeof stored.metadata?.chainId === "string"
+        ? stored.metadata.chainId
+        : undefined;
+      if (
+        stored.runId && stored.conversationId && stored.sourceMessageId &&
+        stored.sequenceInRun && targetMemberId
+      ) {
+        realtimePublisher?.publish({
+          type: "chat.activity.persisted",
+          companyId,
+          conversationId: stored.conversationId,
+          roomId: stored.conversationId,
+          runId: stored.runId,
+          ...(chainId ? { chainId } : {}),
+          sourceMessageId: stored.sourceMessageId,
+          targetMemberId,
+          persistedThroughSequence: stored.sequenceInRun,
+        });
+      }
+    },
+  });
   return {
     async publishProcessTrace(event) {
-      return publishAndNotify(event);
+      return publisher.publish(event);
     },
     async publishProcessTraceEvent(event) {
-      return publishAndNotify(event);
+      return publisher.publish(event);
     },
   };
 }
@@ -1514,6 +1534,7 @@ export async function createTinyOfficeServer(
         }
       })
       .finally(async () => {
+        await drainProcessTraceWriters(config.repoRoot);
         await ownerAuth.close();
         closeWithoutServiceCleanup(callback);
       });

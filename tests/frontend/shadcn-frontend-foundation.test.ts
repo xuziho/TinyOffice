@@ -623,7 +623,9 @@ test("TinyOffice realtime documentation stays aligned with the current event con
   assert.match(realtimeDocs, /viewerMemberId/);
   assert.match(realtimeDocs, /chat\.read_state\.updated/);
   assert.match(realtimeDocs, /chat\.runtime_status\.changed/);
-  assert.match(realtimeDocs, /chat\.process_trace\.appended/);
+  assert.match(realtimeDocs, /chat\.activity\.observed/);
+  assert.match(realtimeDocs, /chat\.activity\.persisted/);
+  assert.doesNotMatch(realtimeDocs, /chat\.process_trace\.appended/);
   assert.match(realtimeDocs, /chat\.reply\.delta/);
   assert.match(realtimeDocs, /runId/);
   assert.match(realtimeDocs, /REST remains authoritative/);

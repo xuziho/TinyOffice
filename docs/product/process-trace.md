@@ -41,13 +41,14 @@ TinyOffice uses Pi Agent as the runtime foundation. Process Trace remains the ra
 
 Chat keeps runtime trace out of the message stream:
 
-- After the user sends a message and a runtime employee starts working, Chat records trace events for that run and refreshes the Activity projection for that run's source message.
+- After the user sends a message and a runtime employee starts working, Chat publishes the backend-owned Activity projection immediately while Process Trace evidence is written in bounded background batches.
 - Chat Context keeps the Activity area stable so room details and participants do not jump when trace events start.
 - Trace events and Activity rows do not occupy the message stream.
 - When the employee reply body starts streaming, the message stream shows the reply text directly.
 - Activity remains in the Context rail and can be expanded to inspect evidence for the selected run or reply. A selected source-message query must keep the full lifecycle for that run, including completion or failure, and must not mix in other runs from the same room.
 - Reopening a concrete Chat room selects the latest employee reply with Activity evidence by default. Manual Activity selection on a message switches the Context rail to that specific run.
 - Raw provider delta spam must be grouped before it reaches the product surface.
+- Process Trace persistence is not a prerequisite for provider invocation, text streaming, or live Activity. The durable snapshot remains the history and reconnect authority.
 
 ## Boundary
 
@@ -55,10 +56,11 @@ Chat keeps runtime trace out of the message stream:
 - Process Trace is not a replacement for the Sessions page.
 - Chat should expose compact room Activity in Context; detailed trace reading can also belong in Sessions, Tasks, or a dedicated runtime evidence view.
 - User-visible Chat messages should contain normal conversation replies, not raw runtime lifecycle events.
+- User Messages, final employee Messages, terminal Run/Session state, permissions, and real tool side effects are durable business facts. They are never downgraded to best-effort Process Trace evidence.
 
 ## Technical Implementation
 
-See [Approval / Process Trace Technical Implementation](../technical/approval-trace.md).
+See [Approval / Process Trace Technical Implementation](../technical/approval-trace.md) and [Runtime event durability](../technical/runtime-event-durability.md).
 
 Related product pages:
 

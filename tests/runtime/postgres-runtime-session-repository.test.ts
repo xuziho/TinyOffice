@@ -175,6 +175,46 @@ test("postgres runtime session repository open waits for each client query to se
   assert.equal(client.released, true);
 });
 
+test("postgres runtime session repository loads only explicitly requested storage domains", async () => {
+  const client = new FakeRuntimePostgresClient();
+  const repository = await PostgresRuntimeSessionRepository.open({
+    client,
+    pool: { async end() {} },
+    companyId: DEFAULT_COMPANY_ID,
+    domains: ["sessions"],
+  });
+
+  try {
+    const selects = client.queries.filter(({ sql }) => /^SELECT \* FROM/.test(sql));
+    assert.equal(selects.length, 2);
+    assert.match(selects[0]!.sql, /session_records/);
+    assert.match(selects[1]!.sql, /session_events/);
+    assert.equal(selects.some(({ sql }) => /process_trace_events|collaboration_action_events|memory_summaries|runtime_storage_retention_state/.test(sql)), false);
+  } finally {
+    repository.close();
+  }
+});
+
+test("postgres runtime session repository scopes one runtime flush to one Session", async () => {
+  const client = new FakeRuntimePostgresClient();
+  const repository = await PostgresRuntimeSessionRepository.open({
+    client,
+    pool: { async end() {} },
+    companyId: DEFAULT_COMPANY_ID,
+    sessionRecordId: "session-record-focused",
+  });
+
+  try {
+    const selects = client.queries.filter(({ sql }) => /^SELECT \* FROM/.test(sql));
+    assert.equal(selects.length, 2);
+    assert.match(selects[0]!.sql, /id = \$2/);
+    assert.match(selects[1]!.sql, /session_record_id = \$2/);
+    assert.deepEqual(selects[0]!.params, [DEFAULT_COMPANY_ID, "session-record-focused"]);
+  } finally {
+    repository.close();
+  }
+});
+
 test("postgres runtime session repository normalizes pg Date timestamps to ISO before readback and save", async () => {
   const client = new DateReturningRuntimePostgresClient();
   const repository = await PostgresRuntimeSessionRepository.open({

@@ -457,6 +457,12 @@ CREATE TABLE IF NOT EXISTS process_trace_events (
   id text NOT NULL,
   timestamp timestamptz NOT NULL,
   session_key text NOT NULL,
+  run_id text,
+  sequence_in_run bigint,
+  conversation_id text,
+  message_id text,
+  source_message_id text,
+  chat_entry_id text,
   channel_topic_id text,
   task_id text,
   employee_id text,
@@ -471,6 +477,9 @@ CREATE TABLE IF NOT EXISTS process_trace_events (
   PRIMARY KEY (company_id, id)
 );
 CREATE INDEX IF NOT EXISTS idx_process_trace_session_timestamp ON process_trace_events(company_id, session_key, timestamp);
+CREATE INDEX IF NOT EXISTS idx_process_trace_run_sequence ON process_trace_events(company_id, run_id, sequence_in_run, timestamp);
+CREATE INDEX IF NOT EXISTS idx_process_trace_conversation_timestamp ON process_trace_events(company_id, conversation_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_process_trace_source_message_timestamp ON process_trace_events(company_id, source_message_id, timestamp);
 CREATE INDEX IF NOT EXISTS idx_process_trace_work_task_timestamp ON process_trace_events(company_id, work_task_id, timestamp);
 CREATE INDEX IF NOT EXISTS idx_process_trace_work_run_timestamp ON process_trace_events(company_id, work_run_id, timestamp);
 
@@ -1203,5 +1212,36 @@ ALTER TABLE user_profiles
   {
     id: "pg_018_mcp_foundation_20260720",
     sql: buildMcpFoundationSchemaSql(),
+  },
+  {
+    id: "pg_019_process_trace_correlation_columns_20260721",
+    sql: `
+ALTER TABLE process_trace_events
+  ADD COLUMN IF NOT EXISTS run_id text,
+  ADD COLUMN IF NOT EXISTS sequence_in_run bigint,
+  ADD COLUMN IF NOT EXISTS conversation_id text,
+  ADD COLUMN IF NOT EXISTS message_id text,
+  ADD COLUMN IF NOT EXISTS source_message_id text,
+  ADD COLUMN IF NOT EXISTS chat_entry_id text;
+
+UPDATE process_trace_events
+SET run_id = NULLIF(payload_json ->> 'runId', ''),
+    sequence_in_run = CASE
+      WHEN (payload_json ->> 'sequenceInRun') ~ '^[0-9]+$'
+      THEN (payload_json ->> 'sequenceInRun')::bigint
+      ELSE NULL
+    END,
+    conversation_id = NULLIF(payload_json ->> 'conversationId', ''),
+    message_id = NULLIF(payload_json ->> 'messageId', ''),
+    source_message_id = NULLIF(payload_json ->> 'sourceMessageId', ''),
+    chat_entry_id = NULLIF(payload_json ->> 'chatEntryId', '');
+
+CREATE INDEX IF NOT EXISTS idx_process_trace_run_sequence
+ON process_trace_events(company_id, run_id, sequence_in_run, timestamp);
+CREATE INDEX IF NOT EXISTS idx_process_trace_conversation_timestamp
+ON process_trace_events(company_id, conversation_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_process_trace_source_message_timestamp
+ON process_trace_events(company_id, source_message_id, timestamp);
+`,
   },
 ];

@@ -434,7 +434,10 @@ async function resolveRuntimeSessionRepository(
     throw new Error("runtime session repository is not configured");
   }
   return {
-    repository: await RuntimeSessionRepository.open(options.repoRoot, { companyId }),
+    repository: await RuntimeSessionRepository.open(options.repoRoot, {
+      companyId,
+      domains: ["sessions"],
+    }),
     shouldClose: true,
   };
 }

@@ -12,6 +12,7 @@ import type {
   RuntimeSessionStatus,
   RuntimeStorageCleanupResult,
   RuntimeStorageRetentionPolicy,
+  RuntimeSessionStorageDomain,
 } from "./runtime-session-repository.js";
 
 interface RuntimePostgresClient extends PostgresMigrationClient {
@@ -146,6 +147,14 @@ function processTraceEventFromRow(row: Record<string, unknown>): ProcessTraceEve
     id: String(row.id),
     timestamp: timestampValue(row.timestamp),
     sessionKey: String(row.session_key),
+    runId: optional(row.run_id),
+    sequenceInRun: row.sequence_in_run === null || row.sequence_in_run === undefined
+      ? undefined
+      : numberValue(row.sequence_in_run),
+    conversationId: optional(row.conversation_id),
+    messageId: optional(row.message_id),
+    sourceMessageId: optional(row.source_message_id),
+    chatEntryId: optional(row.chat_entry_id),
     channelTopicId: optional(row.channel_topic_id),
     workTaskId: optional(row.work_task_id),
     workRunId: optional(row.work_run_id),
@@ -268,31 +277,54 @@ export class PostgresRuntimeSessionRepository {
     client: RuntimePostgresClient;
     pool: RuntimePostgresPoolLike;
     companyId: string;
+    sessionRecordId?: string;
+    domains?: RuntimeSessionStorageDomain[];
   }): Promise<PostgresRuntimeSessionRepository> {
-    const sessionRecords = await input.client.query(
-      "SELECT * FROM session_records WHERE company_id = $1 ORDER BY updated_at DESC, started_at DESC",
-      [input.companyId],
+    const domains = new Set<RuntimeSessionStorageDomain>(
+      input.sessionRecordId ? ["sessions"] : input.domains ?? [
+        "sessions",
+        "processTrace",
+        "collaborationActions",
+        "memory",
+        "retention",
+      ],
     );
-    const sessionEvents = await input.client.query(
-      "SELECT * FROM session_events WHERE company_id = $1 ORDER BY sequence ASC, timestamp ASC",
-      [input.companyId],
+    const sessionRecords = !domains.has("sessions") ? { rows: [] } : await input.client.query(
+      input.sessionRecordId
+        ? "SELECT * FROM session_records WHERE company_id = $1 AND id = $2"
+        : "SELECT * FROM session_records WHERE company_id = $1 ORDER BY updated_at DESC, started_at DESC",
+      input.sessionRecordId ? [input.companyId, input.sessionRecordId] : [input.companyId],
     );
-    const processTraceEvents = await input.client.query(
-      "SELECT * FROM process_trace_events WHERE company_id = $1 ORDER BY timestamp ASC",
-      [input.companyId],
+    const sessionEvents = !domains.has("sessions") ? { rows: [] } : await input.client.query(
+      input.sessionRecordId
+        ? "SELECT * FROM session_events WHERE company_id = $1 AND session_record_id = $2 ORDER BY sequence ASC, timestamp ASC"
+        : "SELECT * FROM session_events WHERE company_id = $1 ORDER BY sequence ASC, timestamp ASC",
+      input.sessionRecordId ? [input.companyId, input.sessionRecordId] : [input.companyId],
     );
-    const collaborationActionEvents = await input.client.query(
-      "SELECT * FROM collaboration_action_events WHERE company_id = $1 ORDER BY timestamp ASC",
-      [input.companyId],
-    );
-    const memorySummaries = await input.client.query(
-      "SELECT * FROM memory_summaries WHERE company_id = $1 ORDER BY updated_at DESC",
-      [input.companyId],
-    );
-    const retentionStates = await input.client.query(
-      "SELECT * FROM runtime_storage_retention_state WHERE company_id = $1",
-      [input.companyId],
-    );
+    const processTraceEvents = !domains.has("processTrace")
+      ? { rows: [] }
+      : await input.client.query(
+          "SELECT * FROM process_trace_events WHERE company_id = $1 ORDER BY timestamp ASC",
+          [input.companyId],
+        );
+    const collaborationActionEvents = !domains.has("collaborationActions")
+      ? { rows: [] }
+      : await input.client.query(
+          "SELECT * FROM collaboration_action_events WHERE company_id = $1 ORDER BY timestamp ASC",
+          [input.companyId],
+        );
+    const memorySummaries = !domains.has("memory")
+      ? { rows: [] }
+      : await input.client.query(
+          "SELECT * FROM memory_summaries WHERE company_id = $1 ORDER BY updated_at DESC",
+          [input.companyId],
+        );
+    const retentionStates = !domains.has("retention")
+      ? { rows: [] }
+      : await input.client.query(
+          "SELECT * FROM runtime_storage_retention_state WHERE company_id = $1",
+          [input.companyId],
+        );
 
     return new PostgresRuntimeSessionRepository(
       input.client,
@@ -581,13 +613,21 @@ ON CONFLICT (company_id, id) DO UPDATE SET
     upsertById(this.processTraceEvents, event);
     this.queueQuery(
       `INSERT INTO process_trace_events (
-  company_id, id, timestamp, session_key, channel_topic_id, work_task_id,
-  work_run_id, employee_id, kind, title, summary, status, preview, payload_json
+  company_id, id, timestamp, session_key, run_id, sequence_in_run,
+  conversation_id, message_id, source_message_id, chat_entry_id,
+  channel_topic_id, work_task_id, work_run_id, employee_id,
+  kind, title, summary, status, preview, payload_json
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
 ON CONFLICT (company_id, id) DO UPDATE SET
   timestamp = EXCLUDED.timestamp,
   session_key = EXCLUDED.session_key,
+  run_id = EXCLUDED.run_id,
+  sequence_in_run = EXCLUDED.sequence_in_run,
+  conversation_id = EXCLUDED.conversation_id,
+  message_id = EXCLUDED.message_id,
+  source_message_id = EXCLUDED.source_message_id,
+  chat_entry_id = EXCLUDED.chat_entry_id,
   channel_topic_id = EXCLUDED.channel_topic_id,
   work_task_id = EXCLUDED.work_task_id,
   work_run_id = EXCLUDED.work_run_id,
@@ -603,6 +643,12 @@ ON CONFLICT (company_id, id) DO UPDATE SET
         event.id,
         event.timestamp,
         event.sessionKey,
+        event.runId ?? metadataString(event.metadata, "runId") ?? metadataString(event.metadata, "eventKey") ?? null,
+        event.sequenceInRun ?? null,
+        event.conversationId ?? metadataString(event.metadata, "conversationId") ?? null,
+        event.messageId ?? metadataString(event.metadata, "messageId") ?? null,
+        event.sourceMessageId ?? metadataString(event.metadata, "sourceMessageId") ?? null,
+        event.chatEntryId ?? metadataString(event.metadata, "chatEntryId") ?? null,
         event.channelTopicId ?? null,
         event.workTaskId ?? null,
         event.workRunId ?? null,
@@ -636,10 +682,10 @@ ON CONFLICT (company_id, id) DO UPDATE SET
       .filter((event) => !input.processTraceId || event.id === input.processTraceId)
       .filter((event) => !input.sessionKey || event.sessionKey === input.sessionKey)
       .filter((event) => !input.channelTopicId || event.channelTopicId === input.channelTopicId)
-      .filter((event) => !input.conversationId || metadataString(event.metadata, "conversationId") === input.conversationId)
-      .filter((event) => !input.messageId || metadataString(event.metadata, "messageId") === input.messageId)
-      .filter((event) => !input.sourceMessageId || metadataString(event.metadata, "sourceMessageId") === input.sourceMessageId)
-      .filter((event) => !input.chatEntryId || metadataString(event.metadata, "chatEntryId") === input.chatEntryId)
+      .filter((event) => !input.conversationId || event.conversationId === input.conversationId)
+      .filter((event) => !input.messageId || event.messageId === input.messageId)
+      .filter((event) => !input.sourceMessageId || event.sourceMessageId === input.sourceMessageId)
+      .filter((event) => !input.chatEntryId || event.chatEntryId === input.chatEntryId)
       .filter((event) => !input.workTaskId || event.workTaskId === input.workTaskId)
       .filter((event) => !input.workRunId || event.workRunId === input.workRunId)
       .filter((event) => !input.employeeId || event.employeeId === input.employeeId)

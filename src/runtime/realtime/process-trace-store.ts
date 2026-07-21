@@ -1,22 +1,20 @@
 import type { ProcessTraceEvent } from "../contracts/process-trace-event.js";
-import { RuntimeSessionRepository } from "../storage/runtime-session-repository.js";
+import {
+  appendProcessTraceEventBatch,
+  queryProcessTraceEvents,
+  type ProcessTraceStoreQuery,
+} from "../storage/postgres-process-trace-store.js";
 
-export interface ProcessTraceQuery {
-  processTraceId?: string;
-  sessionKey?: string;
-  channelTopicId?: string;
-  conversationId?: string;
-  messageId?: string;
-  sourceMessageId?: string;
-  chatEntryId?: string;
-  workTaskId?: string;
-  workRunId?: string;
-  employeeId?: string;
-  since?: string;
-  limit?: number;
-}
+export type ProcessTraceQuery = ProcessTraceStoreQuery;
 
 export type ProcessTraceSubscriber = (event: ProcessTraceEvent) => void;
+
+export interface ProcessTraceWriterSnapshot {
+  queued: number;
+  inFlight: number;
+  persisted: number;
+  failed: number;
+}
 
 export type ProcessTraceRuntimeLinkKind =
   | "process-trace"
@@ -46,9 +44,6 @@ export interface ProcessTraceNavigationEvent extends ProcessTraceEvent {
   chatEntryId?: string;
   runtimeLinks: ProcessTraceRuntimeLink[];
 }
-
-const processTraceWriteQueues = new Map<string, Promise<unknown>>();
-const maxStaleSaveAttempts = 20;
 
 function nowIso() {
   return new Date().toISOString();
@@ -116,9 +111,9 @@ function dedupeRuntimeLinks(links: ProcessTraceRuntimeLink[]): ProcessTraceRunti
 
 export function projectProcessTraceNavigationEvent(event: ProcessTraceEvent): ProcessTraceNavigationEvent {
   const processTraceId = event.id;
-  const conversationId = metadataString(event.metadata, "conversationId");
-  const messageId = metadataString(event.metadata, "messageId");
-  const chatEntryId = metadataString(event.metadata, "chatEntryId");
+  const conversationId = event.conversationId || metadataString(event.metadata, "conversationId");
+  const messageId = event.messageId || metadataString(event.metadata, "messageId");
+  const chatEntryId = event.chatEntryId || metadataString(event.metadata, "chatEntryId");
   const runtimeLinks: ProcessTraceRuntimeLink[] = [{
     kind: "process-trace",
     targetId: processTraceId,
@@ -194,16 +189,27 @@ export function projectProcessTraceNavigationEvent(event: ProcessTraceEvent): Pr
 export function normalizeProcessTraceEvent(
   event: Omit<ProcessTraceEvent, "id" | "timestamp"> & Partial<Pick<ProcessTraceEvent, "id" | "timestamp">>,
 ): ProcessTraceEvent {
+  const metadata = event.metadata
+    ? sanitizeValue(event.metadata) as Record<string, unknown>
+    : undefined;
+  const metadataNumber = (key: string): number | undefined => {
+    const value = metadata?.[key];
+    return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+  };
   return {
     ...event,
     id: event.id || createEventId(event),
     timestamp: event.timestamp || nowIso(),
+    runId: event.runId || metadataString(metadata, "runId") || metadataString(metadata, "eventKey"),
+    sequenceInRun: event.sequenceInRun ?? metadataNumber("sequenceInRun"),
+    conversationId: event.conversationId || metadataString(metadata, "conversationId"),
+    messageId: event.messageId || metadataString(metadata, "messageId"),
+    sourceMessageId: event.sourceMessageId || metadataString(metadata, "sourceMessageId"),
+    chatEntryId: event.chatEntryId || metadataString(metadata, "chatEntryId"),
     title: redactString(event.title),
     summary: event.summary ? redactString(event.summary) : undefined,
     preview: event.preview ? redactString(event.preview) : undefined,
-    metadata: event.metadata
-      ? sanitizeValue(event.metadata) as Record<string, unknown>
-      : undefined,
+    metadata,
   };
 }
 
@@ -216,48 +222,9 @@ export async function appendProcessTraceEvent(
   } = {},
 ): Promise<ProcessTraceEvent> {
   const normalized = normalizeProcessTraceEvent(event);
-  const queueKey = `${repoRoot}\0${companyId}`;
-  const previous = processTraceWriteQueues.get(queueKey) || Promise.resolve();
-  const operation = previous
-    .catch(() => undefined)
-    .then(async () => {
-      for (let attempt = 0; attempt < maxStaleSaveAttempts; attempt += 1) {
-        const repository = await RuntimeSessionRepository.open(repoRoot, { companyId });
-        try {
-          const existing = repository
-            .listProcessTraceEvents({ sessionKey: normalized.sessionKey })
-            .find((candidate) => candidate.id === normalized.id);
-          const stored = existing || repository.appendProcessTraceEvent(normalized);
-          await options.beforeSave?.();
-          await repository.save();
-          return stored;
-        } catch (error) {
-          if (attempt < maxStaleSaveAttempts - 1 && isStaleRuntimeStoreSave(error)) {
-            await waitForRetryTurn();
-            continue;
-          }
-          throw error;
-        } finally {
-          repository.close();
-        }
-      }
-      throw new Error("appendProcessTraceEvent exhausted stale runtime store retries.");
-    });
-  const cleanup = operation.finally(() => {
-    if (processTraceWriteQueues.get(queueKey) === cleanup) {
-      processTraceWriteQueues.delete(queueKey);
-    }
-  });
-  processTraceWriteQueues.set(queueKey, cleanup);
-  return operation;
-}
-
-function isStaleRuntimeStoreSave(error: unknown) {
-  return error instanceof Error && /Runtime store changed after this handle was opened/.test(error.message);
-}
-
-function waitForRetryTurn(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 10));
+  await options.beforeSave?.();
+  await appendProcessTraceEventBatch(repoRoot, companyId, [normalized]);
+  return normalized;
 }
 
 export async function listProcessTraceEvents(
@@ -265,29 +232,145 @@ export async function listProcessTraceEvents(
   companyId: string,
   query: ProcessTraceQuery = {},
 ): Promise<ProcessTraceEvent[]> {
-  const repository = await RuntimeSessionRepository.open(repoRoot, { companyId });
-  try {
-    const events = repository.listProcessTraceEvents({
-      processTraceId: query.processTraceId,
-      sessionKey: query.sessionKey,
-      channelTopicId: query.channelTopicId,
-      conversationId: query.conversationId,
-      messageId: query.messageId,
-      sourceMessageId: query.sourceMessageId,
-      chatEntryId: query.chatEntryId,
-      workTaskId: query.workTaskId,
-      workRunId: query.workRunId,
-      employeeId: query.employeeId,
-      since: query.since,
-      limit: query.limit,
-    });
-    if (query.limit && events.length > query.limit) {
-      return events.slice(-query.limit);
+  return queryProcessTraceEvents(repoRoot, companyId, query);
+}
+
+const PROCESS_TRACE_BATCH_DELAY_MS = 100;
+const PROCESS_TRACE_BATCH_SIZE = 50;
+const PROCESS_TRACE_QUEUE_CAPACITY = 1000;
+const PROCESS_TRACE_PERSIST_ATTEMPTS = 3;
+const sharedProcessTraceWriters = new Map<string, ProcessTraceEvidenceWriter>();
+
+type QueuedProcessTraceEvent = {
+  event: ProcessTraceEvent;
+  resolve(): void;
+  reject(error: unknown): void;
+};
+
+class ProcessTraceEvidenceWriter {
+  private readonly queue: QueuedProcessTraceEvent[] = [];
+  private flushTimer: ReturnType<typeof setTimeout> | undefined;
+  private flushChain = Promise.resolve();
+  private inFlight = 0;
+  private persisted = 0;
+  private failed = 0;
+
+  constructor(
+    private readonly repoRoot: string,
+    private readonly companyId: string,
+  ) {}
+
+  enqueue(event: ProcessTraceEvent): Promise<void> {
+    if (this.queue.length >= PROCESS_TRACE_QUEUE_CAPACITY) {
+      this.failed += 1;
+      return Promise.reject(new Error(
+        `Process Trace evidence queue reached ${PROCESS_TRACE_QUEUE_CAPACITY} events for ${this.companyId}.`,
+      ));
     }
-    return events;
-  } finally {
-    repository.close();
+    const persisted = new Promise<void>((resolve, reject) => {
+      this.queue.push({ event, resolve, reject });
+    });
+    if (this.queue.length >= PROCESS_TRACE_BATCH_SIZE) {
+      this.scheduleFlush(0);
+    } else if (!this.flushTimer) {
+      this.scheduleFlush(PROCESS_TRACE_BATCH_DELAY_MS);
+    }
+    return persisted;
   }
+
+  snapshot(): ProcessTraceWriterSnapshot {
+    return {
+      queued: this.queue.length,
+      inFlight: this.inFlight,
+      persisted: this.persisted,
+      failed: this.failed,
+    };
+  }
+
+  async drain(): Promise<void> {
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = undefined;
+    }
+    while (this.queue.length > 0) {
+      this.queueFlush();
+      await this.flushChain;
+    }
+    await this.flushChain;
+  }
+
+  private scheduleFlush(delayMs: number) {
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer);
+    }
+    this.flushTimer = setTimeout(() => {
+      this.flushTimer = undefined;
+      this.queueFlush();
+    }, delayMs);
+    this.flushTimer.unref?.();
+  }
+
+  private queueFlush() {
+    if (this.queue.length === 0) {
+      return;
+    }
+    const batch = this.queue.splice(0, PROCESS_TRACE_BATCH_SIZE);
+    this.flushChain = this.flushChain
+      .catch(() => undefined)
+      .then(async () => {
+        this.inFlight += batch.length;
+        try {
+          await this.persistBatch(batch);
+          this.persisted += batch.length;
+          for (const item of batch) {
+            item.resolve();
+          }
+        } catch (error) {
+          this.failed += batch.length;
+          for (const item of batch) {
+            item.reject(error);
+          }
+        } finally {
+          this.inFlight -= batch.length;
+          if (this.queue.length > 0) {
+            this.scheduleFlush(this.queue.length >= PROCESS_TRACE_BATCH_SIZE ? 0 : PROCESS_TRACE_BATCH_DELAY_MS);
+          }
+        }
+      });
+  }
+
+  private async persistBatch(batch: QueuedProcessTraceEvent[]): Promise<void> {
+    let latestError: unknown;
+    for (let attempt = 1; attempt <= PROCESS_TRACE_PERSIST_ATTEMPTS; attempt += 1) {
+      try {
+        await appendProcessTraceEventBatch(this.repoRoot, this.companyId, batch.map((item) => item.event));
+        return;
+      } catch (error) {
+        latestError = error;
+        if (attempt < PROCESS_TRACE_PERSIST_ATTEMPTS) {
+          await new Promise<void>((resolve) => setTimeout(resolve, attempt * 25));
+        }
+      }
+    }
+    throw latestError;
+  }
+}
+
+function processTraceWriter(repoRoot: string, companyId: string): ProcessTraceEvidenceWriter {
+  const key = `${repoRoot}\0${companyId}`;
+  let writer = sharedProcessTraceWriters.get(key);
+  if (!writer) {
+    writer = new ProcessTraceEvidenceWriter(repoRoot, companyId);
+    sharedProcessTraceWriters.set(key, writer);
+  }
+  return writer;
+}
+
+export async function drainProcessTraceWriters(repoRoot?: string): Promise<void> {
+  const writers = [...sharedProcessTraceWriters.entries()]
+    .filter(([key]) => !repoRoot || key.startsWith(`${repoRoot}\0`))
+    .map(([, writer]) => writer);
+  await Promise.all(writers.map((writer) => writer.drain()));
 }
 
 export class ProcessTracePublisher {
@@ -296,6 +379,10 @@ export class ProcessTracePublisher {
   constructor(
     private readonly repoRoot: string,
     private readonly companyId: string,
+    private readonly options: {
+      onPersisted?(event: ProcessTraceEvent): void;
+      onPersistenceError?(event: ProcessTraceEvent, error: unknown): void;
+    } = {},
   ) {}
 
   subscribe(sessionKey: string, subscriber: ProcessTraceSubscriber): () => void {
@@ -314,7 +401,7 @@ export class ProcessTracePublisher {
   async publish(
     event: Omit<ProcessTraceEvent, "id" | "timestamp"> & Partial<Pick<ProcessTraceEvent, "id" | "timestamp">>,
   ): Promise<ProcessTraceEvent> {
-    const normalized = await appendProcessTraceEvent(this.repoRoot, this.companyId, event);
+    const normalized = normalizeProcessTraceEvent(event);
     const subscribers = [
       ...(this.subscribers.get(normalized.sessionKey) || []),
       ...(this.subscribers.get("*") || []),
@@ -324,6 +411,23 @@ export class ProcessTracePublisher {
         subscriber(normalized);
       }
     }
+    void processTraceWriter(this.repoRoot, this.companyId).enqueue(normalized)
+      .then(() => this.options.onPersisted?.(normalized))
+      .catch((error) => {
+        this.options.onPersistenceError?.(normalized, error);
+        process.emitWarning(
+          `Process Trace evidence persistence failed for ${normalized.id}: ${error instanceof Error ? error.message : String(error)}`,
+          { code: "TINYOFFICE_PROCESS_TRACE_PERSISTENCE_FAILED" },
+        );
+      });
     return normalized;
+  }
+
+  drain(): Promise<void> {
+    return processTraceWriter(this.repoRoot, this.companyId).drain();
+  }
+
+  writerSnapshot(): ProcessTraceWriterSnapshot {
+    return processTraceWriter(this.repoRoot, this.companyId).snapshot();
   }
 }

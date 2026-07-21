@@ -118,7 +118,7 @@ export function applyChatRunRealtimeEvent(state: ChatRunState, event: TinyOffice
     });
   }
 
-  if (event.type === "chat.process_trace.appended") {
+  if (event.type === "chat.activity.observed") {
     const existing = state.runs[event.runId];
     return upsertRun(state, event.runId, {
       companyId: event.companyId,
@@ -127,7 +127,6 @@ export function applyChatRunRealtimeEvent(state: ChatRunState, event: TinyOffice
       runId: event.runId,
       chainId: event.chainId ?? existing?.chainId ?? event.runId,
       sourceMessageId: event.sourceMessageId,
-      replyMessageId: event.replyMessageId,
       targetMemberId: event.targetMemberId,
       status: existing?.status ?? "thinking",
       sequence: event.sequence,

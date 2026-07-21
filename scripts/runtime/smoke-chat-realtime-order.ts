@@ -10,6 +10,7 @@ const commandName = "npm run smoke:chat-realtime-order";
 const runtimeOrigin = process.env.TINYOFFICE_RUNTIME_ORIGIN || "http://127.0.0.1:8095";
 const targetMemberId = process.env.TINYOFFICE_SMOKE_TARGET_MEMBER_ID || "alex";
 const timeoutMs = Number(process.env.TINYOFFICE_SMOKE_TIMEOUT_MS || 90_000);
+const authCookie = process.env.TINYOFFICE_SMOKE_COOKIE?.trim();
 const socketIoPath = "/api/realtime/socket.io";
 const socketEventName = "tinyoffice.realtime";
 
@@ -82,7 +83,11 @@ function socketIoClient(): SocketIoClient {
 }
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, init);
+  const headers = new Headers(init?.headers);
+  if (authCookie) {
+    headers.set("Cookie", authCookie);
+  }
+  const response = await fetch(url, { ...init, headers });
   const text = await response.text();
   if (!response.ok) {
     throw new Error(`${init?.method || "GET"} ${url} failed with ${response.status}: ${text}`);
@@ -205,7 +210,7 @@ async function waitForRealtimeOrder(input: {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const runEvents = input.monitor.events.filter((event) => eventBelongsToRun(event, input.created));
-    const firstProcessTraceIndex = firstIndex(runEvents, (event) => event.type === "chat.process_trace.appended");
+    const firstProcessTraceIndex = firstIndex(runEvents, (event) => event.type === "chat.activity.observed");
     const firstVisibleReplyIndex = firstIndex(runEvents, (event) =>
       event.type === "chat.reply.delta" || event.type === "chat.reply.snapshot"
     );

@@ -44,6 +44,10 @@ export interface ChatProjectionChannelSource {
 }
 
 export interface ChatProjectionMessageSource {
+  listFirstMessages?(
+    companyId: string,
+    conversationIds: string[],
+  ): Promise<MessagePage>;
   listMessages(
     companyId: string,
     conversationId: string,
@@ -293,9 +297,7 @@ export class ChatProjectionService {
       ensureChatEntryCompanyScope({ companyId: scopedCompanyId, resourceCompanyId: conversation.companyId });
       return isChatParticipantAllowed(conversation, viewer);
     });
-    const summaries = await Promise.all(
-      visibleConversations.map((conversation) => this.firstMessagePreview(scopedCompanyId, conversation)),
-    );
+    const summaries = await this.firstMessagePreviews(scopedCompanyId, visibleConversations);
 
     for (const [index, conversation] of visibleConversations.entries()) {
       const summary = summaries[index];
@@ -349,6 +351,25 @@ export class ChatProjectionService {
     }
     const page = await this.messageSource.listMessages(companyId, conversation.conversationId, { limit: 1 });
     return compactEntryPreview(page.messages[0]?.body);
+  }
+
+  private async firstMessagePreviews(companyId: string, conversations: ConversationDto[]): Promise<Array<string | undefined>> {
+    if (!this.messageSource) {
+      return conversations.map(() => undefined);
+    }
+    if (this.messageSource.listFirstMessages) {
+      const page = await this.messageSource.listFirstMessages(
+        companyId,
+        conversations.map((conversation) => conversation.conversationId),
+      );
+      const previews = new Map(page.messages.map((message) => [message.conversationId, compactEntryPreview(message.body)]));
+      return conversations.map((conversation) => previews.get(conversation.conversationId));
+    }
+    const previews: Array<string | undefined> = [];
+    for (const conversation of conversations) {
+      previews.push(await this.firstMessagePreview(companyId, conversation));
+    }
+    return previews;
   }
 }
 

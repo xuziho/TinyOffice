@@ -289,6 +289,20 @@ export class MessageService {
     };
   }
 
+  async listFirstMessages(companyId: string, conversationIds: string[]): Promise<MessagePage> {
+    const scopedCompanyId = ensureConversationCompanyScope({ companyId });
+    const scopedConversationIds = [...new Set(conversationIds.map((conversationId) =>
+      trimRequired(conversationId, "conversationId")
+    ))];
+    const records = await this.repository.listFirstMessages({
+      companyId: scopedCompanyId,
+      conversationIds: scopedConversationIds,
+    });
+    return {
+      messages: records.map((record) => publicMessage(record.message)),
+    };
+  }
+
   async listRecentMessages(
     companyId: string,
     conversationId: string,

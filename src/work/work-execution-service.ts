@@ -505,6 +505,7 @@ export class WorkExecutionService {
     }
     const repository = await RuntimeSessionRepository.open(this.input.repoRoot, {
       companyId: this.input.companyId,
+      domains: ["sessions"],
     });
     try {
       const record = repository.listSessionRecords({

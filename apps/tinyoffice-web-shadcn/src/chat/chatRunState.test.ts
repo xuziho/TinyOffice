@@ -309,24 +309,18 @@ test("chat run state restores the durable current holder after a page refresh", 
   assert.equal(activeChatRunForRoom(reconcileActiveChatRun(restored, "room-1", null), "room-1"), undefined);
 });
 
-test("chat run state ignores process trace payloads as a product activity source", () => {
+test("chat run state tracks backend-projected Activity without interpreting raw trace", () => {
   const state = applyChatRunRealtimeEvent(emptyChatRunState(), realtimeEvent({
-    type: "chat.process_trace.appended",
+    type: "chat.activity.observed",
     companyId: "acme",
     conversationId: "conversation-1",
     roomId: "room-1",
     runId: "run-1",
     sourceMessageId: "message-1",
     targetMemberId: "aster",
-    processTraceEvent: {
-      id: "trace-1",
-      timestamp: "2026-07-02T00:00:01.000Z",
-      sessionKey: "aster|chat_direct_room|room-1",
-      employeeId: "aster",
-      kind: "model_reasoning_observed",
-      title: "Aster is thinking",
-      summary: "Checking the request",
-      status: "running",
+    sequenceInRun: 1,
+    activity: {
+      items: [],
     },
   }));
 

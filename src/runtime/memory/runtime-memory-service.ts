@@ -81,7 +81,10 @@ export function upsertSessionCompletionMemory(
 export async function recordSessionCompletionMemory(
   input: RecordSessionCompletionMemoryInput,
 ): Promise<MemorySummary | undefined> {
-  const repository = await RuntimeSessionRepository.open(input.repoRoot, { companyId: input.companyId });
+  const repository = await RuntimeSessionRepository.open(input.repoRoot, {
+    companyId: input.companyId,
+    domains: ["sessions", "memory"],
+  });
   try {
     const saved = upsertSessionCompletionMemory(repository, {
       sessionRecordId: input.sessionRecordId,
@@ -99,7 +102,10 @@ export async function recordSessionCompletionMemory(
 export async function recallRuntimeMemories(
   input: RecallRuntimeMemoriesInput,
 ): Promise<MemorySummary[]> {
-  const repository = await RuntimeSessionRepository.open(input.repoRoot, { companyId: input.companyId });
+  const repository = await RuntimeSessionRepository.open(input.repoRoot, {
+    companyId: input.companyId,
+    domains: ["memory"],
+  });
   try {
     return repository.listMemorySummaries({
       employeeId: input.employeeId,

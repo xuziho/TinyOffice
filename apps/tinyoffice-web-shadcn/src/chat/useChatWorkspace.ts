@@ -18,7 +18,6 @@ import { latestActivitySourceForMessages } from "./messageActivitySource";
 import { useChatRealtime } from "./useChatRealtime";
 import type { ComposerSubmitValue } from "./mentionComposerModel";
 import { appendOptimisticMessage, optimisticChatMessage, reconcileOptimisticMessage, removeOptimisticMessage } from "./optimisticChatMessage";
-import { createRealtimeInvalidationCoalescer } from "./realtimeInvalidationCoalescer";
 import {
   activitySourceSummaryForSelection,
   addMembersToSelectedChannel,
@@ -56,6 +55,12 @@ type ActivityDisplaySnapshot = {
   selection?: ActivitySelection;
 };
 
+type LiveActivitySnapshot = {
+  activity: RuntimeActivity;
+  sequenceInRun: number;
+  persistedThroughSequence: number;
+};
+
 const EMPTY_RUNTIME_ACTIVITY: RuntimeActivity = { items: [] };
 const CHAT_PROJECTION_STALE_TIME_MS = 15_000;
 const CHAT_MESSAGES_STALE_TIME_MS = 15_000;
@@ -64,6 +69,21 @@ const CURRENT_SESSION_STALE_TIME_MS = 5 * 60_000;
 
 export function activityQueryPlaceholderData(previousData: RuntimeActivity | undefined): RuntimeActivity | undefined {
   return previousData;
+}
+
+export function mergeRuntimeActivity(
+  persisted: RuntimeActivity | undefined,
+  live: RuntimeActivity | undefined,
+): RuntimeActivity {
+  const items = new Map((persisted?.items ?? []).map((item) => [item.id, item]));
+  for (const item of live?.items ?? []) {
+    items.set(item.id, item);
+  }
+  return {
+    items: [...items.values()].sort((left, right) =>
+      (left.timestamp ?? "").localeCompare(right.timestamp ?? "") || left.id.localeCompare(right.id)
+    ),
+  };
 }
 export function activityDisplaySnapshot(input: {
   currentActivity?: RuntimeActivity;
@@ -128,12 +148,10 @@ export function useChatWorkspace(input: { requestedRoomId?: string; currentSessi
   const [selectedSurface, setSelectedSurface] = useState<ChatShellSurface>();
   const [activitySelection, setActivitySelection] = useState<ActivitySelection | undefined>();
   const [settledActivityDisplay, setSettledActivityDisplay] = useState<ActivityDisplaySnapshot | undefined>();
+  const [liveActivityBySource, setLiveActivityBySource] = useState<Record<string, LiveActivitySnapshot>>({});
   const [chatRunState, setChatRunState] = useState(emptyChatRunState);
   const [composerNotice, setComposerNotice] = useState<string | undefined>();
   const markedReadKey = useRef<string | undefined>(undefined);
-  const activityInvalidations = useMemo(() => createRealtimeInvalidationCoalescer(), []);
-
-  useEffect(() => () => activityInvalidations.dispose(), [activityInvalidations]);
 
   const sessionQuery = useQuery({
     queryKey: chatQueryKeys.currentSession(),
@@ -261,7 +279,16 @@ export function useChatWorkspace(input: { requestedRoomId?: string; currentSessi
     }),
     [activeRun?.sourceMessageId, activityQuery.data, activityQuery.isPlaceholderData, activitySelection, settledActivityDisplay],
   );
-  const activity = displayedActivity.activity;
+  const liveActivityKey = companyId && baseModel.selectedRoomId && displayedActivity.selection?.sourceMessageId
+    ? `${companyId}:${baseModel.selectedRoomId}:${displayedActivity.selection.sourceMessageId}`
+    : undefined;
+  const activity = useMemo(
+    () => mergeRuntimeActivity(
+      displayedActivity.activity,
+      liveActivityKey ? liveActivityBySource[liveActivityKey]?.activity : undefined,
+    ),
+    [displayedActivity.activity, liveActivityBySource, liveActivityKey],
+  );
   const activitySource = useMemo(
     () => activitySourceSummaryForSelection(messagesQuery.data?.messages ?? [], displayedActivity.selection?.sourceMessageId),
     [displayedActivity.selection?.sourceMessageId, messagesQuery.data?.messages],
@@ -283,6 +310,7 @@ export function useChatWorkspace(input: { requestedRoomId?: string; currentSessi
   useEffect(() => {
     setActivitySelection(undefined);
     setSettledActivityDisplay(undefined);
+    setLiveActivityBySource({});
   }, [companyId, baseModel.selectedRoomId]);
 
   useEffect(() => {
@@ -313,12 +341,54 @@ export function useChatWorkspace(input: { requestedRoomId?: string; currentSessi
 
   const handleRealtimeEvent = useCallback((event: Parameters<typeof applyChatRunRealtimeEvent>[1]) => {
     setChatRunState((current) => applyChatRunRealtimeEvent(current, event));
-    if (event.type === "chat.process_trace.appended") {
-      activityInvalidations.invalidate(`${event.companyId}:${event.roomId}`, () => {
-        void queryClient.invalidateQueries({ queryKey: chatQueryKeys.roomActivityScope(event.companyId, event.roomId) });
+    if (event.type === "chat.activity.observed") {
+      const key = `${event.companyId}:${event.roomId}:${event.sourceMessageId}`;
+      setLiveActivityBySource((current) => {
+        const existing = current[key];
+        if (existing && event.sequenceInRun <= existing.sequenceInRun) {
+          return current;
+        }
+        const next = {
+          ...current,
+          [key]: {
+            activity: mergeRuntimeActivity(existing?.activity, event.activity),
+            sequenceInRun: event.sequenceInRun,
+            persistedThroughSequence: existing?.persistedThroughSequence ?? 0,
+          },
+        };
+        const keys = Object.keys(next);
+        if (keys.length <= 50) {
+          return next;
+        }
+        const { [keys[0]!]: _discarded, ...bounded } = next;
+        return bounded;
       });
     }
-  }, [activityInvalidations, queryClient]);
+    if (event.type === "chat.activity.persisted") {
+      const key = `${event.companyId}:${event.roomId}:${event.sourceMessageId}`;
+      setLiveActivityBySource((current) => {
+        const existing = current[key];
+        if (!existing || event.persistedThroughSequence <= existing.persistedThroughSequence) {
+          return current;
+        }
+        return {
+          ...current,
+          [key]: {
+            ...existing,
+            persistedThroughSequence: event.persistedThroughSequence,
+          },
+        };
+      });
+    }
+    if (
+      event.type === "chat.runtime_status.changed" &&
+      ["completed", "canceled", "failed"].includes(event.status)
+    ) {
+      void queryClient.invalidateQueries({
+        queryKey: chatQueryKeys.roomActivityScope(event.companyId, event.roomId),
+      });
+    }
+  }, [queryClient]);
 
   useChatRealtime({
     companyId,

@@ -24,6 +24,11 @@ export interface MessageRepositoryAfterCursorInput {
   afterMessageId: string;
 }
 
+export interface MessageRepositoryConversationIdsInput {
+  companyId: string;
+  conversationIds: string[];
+}
+
 export interface MessageRepositoryConversationListInput extends MessageRepositoryPageInput {
   viewerMemberId?: string;
   viewerParticipantId?: string;
@@ -36,6 +41,7 @@ export interface MessageRepository {
   findConversationCompanyId(conversationId: string): Promise<string | undefined>;
   listConversations(input: MessageRepositoryConversationListInput): Promise<ConversationRecord[]>;
   upsertMessage(record: MessageRecord): Promise<void>;
+  listFirstMessages(input: MessageRepositoryConversationIdsInput): Promise<MessageRecord[]>;
   listMessages(input: MessageRepositoryPageInput & { conversationId: string }): Promise<MessageRecord[]>;
   listRecentMessages(input: MessageRepositoryPageInput & { conversationId: string }): Promise<MessageRecord[]>;
   listMessagesAfter(input: MessageRepositoryAfterCursorInput): Promise<MessageRecord[]>;
@@ -138,6 +144,22 @@ export class InMemoryMessageRepository implements MessageRepository {
 
   async upsertMessage(record: MessageRecord): Promise<void> {
     this.messages.set(this.messageKey(record.message.companyId, record.message.messageId), cloneMessageRecord(record));
+  }
+
+  async listFirstMessages(input: MessageRepositoryConversationIdsInput): Promise<MessageRecord[]> {
+    const requested = new Set(input.conversationIds);
+    const firstByConversation = new Map<string, MessageRecord>();
+    for (const record of [...this.messages.values()]
+      .filter((candidate) => candidate.message.companyId === input.companyId && requested.has(candidate.message.conversationId))
+      .sort((left, right) =>
+        left.message.createdAt.localeCompare(right.message.createdAt) ||
+        left.message.messageId.localeCompare(right.message.messageId)
+      )) {
+      if (!firstByConversation.has(record.message.conversationId)) {
+        firstByConversation.set(record.message.conversationId, record);
+      }
+    }
+    return [...firstByConversation.values()].map(cloneMessageRecord);
   }
 
   async listMessages(input: MessageRepositoryPageInput & { conversationId: string }): Promise<MessageRecord[]> {

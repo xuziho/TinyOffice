@@ -7,6 +7,8 @@ test("production installer verifies, backs up, migrates, checks readiness, and g
   assert.match(source, /sha256sum/);
   assert.match(source, /TINYOFFICE_DEPLOYMENT_MODE/);
   assert.match(source, /backup create/);
+  assert.match(source, /PRE_UPDATE_BACKUP_KEEP=3/);
+  assert.match(source, /prune-backup-retention\.ts/);
   assert.match(source, /systemctl --user stop/);
   assert.match(source, /active Release was not changed/);
   assert.match(source, /inactive target Release was removed/);
@@ -17,6 +19,10 @@ test("production installer verifies, backs up, migrates, checks readiness, and g
   assert.match(source, /service restart was rejected; evaluating the guarded rollback boundary/);
   assert.match(source, /automatic code rollback is unsafe/);
   assert.doesNotMatch(source, /git pull|git reset|runtime:postgres:reset/);
+  const readyIndex = source.indexOf('echo "TinyOffice $RELEASE_ID is ready."');
+  const retentionIndex = source.indexOf("prune-backup-retention.ts");
+  const successExitIndex = source.indexOf("exit 0", retentionIndex);
+  assert.ok(readyIndex >= 0 && retentionIndex > readyIndex && successExitIndex > retentionIndex, "Pre-update backup retention must run only after readiness succeeds.");
 });
 
 test("production Release build binds the artifact to a clean Git commit and writes a checksum", async () => {

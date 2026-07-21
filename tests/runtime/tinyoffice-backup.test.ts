@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { createTinyOfficeBackup, inspectTinyOfficeBackup, verifyTinyOfficeBackup, type BackupCommandRunner } from "../../src/runtime/backup/tinyoffice-backup.js";
+import { createTinyOfficeBackup, inspectTinyOfficeBackup, pruneTinyOfficeBackups, verifyTinyOfficeBackup, type BackupCommandRunner } from "../../src/runtime/backup/tinyoffice-backup.js";
 
 test("creates, inspects, and verifies a full-instance backup package", async () => {
   const repoRoot = await mkdtemp(path.join(os.tmpdir(), "tinyoffice-backup-test-"));
@@ -100,5 +100,46 @@ test("rejects nested symbolic links inside a managed backup root", async () => {
     }), /unsupported symbolic link/);
   } finally {
     await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("pre-update retention keeps the newest complete backup pairs without touching other files", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "tinyoffice-backup-retention-"));
+  const archives: string[] = [];
+  try {
+    for (let index = 1; index <= 5; index += 1) {
+      const createdAt = `2026-07-${String(index).padStart(2, "0")}T02:00:00.000Z`;
+      const fileName = `tinyoffice-${createdAt.replace(/[:.]/g, "-")}.tobackup`;
+      const archivePath = path.join(directory, fileName);
+      archives.push(archivePath);
+      await writeFile(archivePath, `backup-${index}`);
+      await writeFile(`${archivePath}.json`, JSON.stringify({
+        ok: true,
+        backupId: `backup-${index}`,
+        createdAt,
+        path: archivePath,
+        fileName,
+        byteLength: 8,
+        sha256: "test",
+      }));
+    }
+    const unrelated = path.join(directory, "manual-backup.tobackup");
+    const orphan = path.join(directory, "tinyoffice-orphan.tobackup");
+    await writeFile(unrelated, "manual");
+    await writeFile(orphan, "orphan");
+
+    const result = await pruneTinyOfficeBackups({ directory, keep: 3 });
+
+    assert.deepEqual(result.kept, archives.slice(2).reverse());
+    assert.deepEqual(result.removed, archives.slice(0, 2).reverse());
+    assert.deepEqual(result.skipped, [orphan]);
+    await assert.rejects(readFile(archives[0]));
+    await assert.rejects(readFile(`${archives[0]}.json`));
+    assert.equal(await readFile(archives[4], "utf8"), "backup-5");
+    assert.equal(await readFile(`${archives[4]}.json`, "utf8").then((value) => JSON.parse(value).backupId), "backup-5");
+    assert.equal(await readFile(unrelated, "utf8"), "manual");
+    assert.equal(await readFile(orphan, "utf8"), "orphan");
+  } finally {
+    await rm(directory, { recursive: true, force: true });
   }
 });

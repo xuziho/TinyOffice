@@ -5,6 +5,7 @@ ARCHIVE="${1:-}"
 EXPECTED_SHA256="${2:-}"
 APP_ROOT="${TINYOFFICE_APP_ROOT:-$HOME/apps/tinyoffice}"
 SERVICE="${TINYOFFICE_SYSTEMD_SERVICE:-tinyoffice.service}"
+PRE_UPDATE_BACKUP_KEEP=3
 
 if [[ -z "$ARCHIVE" || -z "$EXPECTED_SHA256" ]]; then
   echo "Usage: install-production-release.sh <release.tgz> <sha256>" >&2
@@ -17,6 +18,7 @@ case "$APP_ROOT" in
   "$HOME"/apps/tinyoffice|/opt/tinyoffice) ;;
   *) echo "Refusing unsupported TinyOffice app root: $APP_ROOT" >&2; exit 2 ;;
 esac
+PRE_UPDATE_BACKUP_DIRECTORY="$APP_ROOT/shared/.data/backups/pre-update"
 
 ACTUAL_SHA256="$(sha256sum "$ARCHIVE" | awk '{print $1}')"
 if [[ "$ACTUAL_SHA256" != "$EXPECTED_SHA256" ]]; then
@@ -83,7 +85,7 @@ fi
 
 if [[ -n "$PREVIOUS" ]]; then
   echo "Creating verified pre-update backup from $PREVIOUS"
-  if ! (cd "$PREVIOUS" && node --import tsx src/cli/agentco.ts backup create --output "$APP_ROOT/shared/.data/backups/pre-update" --json); then
+  if ! (cd "$PREVIOUS" && node --import tsx src/cli/agentco.ts backup create --output "$PRE_UPDATE_BACKUP_DIRECTORY" --json); then
     if [[ "$SERVICE_WAS_ACTIVE" -eq 1 ]]; then systemctl --user start "$SERVICE"; fi
     rm -rf "$TARGET"
     echo "Pre-update backup failed; the active Release was not changed." >&2
@@ -118,6 +120,9 @@ if [[ "$RESTART_ACCEPTED" -eq 1 ]]; then
   for attempt in {1..30}; do
     if curl --fail --silent --show-error "$READY_URL" >/dev/null; then
       echo "TinyOffice $RELEASE_ID is ready."
+      if ! (cd "$TARGET" && node --import tsx scripts/release/prune-backup-retention.ts --directory "$PRE_UPDATE_BACKUP_DIRECTORY" --keep "$PRE_UPDATE_BACKUP_KEEP"); then
+        echo "TinyOffice is ready, but pre-update backup retention failed; inspect $PRE_UPDATE_BACKUP_DIRECTORY." >&2
+      fi
       exit 0
     fi
     sleep 1

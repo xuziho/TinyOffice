@@ -1,6 +1,6 @@
 # Backup and Restore
 
-TinyOffice owns the creation, verification, inspection, and recovery semantics of a full-instance backup. External automation owns scheduling, off-machine transfer, retention, storage credentials, and notifications.
+TinyOffice owns the creation, verification, inspection, and recovery semantics of a full-instance backup. External automation owns scheduling, off-machine transfer, general backup retention, storage credentials, and notifications. The guarded production updater is the one narrow exception: after a new Release passes readiness, it retains only the newest three complete backup-and-receipt pairs under `shared/.data/backups/pre-update`.
 
 ## Product boundary
 
@@ -28,6 +28,8 @@ node --import tsx src/cli/agentco.ts backup verify --from D:\TinyOfficeBackups\t
 ```
 
 The create command emits JSON and a non-zero exit code on failure. An external script may parse `path`, upload that immutable file with rclone or another provider tool, apply retention, and notify the operator. TinyOffice does not store cloud-drive credentials or embed provider-specific destinations.
+
+Manual backups, downloaded backups, scheduled backups, and pre-restore safety backups are not part of the production updater's three-copy policy. Incomplete or invalid entries in the pre-update directory are reported and left untouched rather than being counted as a valid retained backup or deleted automatically.
 
 ## Restore safety
 

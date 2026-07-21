@@ -32,6 +32,12 @@ export interface TinyOfficeBackupReceipt {
 
 export type TinyOfficeBackupRecord = Omit<TinyOfficeBackupReceipt, "manifest">;
 
+export interface TinyOfficeBackupPruneResult {
+  kept: string[];
+  removed: string[];
+  skipped: string[];
+}
+
 export interface BackupCommandRunner {
   run(command: string, args: string[], options?: { cwd?: string }): Promise<void>;
 }
@@ -333,4 +339,45 @@ export async function listTinyOfficeBackups(repoRoot: string): Promise<TinyOffic
     } catch { /* Invalid or partial files are intentionally omitted from the product list. */ }
   }
   return receipts;
+}
+
+export async function pruneTinyOfficeBackups(input: {
+  directory: string;
+  keep: number;
+}): Promise<TinyOfficeBackupPruneResult> {
+  if (!Number.isSafeInteger(input.keep) || input.keep < 1) {
+    throw new Error("Backup retention requires a positive integer keep count.");
+  }
+
+  const directory = path.resolve(input.directory);
+  if (!await exists(directory)) return { kept: [], removed: [], skipped: [] };
+
+  const complete: Array<{ archivePath: string; metadataPath: string; createdAt: string }> = [];
+  const skipped: string[] = [];
+  const names = (await readdir(directory)).filter((name) => name.startsWith("tinyoffice-") && name.endsWith(".tobackup"));
+  for (const fileName of names) {
+    const archivePath = path.join(directory, fileName);
+    const metadataPath = `${archivePath}.json`;
+    try {
+      const archiveStat = await lstat(archivePath);
+      const metadataStat = await lstat(metadataPath);
+      if (!archiveStat.isFile() || !metadataStat.isFile()) throw new Error("Backup pair is not made of regular files.");
+      const record = JSON.parse(await readFile(metadataPath, "utf8")) as TinyOfficeBackupRecord;
+      if (record.ok !== true || record.fileName !== fileName || path.resolve(record.path) !== archivePath || !Number.isFinite(Date.parse(record.createdAt))) {
+        throw new Error("Backup receipt does not match its archive.");
+      }
+      complete.push({ archivePath, metadataPath, createdAt: record.createdAt });
+    } catch {
+      skipped.push(archivePath);
+    }
+  }
+
+  complete.sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt) || right.archivePath.localeCompare(left.archivePath));
+  const kept = complete.slice(0, input.keep).map((item) => item.archivePath);
+  const expired = complete.slice(input.keep);
+  for (const item of expired) {
+    await rm(item.metadataPath);
+    await rm(item.archivePath);
+  }
+  return { kept, removed: expired.map((item) => item.archivePath), skipped };
 }

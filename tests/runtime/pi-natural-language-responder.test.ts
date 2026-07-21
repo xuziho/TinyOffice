@@ -254,6 +254,38 @@ test("PI streaming final-result tool call completion becomes immediate process t
   assert.equal(events[1].metadata?.streamEventType, "toolcall_end");
 });
 
+test("PI completed tool calls and results preserve one shared tool call identity", () => {
+  const callEvents = buildProcessEventsFromSessionEvent(input, {
+    type: "message",
+    id: "assistant-record-1",
+    message: {
+      role: "assistant",
+      content: [{
+        type: "toolCall",
+        id: "tool-call-1",
+        name: "bash",
+        arguments: { command: "pwd" },
+      }],
+    },
+  });
+  const resultEvents = buildProcessEventsFromSessionEvent(input, {
+    type: "message",
+    id: "result-record-1",
+    message: {
+      role: "toolResult",
+      toolCallId: "tool-call-1",
+      toolName: "bash",
+      content: [{ type: "text", text: "/workspace" }],
+    },
+  });
+
+  assert.equal(callEvents.length, 2);
+  assert.equal(callEvents[0].metadata?.toolCallId, "tool-call-1");
+  assert.equal(callEvents[1].metadata?.toolCallId, "tool-call-1");
+  assert.equal(resultEvents.length, 1);
+  assert.equal(resultEvents[0].metadata?.toolCallId, "tool-call-1");
+});
+
 test("PI tool activity process trace labels use stable ASCII titles for Chinese sessions", () => {
   const zhInput = {
     ...input,

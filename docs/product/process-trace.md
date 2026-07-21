@@ -13,7 +13,7 @@ Process Trace is runtime evidence for how a member session or WorkRun was handle
 | Surface | Role |
 | --- | --- |
 | Chat message stream | Shows human and employee message bodies only. Runtime trace events do not create standalone Chat messages and message headers do not own trace navigation. |
-| Chat Context | Keeps a stable Activity dock in the right panel. Activity is a backend projection of high-signal Process Trace evidence. Each row can expand raw trace events when inspection is needed. |
+| Chat Context | Keeps a stable Activity dock in the right panel. Activity is a backend projection of high-signal Process Trace evidence. Repeated tool steps collapse into a bounded summary; detailed evidence remains in Sessions. |
 | Sessions | Shows per-turn Activity, prompt/context input, output message, and raw evidence details. |
 | Tasks | Shows WorkRun-related trace timeline and evidence links. |
 | Runtime API | Allows tools and maintenance views to query trace events. |
@@ -32,8 +32,8 @@ Process Trace is runtime evidence for how a member session or WorkRun was handle
 TinyOffice uses Pi Agent as the runtime foundation. Process Trace remains the raw evidence store. Product surfaces show Activity: a small, generic projection of high-signal trace evidence plus expandable raw events.
 
 - Pi `thinking_start`, `thinking_delta`, and `thinking_end` style provider details are grouped into a logical Activity row when persisted evidence carries useful content.
-- High-frequency deltas are not displayed as raw rows. Activity keeps high-signal rows such as run start, thinking, tool call, tool result, run completion, and failure.
-- Tool call lifecycle events are projected as tool call and tool result Activity rows.
+- High-frequency deltas are not displayed as raw rows. Activity keeps high-signal rows such as run start, thinking, logical tool operation, run completion, and failure. A completed tool call and its result share `toolCallId` and project as one logical operation.
+- Tool call lifecycle events are projected as one named logical operation when call and result share durable identity; older unpaired evidence remains available without being discarded.
 - Final chat replies remain normal Chat messages. Process Trace explains how the reply was produced; it is not the reply body.
 - If a provider does not expose real thinking text, the trace shows truthful lifecycle/tool activity only. TinyOffice must not fake reasoning text.
 
@@ -43,6 +43,7 @@ Chat keeps runtime trace out of the message stream:
 
 - After the user sends a message and a runtime employee starts working, Chat publishes the backend-owned Activity projection immediately while Process Trace evidence is written in bounded background batches.
 - Chat Context keeps the Activity area stable so room details and participants do not jump when trace events start.
+- Chat Context summarizes repeated tool operations by tool name inside a bounded scroll area. It does not render every tool result as an equally prominent top-level row; Sessions retains the full per-step evidence.
 - Trace events and Activity rows do not occupy the message stream.
 - When the employee reply body starts streaming, the message stream shows the reply text directly.
 - Activity remains in the Context rail and can be expanded to inspect evidence for the selected run or reply. A selected source-message query must keep the full lifecycle for that run, including completion or failure, and must not mix in other runs from the same room.

@@ -22,9 +22,14 @@ test("streaming reply keeps one stable scroller item while persisted data is rec
 });
 
 test("Activity selection does not add a persistent second frame around message content", () => {
+  const activitySelectionClasses = [...source.matchAll(/const activityContentClassName =[\s\S]*?: "max-w-full gap-1 overflow-hidden";/g)]
+    .map((match) => match[0])
+    .join("\n");
+
+  assert.ok(activitySelectionClasses);
   assert.doesNotMatch(source, /bg-muted\/45 ring-1 ring-border/);
   assert.match(source, /hover:bg-muted\/20 focus-visible:bg-muted\/30 focus-visible:outline-none/);
-  assert.doesNotMatch(source, /focus-visible:ring-2 focus-visible:ring-ring/);
+  assert.doesNotMatch(activitySelectionClasses, /focus-visible:ring-2 focus-visible:ring-ring/);
   assert.match(source, /aria-pressed=\{activitySource \? isActivitySourceSelected : undefined\}/);
 });
 

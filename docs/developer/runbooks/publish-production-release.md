@@ -33,8 +33,17 @@ If `TINYOFFICE_APP_ROOT` is not the default home-directory layout, adjust both u
 TINYOFFICE_DEPLOYMENT_MODE=production
 TINYOFFICE_UPDATE_EXECUTOR=systemd
 TINYOFFICE_UPDATER_SYSTEMD_SERVICE=tinyoffice-updater.service
+# Optional: only set TINYOFFICE_RELEASE_MANIFEST_URL when using a controlled
+# direct-JSON mirror. The official update channel uses the GitHub Releases API.
+```
+
+Hosts configured from an older example may still contain the retired official-channel override below:
+
+```dotenv
 TINYOFFICE_RELEASE_MANIFEST_URL=https://github.com/xuziho/TinyOffice/releases/latest/download/tinyoffice-stable.json
 ```
+
+Remove that line before starting a Release that uses GitHub API discovery. Keeping it deliberately selects the old direct endpoint and bypasses the stable default. A custom private mirror may keep the variable only when it serves the manifest JSON directly.
 
 Run the PI model enumeration preflight from the product Production Releases page after any host or service-account change.
 

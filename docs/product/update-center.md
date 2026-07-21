@@ -5,7 +5,8 @@ Operations / Updates at `/updates` is the product surface for controlled TinyOff
 ## Product Contract
 
 - The npm registry reports whether `@earendil-works/pi-coding-agent` has published a newer version.
-- The TinyOffice stable manifest at `updates/stable.json`, refreshed from the official `main` branch, declares the exact PI version TinyOffice has validated, its minimum Node.js version, and its approved OpenAI Codex model catalog.
+- The TinyOffice stable manifest at `updates/stable.json`, refreshed from the official `main` branch through the GitHub Contents API, declares the exact PI version TinyOffice has validated, its minimum Node.js version, and its approved OpenAI Codex model catalog.
+- The approved TinyOffice Release is discovered through the GitHub Releases API. TinyOffice locates the exact `tinyoffice-stable.json` asset and downloads it through the asset API instead of depending on the redirect-heavy `releases/latest/download` path.
 - An npm release newer than the installed version is shown as `Awaiting approval` until the stable manifest approves it.
 - Only an approved version can become `Ready to install`.
 - The browser never runs npm, shell commands, service restarts, or rollback logic directly.
@@ -17,6 +18,8 @@ Operations / Updates at `/updates` is the product surface for controlled TinyOff
 `GET /api/tinyoffice/updates` returns the installed TinyOffice and PI versions, npm latest version, approved version, Node compatibility, model catalog changes, source warnings, and installation eligibility.
 
 Each remote update source receives one bounded retry when the first attempt fails with a transport error, timeout, rate limit, or retryable server response. Non-retryable HTTP responses, malformed JSON, and invalid manifests fail immediately. If both attempts fail, the update check remains fail-closed and cannot authorize installation.
+
+The default GitHub API requests identify themselves as `TinyOffice-update-check`. Explicit `TINYOFFICE_UPDATE_MANIFEST_URL` and `TINYOFFICE_RELEASE_MANIFEST_URL` overrides remain direct JSON endpoints for controlled private mirrors or test environments; TinyOffice does not silently fall back from an unavailable official source to an older manifest.
 
 `POST /api/tinyoffice/updates` requests installation of the exact currently approved version. It fails closed when no external update executor is configured, the runtime is incompatible, update sources cannot be checked, or the approved version is already installed.
 

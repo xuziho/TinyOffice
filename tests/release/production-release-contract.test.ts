@@ -31,6 +31,7 @@ test("production Release build binds the artifact to a clean Git commit and writ
 test("release publication emits a stable manifest and the host updater re-verifies it", async () => {
   const manifestBuilder = await readFile("scripts/release/build-release-channel-manifest.mjs", "utf8");
   const updater = await readFile("scripts/release/run-approved-production-update.ts", "utf8");
+  const updateSource = await readFile("src/runtime/update/tinyoffice-update-source.ts", "utf8");
   const workflow = await readFile(".github/workflows/release.yml", "utf8");
   assert.match(manifestBuilder, /tinyoffice-release-channel/);
   assert.match(manifestBuilder, /GITHUB_SHA/);
@@ -38,6 +39,11 @@ test("release publication emits a stable manifest and the host updater re-verifi
   assert.match(updater, /targetReleaseId/);
   assert.match(updater, /Release checksum mismatch/);
   assert.match(updater, /install-production-release\.sh/);
+  assert.match(updater, /loadReleaseManifestFromSource/);
+  assert.match(updateSource, /api\.github\.com\/repos\/xuziho\/TinyOffice\/releases\/latest/);
+  assert.match(updateSource, /application\/octet-stream/);
+  assert.doesNotMatch(updater, /releases\/latest\/download/);
+  assert.doesNotMatch(updateSource, /releases\/latest\/download/);
   assert.match(workflow, /push:\s*[\s\S]*tags:/);
   assert.match(workflow, /gh release create/);
   assert.match(workflow, /tinyoffice-stable\.json/);

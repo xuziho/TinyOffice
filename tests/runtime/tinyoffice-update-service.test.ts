@@ -67,9 +67,10 @@ test("transient Release discovery timeout recovers on one bounded retry", async 
       if (String(url).includes("releases/latest")) {
         releaseAttempts += 1;
         if (releaseAttempts === 1) throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
-        return Response.json(releaseManifest());
+        return Response.json(githubRelease());
       }
-      return Response.json(piManifest("0.80.6"));
+      if (String(url).includes("releases/assets/")) return Response.json(releaseManifest());
+      return Response.json(githubContents(piManifest("0.80.6")));
     },
   });
   const status = await service.loadStatus();
@@ -92,7 +93,7 @@ test("failed Release discovery never falls back to an installable target", async
         releaseAttempts += 1;
         return new Response("offline", { status: 503, statusText: "Offline" });
       }
-      return Response.json(piManifest("0.80.6"));
+      return Response.json(githubContents(piManifest("0.80.6")));
     },
   });
   const status = await service.loadStatus();
@@ -111,17 +112,67 @@ test("malformed Release JSON fails immediately without retry", async () => {
     nodeVersion: "22.19.0",
     fetch: async (url) => {
       if (String(url).includes("registry.npmjs.org")) return Response.json({ version: "0.80.6" });
-      if (String(url).includes("releases/latest")) {
+      if (String(url).includes("releases/latest")) return Response.json(githubRelease());
+      if (String(url).includes("releases/assets/")) {
         releaseAttempts += 1;
         return new Response("{", { status: 200, headers: { "Content-Type": "application/json" } });
       }
-      return Response.json(piManifest("0.80.6"));
+      return Response.json(githubContents(piManifest("0.80.6")));
     },
   });
   const status = await service.loadStatus();
   assert.equal(releaseAttempts, 1);
   assert.equal(status.release.state, "check_failed");
   assert.match(status.sources.warnings.join("\n"), /Release manifest could not be refreshed/);
+});
+
+test("default update discovery uses structured GitHub APIs and exact Release asset", async () => {
+  const repoRoot = await updateFixture();
+  const requests: Array<{ url: string; accept: string | null; userAgent: string | null }> = [];
+  const service = new TinyOfficeUpdateService({
+    repoRoot,
+    deploymentMode: "production",
+    nodeVersion: "22.19.0",
+    fetch: async (url, init) => {
+      const headers = new Headers(init?.headers);
+      requests.push({ url: String(url), accept: headers.get("Accept"), userAgent: headers.get("User-Agent") });
+      if (String(url).includes("registry.npmjs.org")) return Response.json({ version: "0.80.6" });
+      if (String(url).includes("/contents/updates/stable.json")) return Response.json(githubContents(piManifest("0.80.6")));
+      if (String(url).endsWith("/releases/latest")) return Response.json(githubRelease());
+      if (String(url).includes("/releases/assets/")) return Response.json(releaseManifest());
+      throw new Error(`Unexpected request: ${url}`);
+    },
+  });
+
+  const status = await service.loadStatus();
+  assert.equal(status.release.state, "ready_to_install");
+  assert.equal(status.pi.state, "up_to_date");
+  assert.deepEqual(status.sources.warnings, []);
+  assert.equal(requests.some((request) => request.url.includes("raw.githubusercontent.com")), false);
+  assert.equal(requests.some((request) => request.url.includes("releases/latest/download")), false);
+  const releaseAssetRequest = requests.find((request) => request.url.includes("/releases/assets/"));
+  assert.equal(releaseAssetRequest?.accept, "application/octet-stream");
+  assert.equal(releaseAssetRequest?.userAgent, "TinyOffice-update-check");
+});
+
+test("Release discovery fails closed when the stable manifest asset is missing", async () => {
+  const repoRoot = await updateFixture();
+  const service = new TinyOfficeUpdateService({
+    repoRoot,
+    deploymentMode: "production",
+    nodeVersion: "22.19.0",
+    fetch: async (url) => {
+      if (String(url).includes("registry.npmjs.org")) return Response.json({ version: "0.80.6" });
+      if (String(url).includes("/contents/updates/stable.json")) return Response.json(githubContents(piManifest("0.80.6")));
+      if (String(url).endsWith("/releases/latest")) return Response.json({ assets: [{ name: "other.json", url: "https://api.github.com/assets/other" }] });
+      throw new Error(`Unexpected request: ${url}`);
+    },
+  });
+
+  const status = await service.loadStatus();
+  assert.equal(status.release.state, "check_failed");
+  assert.equal(status.installation.enabled, false);
+  assert.match(status.sources.warnings.join("\n"), /does not contain tinyoffice-stable.json/);
 });
 
 test("update service submits only the exact approved Release", async () => {
@@ -166,9 +217,18 @@ function createService(repoRoot: string, input: { approvedReleaseId?: string; la
 function updateFetch(input: { approvedReleaseId?: string; latestPi?: string } = {}): typeof fetch {
   return async (url) => {
     if (String(url).includes("registry.npmjs.org")) return Response.json({ version: input.latestPi ?? "0.80.6" });
-    if (String(url).includes("releases/latest")) return Response.json(releaseManifest(input.approvedReleaseId));
-    return Response.json(piManifest("0.80.6"));
+    if (String(url).includes("releases/latest")) return Response.json(githubRelease());
+    if (String(url).includes("releases/assets/")) return Response.json(releaseManifest(input.approvedReleaseId));
+    return Response.json(githubContents(piManifest("0.80.6")));
   };
+}
+
+function githubContents(value: TinyOfficeUpdateManifest): object {
+  return { type: "file", encoding: "base64", content: Buffer.from(JSON.stringify(value), "utf8").toString("base64") };
+}
+
+function githubRelease(): object {
+  return { assets: [{ name: "tinyoffice-stable.json", url: "https://api.github.com/repos/xuziho/TinyOffice/releases/assets/123" }] };
 }
 
 function piManifest(approvedVersion: string): TinyOfficeUpdateManifest {

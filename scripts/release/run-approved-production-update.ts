@@ -3,12 +3,13 @@ import { createHash } from "node:crypto";
 import { mkdir, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { TinyOfficeReleaseChannelManifest, TinyOfficeUpdateJob } from "../../src/api/contracts/tinyoffice-frontend-api-contracts.js";
+import type { TinyOfficeUpdateJob } from "../../src/api/contracts/tinyoffice-frontend-api-contracts.js";
 import { readUpdateJob, writeUpdateJob } from "../../src/runtime/update/tinyoffice-update-job-store.js";
 import { validateReleaseManifest } from "../../src/runtime/update/tinyoffice-update-service.js";
+import { loadReleaseManifestFromSource } from "../../src/runtime/update/tinyoffice-update-source.js";
 
 const repoRoot = process.cwd();
-const manifestUrl = process.env.TINYOFFICE_RELEASE_MANIFEST_URL?.trim() || "https://github.com/xuziho/TinyOffice/releases/latest/download/tinyoffice-stable.json";
+const directManifestUrl = process.env.TINYOFFICE_RELEASE_MANIFEST_URL?.trim() || undefined;
 
 await run().catch(async (error) => {
   const current = await readUpdateJob(repoRoot);
@@ -22,10 +23,12 @@ async function run(): Promise<void> {
   const job = await readUpdateJob(repoRoot);
   if (!job || job.schema !== "tinyoffice-update-job" || job.version !== 2 || job.status !== "accepted") throw new Error("No accepted TinyOffice update job is available.");
 
-  await setJob(job, "downloading", undefined, `Reading approved Release metadata from ${manifestUrl}`);
-  const manifestResponse = await fetch(manifestUrl, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(30_000) });
-  if (!manifestResponse.ok) throw new Error(`Release manifest download failed: ${manifestResponse.status} ${manifestResponse.statusText}`);
-  const manifest = await manifestResponse.json() as TinyOfficeReleaseChannelManifest;
+  await setJob(job, "downloading", undefined, "Reading approved Release metadata from the configured update source.");
+  const manifest = await loadReleaseManifestFromSource({
+    fetchImpl: globalThis.fetch,
+    ...(directManifestUrl ? { directManifestUrl } : {}),
+    timeoutMs: 30_000,
+  });
   validateReleaseManifest(manifest);
   if (manifest.release.releaseId !== job.targetReleaseId) throw new Error(`Approved Release changed from ${job.targetReleaseId} to ${manifest.release.releaseId}; start a new update after reviewing it.`);
 

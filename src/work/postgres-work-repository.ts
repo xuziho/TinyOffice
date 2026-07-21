@@ -50,7 +50,7 @@ function jsonValue<T>(value: unknown): T | undefined {
   return value as T;
 }
 
-function workTaskFromRow(row: Record<string, unknown>): WorkTaskRecord {
+export function workTaskFromRow(row: Record<string, unknown>): WorkTaskRecord {
   return {
     id: String(row.id),
     title: String(row.title),
@@ -87,7 +87,7 @@ function workTaskRevisionFromRow(row: Record<string, unknown>): WorkTaskRevision
   };
 }
 
-function workScheduleFromRow(row: Record<string, unknown>): WorkScheduleRecord {
+export function workScheduleFromRow(row: Record<string, unknown>): WorkScheduleRecord {
   return {
     id: String(row.id),
     workTaskId: String(row.work_task_id),
@@ -107,7 +107,7 @@ function workScheduleFromRow(row: Record<string, unknown>): WorkScheduleRecord {
   };
 }
 
-function workRunFromRow(row: Record<string, unknown>): WorkRunRecord {
+export function workRunFromRow(row: Record<string, unknown>): WorkRunRecord {
   return {
     id: String(row.id),
     workTaskId: String(row.work_task_id),

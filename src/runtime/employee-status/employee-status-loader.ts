@@ -1,9 +1,9 @@
-import { DbChannelTopicStore } from "../../channel-topics/storage/db-channel-topic-store.js";
 import type { WorkScheduleRecord, WorkTaskRecord } from "../../work/domain.js";
-import { WorkService } from "../../work/work-service.js";
-import { WorkDispatchLeaseRepository } from "../../work/work-dispatch-lease.js";
 import { loadEmployeesAdminState } from "../company-config/employees-admin.js";
-import { RuntimeSessionRepository } from "../storage/runtime-session-repository.js";
+import {
+  openConfiguredPostgresConnection,
+  releaseCompanyPostgresConnection,
+} from "../company-config/postgres-runtime-connection.js";
 import {
   buildEmployeeStatusViewModel,
   type ScheduledWorkTaskRecord,
@@ -11,6 +11,7 @@ import {
   type EmployeeStatusSortMode,
   type EmployeeStatusViewModel,
 } from "./employee-status-view-model.js";
+import { readEmployeeStatusPostgresSnapshot } from "./postgres-employee-status-reader.js";
 
 export interface LoadEmployeeStatusViewModelInput {
   repoRoot: string;
@@ -21,46 +22,63 @@ export interface LoadEmployeeStatusViewModelInput {
   routes?: {
     viewModelJsonPath?: string;
   };
-  workService?: WorkService;
 }
 
-export async function loadEmployeeStatusViewModel(
+const employeeStatusLoads = new Map<string, Promise<EmployeeStatusViewModel>>();
+
+export function loadEmployeeStatusViewModel(
   input: LoadEmployeeStatusViewModelInput,
 ): Promise<EmployeeStatusViewModel> {
-  const workService = input.workService || new WorkService({ repoRoot: input.repoRoot, companyId: input.companyId });
-  const [employeesState, workTasks, workSchedules, workRuns, channelTopicStore] = await Promise.all([
-    loadEmployeesAdminState({
-      repoRoot: input.repoRoot,
-      companyId: input.companyId,
-    }),
-    workService.listWorkTasks(),
-    workService.listWorkSchedules(),
-    workService.listWorkRuns(),
-    DbChannelTopicStore.open({ repoRoot: input.repoRoot, companyId: input.companyId }),
+  const key = JSON.stringify([
+    input.repoRoot,
+    input.companyId,
+    input.employeeId ?? "",
+    input.status ?? "",
+    input.sort ?? "",
+    input.routes ?? {},
   ]);
-  const scheduleByTaskId = new Map(workSchedules.map((schedule) => [schedule.workTaskId, schedule] as const));
-  const scheduledWorkTasks = workTasks.map((task) => scheduledWorkTaskFromTask(task, scheduleByTaskId.get(task.id)));
+  const existing = employeeStatusLoads.get(key);
+  if (existing) {
+    return existing;
+  }
+  const loading = loadEmployeeStatusViewModelOnce(input).finally(() => {
+    if (employeeStatusLoads.get(key) === loading) {
+      employeeStatusLoads.delete(key);
+    }
+  });
+  employeeStatusLoads.set(key, loading);
+  return loading;
+}
 
-  const runtimeRepository = await RuntimeSessionRepository.open(input.repoRoot, { companyId: input.companyId });
-  const leaseRepository = await WorkDispatchLeaseRepository.open(input.repoRoot, { companyId: input.companyId });
+async function loadEmployeeStatusViewModelOnce(
+  input: LoadEmployeeStatusViewModelInput,
+): Promise<EmployeeStatusViewModel> {
+  const employeesState = await loadEmployeesAdminState({
+    repoRoot: input.repoRoot,
+    companyId: input.companyId,
+  });
+  const postgres = await openConfiguredPostgresConnection(input.repoRoot, { companyId: input.companyId });
+  if (!postgres) {
+    throw new Error("Employee status storage requires PostgreSQL runtime configuration.");
+  }
   try {
-    const channelTopicState = await channelTopicStore.load();
+    const snapshot = await readEmployeeStatusPostgresSnapshot(postgres.client, input.companyId);
+    const scheduleByTaskId = new Map(snapshot.workSchedules.map((schedule) => [schedule.workTaskId, schedule] as const));
+    const scheduledWorkTasks = snapshot.workTasks.map((task) => scheduledWorkTaskFromTask(task, scheduleByTaskId.get(task.id)));
     return buildEmployeeStatusViewModel({
       employeeId: input.employeeId,
       status: input.status,
       sort: input.sort,
       employees: employeesState.employees,
       workTasks: scheduledWorkTasks,
-      workRuns,
-      dispatchLeases: leaseRepository.listLeases(),
-      sessions: runtimeRepository.listSessionRecords(),
-      channelTopics: channelTopicState.channelTopics,
+      workRuns: snapshot.workRuns,
+      dispatchLeases: snapshot.dispatchLeases,
+      sessions: snapshot.sessions,
+      channelTopics: snapshot.channelTopics,
       routes: input.routes,
     });
   } finally {
-    leaseRepository.close();
-    runtimeRepository.close();
-    channelTopicStore.close?.();
+    releaseCompanyPostgresConnection({ client: postgres.client, pool: postgres.pool });
   }
 }
 

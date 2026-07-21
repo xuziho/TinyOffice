@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { io } from "socket.io-client";
 import { chatQueryKeys } from "./chatQueryKeys";
+import { createRealtimeInvalidationCoalescer } from "./realtimeInvalidationCoalescer";
 import type { TinyOfficeRealtimeEvent } from "tinyoffice/realtime-contracts";
 
 const TINYOFFICE_REALTIME_SOCKET_IO_PATH = "/api/realtime/socket.io";
@@ -38,8 +39,11 @@ export function chatRealtimeInvalidationsForEvent(event: TinyOfficeRealtimeEvent
   if (event.type === "work_task.updated") {
     return ["employeeRuntimeSummary", "tasks"];
   }
-  if (event.type === "session.updated" || event.type === "process_trace.appended") {
+  if (event.type === "session.updated") {
     return ["employeeRuntimeSummary", "sessions"];
+  }
+  if (event.type === "process_trace.appended") {
+    return ["sessions"];
   }
   return [];
 }
@@ -67,6 +71,16 @@ export function useChatRealtime({
       query,
       transports: ["websocket"],
     });
+    const expensiveInvalidations = createRealtimeInvalidationCoalescer();
+    const invalidateExpensiveQuery = (target: "employeeRuntimeSummary" | "sessions") => {
+      expensiveInvalidations.invalidate(target, () => {
+        if (target === "employeeRuntimeSummary") {
+          void queryClient.invalidateQueries({ queryKey: chatQueryKeys.employeeRuntimeSummary(companyId) });
+          return;
+        }
+        void queryClient.invalidateQueries({ queryKey: chatQueryKeys.sessionsScope(companyId) });
+      });
+    };
     socket.on(TINYOFFICE_REALTIME_SOCKET_EVENT, (event: TinyOfficeRealtimeEvent) => {
       if (!event || event.companyId !== companyId) {
         return;
@@ -86,17 +100,18 @@ export function useChatRealtime({
         void queryClient.invalidateQueries({ queryKey: chatQueryKeys.accessRequests(companyId) });
       }
       if (invalidations.includes("employeeRuntimeSummary")) {
-        void queryClient.invalidateQueries({ queryKey: chatQueryKeys.employeeRuntimeSummary(companyId) });
+        invalidateExpensiveQuery("employeeRuntimeSummary");
       }
       if (invalidations.includes("tasks")) {
         void queryClient.invalidateQueries({ queryKey: chatQueryKeys.tasksScope(companyId) });
       }
       if (invalidations.includes("sessions")) {
-        void queryClient.invalidateQueries({ queryKey: chatQueryKeys.sessionsScope(companyId) });
+        invalidateExpensiveQuery("sessions");
       }
     });
 
     return () => {
+      expensiveInvalidations.dispose();
       socket.disconnect();
     };
   }, [companyId, memberId, onEvent, queryClient]);

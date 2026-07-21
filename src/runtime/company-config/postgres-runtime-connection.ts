@@ -32,6 +32,17 @@ const trackedPostgresPoolEnds = new Set<Promise<unknown>>();
 const sharedDefaultPostgresPools = new Map<string, Promise<CompanyPostgresPoolLike>>();
 const sharedDefaultPostgresPoolInstances = new WeakSet<object>();
 const sharedDefaultPostgresMigrations = new Map<string, Promise<void>>();
+export const DEFAULT_POSTGRES_CONNECTION_TIMEOUT_MS = 5_000;
+export const DEFAULT_POSTGRES_QUERY_TIMEOUT_MS = 15_000;
+
+export class PostgresConnectionUnavailableError extends Error {
+  readonly statusCode = 503;
+
+  constructor(readonly cause: unknown) {
+    super(`PostgreSQL connection was not available within ${DEFAULT_POSTGRES_CONNECTION_TIMEOUT_MS} ms.`);
+    this.name = "PostgresConnectionUnavailableError";
+  }
+}
 
 export function endCompanyPostgresPool(pool: { end?(): Promise<void> }): Promise<void> {
   if (sharedDefaultPostgresPoolInstances.has(pool as object)) {
@@ -81,6 +92,9 @@ async function createDefaultPostgresPool(databaseUrl: string): Promise<CompanyPo
       allowExitOnIdle: true,
       max: 20,
       idleTimeoutMillis: 1000,
+      connectionTimeoutMillis: DEFAULT_POSTGRES_CONNECTION_TIMEOUT_MS,
+      query_timeout: DEFAULT_POSTGRES_QUERY_TIMEOUT_MS,
+      statement_timeout: DEFAULT_POSTGRES_QUERY_TIMEOUT_MS,
     }) as CompanyPostgresPoolLike;
     sharedDefaultPostgresPoolInstances.add(pool as object);
     return pool;
@@ -107,7 +121,13 @@ export async function openConfiguredPostgresConnection(
   const pool = options.createPostgresPool
     ? options.createPostgresPool(postgresUrl)
     : await createDefaultPostgresPool(postgresUrl);
-  const client = await pool.connect();
+  let client: CompanyPostgresClient;
+  try {
+    client = await pool.connect();
+  } catch (error) {
+    await endCompanyPostgresPool(pool);
+    throw new PostgresConnectionUnavailableError(error);
+  }
   try {
     if (options.createPostgresPool) {
       await runPostgresSchemaMigrations(client);

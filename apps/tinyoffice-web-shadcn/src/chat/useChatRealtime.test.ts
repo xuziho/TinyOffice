@@ -54,7 +54,7 @@ test("chat realtime invalidates authoritative queries only for persisted data ev
   })), ["accessRequests"]);
 });
 
-test("workspace runtime events invalidate status, task, and session projections", () => {
+test("workspace runtime events keep status refreshes semantic and trace refreshes evidence-only", () => {
   assert.deepEqual(chatRealtimeInvalidationsForEvent(realtimeEvent({
     type: "work_run.updated",
     workRunId: "work-run-1",
@@ -83,7 +83,7 @@ test("workspace runtime events invalidate status, task, and session projections"
     processTraceId: "trace-1",
     employeeId: "avery",
     sessionKey: "avery|work_run_execution|work-run-1",
-  })), ["employeeRuntimeSummary", "sessions"]);
+  })), ["sessions"]);
 });
 
 test("chat realtime run-state events do not invalidate authoritative query data", () => {

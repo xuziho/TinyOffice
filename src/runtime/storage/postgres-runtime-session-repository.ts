@@ -85,7 +85,7 @@ function inferWorkRunIdFromSessionKey(sceneType: string, sessionKey: string): st
   return workRunId?.trim() || undefined;
 }
 
-function sessionRecordFromRow(row: Record<string, unknown>): RuntimeSessionRecord {
+export function sessionRecordFromRow(row: Record<string, unknown>): RuntimeSessionRecord {
   return {
     id: String(row.id),
     employeeId: String(row.employee_id),

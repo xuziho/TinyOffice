@@ -40,7 +40,7 @@ function jsonObject(value: unknown): Record<string, unknown> | undefined {
   return value as Record<string, unknown>;
 }
 
-function leaseFromRow(row: Record<string, unknown>): WorkDispatchLeaseRecord {
+export function leaseFromRow(row: Record<string, unknown>): WorkDispatchLeaseRecord {
   return {
     id: String(row.id),
     workRunId: String(row.work_run_id),

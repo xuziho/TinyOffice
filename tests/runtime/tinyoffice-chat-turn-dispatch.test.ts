@@ -2817,17 +2817,17 @@ test("TinyOffice Chat runtime dispatch sink runs provider-neutral reply persiste
   assert.equal(completedTrace?.metadata?.replyMessageId, reply.messageId);
   assert.equal(completedTrace?.metadata?.targetMemberId, "nora-automation");
   assert.equal(completedTrace?.metadata?.runId, "tinyoffice_chat:chat_room_message:acme:conversation-1:message-1:nora-automation");
-  const realtimeTraceEvents = realtimePublisher.payloads.filter((event) => event.type === "chat.process_trace.appended");
+  const realtimeTraceEvents = realtimePublisher.payloads.filter((event) => event.type === "chat.activity.observed");
   assert.deepEqual(
     realtimeTraceEvents.map((event) => [
       event.sourceMessageId,
       event.targetMemberId,
       event.sessionKey,
-      event.processTraceEvent.kind,
+      event.activity.items.some((item) => item.kind === "run_completed"),
     ]),
     [
-      [userMessage.message.messageId, "nora-automation", "nora-automation|chat_direct_room|conversation-1", "employee_reply_started"],
-      [userMessage.message.messageId, "nora-automation", "nora-automation|chat_direct_room|conversation-1", "turn_completed"],
+      [userMessage.message.messageId, "nora-automation", "nora-automation|chat_direct_room|conversation-1", false],
+      [userMessage.message.messageId, "nora-automation", "nora-automation|chat_direct_room|conversation-1", true],
     ],
   );
   assert.equal(capturedInput?.message, "Can you turn this into a brief action list?");
@@ -2850,7 +2850,7 @@ test("TinyOffice Chat runtime dispatch sink runs provider-neutral reply persiste
     userMessage.message.messageId,
     "nora-automation",
     "Action list: confirm owner",
-    1,
+    2,
   ]]);
   const snapshotEvents = realtimePublisher.payloads.filter((event) => event.type === "chat.reply.snapshot");
   assert.deepEqual(snapshotEvents.map((event) => [
@@ -2864,13 +2864,13 @@ test("TinyOffice Chat runtime dispatch sink runs provider-neutral reply persiste
     userMessage.message.messageId,
     "nora-automation",
     "Action list: confirm owner, capture deadline, publish summary.",
-    2,
+    3,
   ]]);
   assert.deepEqual(realtimePublisher.payloads.map((event) => event.type), [
     "chat.runtime_status.changed",
     "chat.runtime_status.changed",
     "chat.runtime_status.changed",
-    "chat.process_trace.appended",
+    "chat.activity.observed",
     "chat.runtime_status.changed",
     "chat.reply.delta",
     "chat.reply.snapshot",
@@ -2878,10 +2878,10 @@ test("TinyOffice Chat runtime dispatch sink runs provider-neutral reply persiste
     "chat.message.created",
     "chat.projection.changed",
     "chat.projection.changed",
+    "chat.activity.observed",
     "chat.runtime_status.changed",
-    "chat.process_trace.appended",
   ]);
-  const firstTraceIndex = realtimePublisher.payloads.findIndex((event) => event.type === "chat.process_trace.appended");
+  const firstTraceIndex = realtimePublisher.payloads.findIndex((event) => event.type === "chat.activity.observed");
   const firstVisibleReplyIndex = realtimePublisher.payloads.findIndex((event) =>
     event.type === "chat.reply.delta" || event.type === "chat.reply.snapshot"
   );
@@ -3277,15 +3277,15 @@ test("TinyOffice Chat runtime dispatch sink publishes failed status when executi
   assert.equal(processTraceEvents[1]?.metadata?.targetMemberId, "nora-automation");
   assert.equal(processTraceEvents[1]?.metadata?.runId, "tinyoffice_chat:chat_room_message:acme:conversation-1:message-1:nora-automation");
   const failedRealtimeTrace = realtimePublisher.payloads
-    .filter((event) => event.type === "chat.process_trace.appended")
+    .filter((event) => event.type === "chat.activity.observed")
     .at(-1);
-  assert.equal(failedRealtimeTrace?.type, "chat.process_trace.appended");
+  assert.equal(failedRealtimeTrace?.type, "chat.activity.observed");
   assert.equal(failedRealtimeTrace?.sourceMessageId, userMessage.message.messageId);
   assert.equal(failedRealtimeTrace?.targetMemberId, "nora-automation");
-  assert.equal(failedRealtimeTrace?.processTraceEvent.kind, "turn_failed");
+  assert.equal(failedRealtimeTrace?.activity.items.some((item) => item.kind === "failure"), true);
   const firstRealtimeTraceIndex = realtimePublisher.payloads.findIndex((event) =>
-    event.type === "chat.process_trace.appended" &&
-    event.processTraceEvent.kind === "employee_reply_started"
+    event.type === "chat.activity.observed" &&
+    event.activity.items.some((item) => item.kind === "run_started")
   );
   const failedStatusIndex = realtimePublisher.payloads.findIndex((event) =>
     event.type === "chat.runtime_status.changed" &&

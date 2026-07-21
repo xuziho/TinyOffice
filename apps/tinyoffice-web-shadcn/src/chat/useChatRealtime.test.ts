@@ -98,21 +98,14 @@ test("chat realtime run-state events do not invalidate authoritative query data"
   })), []);
 
   assert.deepEqual(chatRealtimeInvalidationsForEvent(realtimeEvent({
-    type: "chat.process_trace.appended",
+    type: "chat.activity.observed",
     conversationId: "conversation-1",
     roomId: "room-1",
     runId: "run-1",
     sourceMessageId: "message-1",
     targetMemberId: "alex",
-    processTraceEvent: {
-      id: "trace-1",
-      employeeId: "alex",
-      sessionKey: "alex|chat|room-1",
-      kind: "employee_reply_started",
-      title: "alex started replying",
-      summary: "alex started replying.",
-      timestamp: "2026-07-06T00:00:00.000Z",
-    },
+    sequenceInRun: 1,
+    activity: { items: [] },
   })), []);
 
   assert.deepEqual(chatRealtimeInvalidationsForEvent(realtimeEvent({

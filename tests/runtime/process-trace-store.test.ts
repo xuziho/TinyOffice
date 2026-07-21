@@ -378,6 +378,7 @@ test("process trace publisher serializes concurrent database writes", async () =
       status: "succeeded",
     })
   ));
+  await publisher.drain();
 
   const events = await listProcessTraceEvents(repoRoot, DEFAULT_COMPANY_ID, { channelTopicId: "channel-topic-concurrent" });
   assert.equal(events.length, 8);
@@ -385,6 +386,52 @@ test("process trace publisher serializes concurrent database writes", async () =
     events.map((event) => event.title).sort(),
     Array.from({ length: 8 }, (_, index) => `Concurrent phase ${index + 1}`).sort(),
   );
+});
+
+test("process trace publisher exposes observations before background persistence", async () => {
+  const repoRoot = await createRepoRoot();
+  const publisher = new ProcessTracePublisher(repoRoot, DEFAULT_COMPANY_ID);
+  const observed: string[] = [];
+  publisher.subscribe("*", (event) => observed.push(event.id));
+
+  const event = await publisher.publish({
+    id: "trace-live-before-persist",
+    kind: "employee_reply_started",
+    sessionKey: "mira|chat_direct_room|conversation-live",
+    employeeId: "mira",
+    title: "Live run started",
+  });
+
+  assert.deepEqual(observed, [event.id]);
+  assert.equal(publisher.writerSnapshot().queued, 1);
+  await publisher.drain();
+  assert.equal(publisher.writerSnapshot().queued, 0);
+  assert.equal(publisher.writerSnapshot().persisted, 1);
+});
+
+test("process trace evidence writer drains a dense 100-event run in bounded batches", async () => {
+  const repoRoot = await createRepoRoot();
+  const publisher = new ProcessTracePublisher(repoRoot, DEFAULT_COMPANY_ID);
+
+  await Promise.all(Array.from({ length: 100 }, (_, index) => publisher.publish({
+    id: `trace-dense-${index + 1}`,
+    kind: "progress_update",
+    sessionKey: "mira|chat_direct_room|conversation-dense",
+    runId: "run-dense",
+    sequenceInRun: index + 1,
+    conversationId: "conversation-dense",
+    sourceMessageId: "message-dense",
+    employeeId: "mira",
+    title: `Progress ${index + 1}`,
+  })));
+  await publisher.drain();
+
+  const snapshot = publisher.writerSnapshot();
+  assert.equal(snapshot.queued, 0);
+  assert.equal(snapshot.inFlight, 0);
+  assert.equal(snapshot.persisted, 100);
+  assert.equal(snapshot.failed, 0);
+  assert.equal((await listProcessTraceEvents(repoRoot, DEFAULT_COMPANY_ID, { runId: "run-dense" })).length, 100);
 });
 
 test("process trace publisher stores events and notifies matching subscribers", async () => {
@@ -417,12 +464,14 @@ test("process trace publisher stores events and notifies matching subscribers", 
     employeeId: "mira",
     title: "Turn returned_to_user",
   });
+  await publisher.drain();
 
   assert.equal(received.length, 1);
   const events = await listProcessTraceEvents(repoRoot, DEFAULT_COMPANY_ID, { channelTopicId: "channel-topic-1" });
   assert.equal(events.length, 2);
-  assert.equal(events[0]?.metadata?.authorization, "<redacted>");
-  assert.deepEqual(events[0]?.metadata?.nested, { apiKey: "<redacted>" });
+  const started = events.find((event) => event.kind === "employee_reply_started");
+  assert.equal(started?.metadata?.authorization, "<redacted>");
+  assert.deepEqual(started?.metadata?.nested, { apiKey: "<redacted>" });
 });
 
 test("process trace publisher notifies wildcard subscribers for side-panel streams", async () => {
@@ -449,6 +498,7 @@ test("process trace publisher notifies wildcard subscribers for side-panel strea
     title: "Routed to Iris",
   });
   unsubscribe();
+  await publisher.drain();
 
   assert.deepEqual(received, [
     "mira|chat_topic_room|conversation-1",

@@ -161,7 +161,10 @@ export async function persistCollaborationActionEvent(
 ): Promise<void> {
   const maxSaveAttempts = 20;
   for (let attempt = 0; attempt < maxSaveAttempts; attempt += 1) {
-    const repository = await RuntimeSessionRepository.open(repoRoot, { companyId });
+    const repository = await RuntimeSessionRepository.open(repoRoot, {
+      companyId,
+      domains: ["collaborationActions"],
+    });
     try {
       const exists = repository
         .listCollaborationActionEvents({

@@ -31,7 +31,10 @@ export async function persistNaturalLanguageRuntimeSessionSnapshot(
 ): Promise<RuntimeSessionPersistResult> {
   const maxSaveAttempts = 20;
   for (let attempt = 0; attempt < maxSaveAttempts; attempt += 1) {
-    const repository = await RuntimeSessionRepository.open(repoRoot, { companyId });
+    const repository = await RuntimeSessionRepository.open(repoRoot, {
+      companyId,
+      sessionRecordId: record.id,
+    });
     try {
       const persisted = await persistNaturalLanguageRuntimeSessionSnapshotIntoRepository(repository, record, events, {
         authoritativeUsage: options.authoritativeUsage,

@@ -79,6 +79,7 @@ nav:
       - Tasks: technical/tasks.md
       - Conversation / Message Contract: technical/conversation-message-contract.md
       - Chat Entry Contract: technical/chat-entry-contract.md
+      - Runtime Event Durability: technical/runtime-event-durability.md
       - TinyOffice Realtime WebSocket: technical/tinyoffice-realtime.md
       - TinyOffice Web: technical/tinyoffice-web.md
       - Standalone Frontend: technical/standalone-frontend.md

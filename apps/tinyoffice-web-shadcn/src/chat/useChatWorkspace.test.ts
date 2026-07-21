@@ -5,7 +5,7 @@ import type { ChatShellModel } from "./chatShellModel";
 import { memberDisplayNamesForCreateEntry } from "./chatCreateEntryDisplayNames";
 import { accessDecisionContinuationMessage, accessRequestForegroundRoomId, accessRequestsForRoom } from "./chatAccessRequests";
 import type { AccessRequestDto, RuntimeActivity } from "tinyoffice/frontend-api-contracts";
-import { activityDisplaySnapshot, activityQueryPlaceholderData } from "./useChatWorkspace";
+import { activityDisplaySnapshot, activityQueryPlaceholderData, mergeRuntimeActivity } from "./useChatWorkspace";
 
 function shellModel(input: Partial<ChatShellModel>): ChatShellModel {
   return {
@@ -261,6 +261,36 @@ function runtimeActivity(title: string): RuntimeActivity {
     }],
   };
 }
+
+test("mergeRuntimeActivity keeps durable history and lets backend live upserts win by id", () => {
+  const persisted: RuntimeActivity = {
+    items: [{
+      id: "activity:thinking:run-1",
+      kind: "thinking",
+      title: "Thinking",
+      details: "Initial thought",
+      timestamp: "2026-07-21T00:00:00.000Z",
+      raw: { eventIds: ["trace-1"], events: [] },
+    }],
+  };
+  const live: RuntimeActivity = {
+    items: [{
+      ...persisted.items[0]!,
+      details: "Latest thought",
+      raw: { eventIds: ["trace-1", "trace-2"], events: [] },
+    }, {
+      id: "activity:tool_call:run-1:tool-1",
+      kind: "tool_call",
+      title: "Tool call",
+      timestamp: "2026-07-21T00:00:01.000Z",
+      raw: { eventIds: ["trace-3"], events: [] },
+    }],
+  };
+
+  assert.deepEqual(mergeRuntimeActivity(persisted, live), {
+    items: [live.items[0], live.items[1]],
+  });
+});
 
 function accessRequest(input: {
   id: string;

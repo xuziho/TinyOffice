@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { assertNoForbiddenPublicCarrierFields } from "./conversation-message-contract.js";
-import type { ProcessTraceEvent } from "../../runtime/contracts/process-trace-event.js";
+import type { RuntimeActivity } from "../../runtime/activity/runtime-activity-projection.js";
 
 export const TINYOFFICE_REALTIME_EVENT_SCHEMA = "tinyoffice-realtime-event";
 export const TINYOFFICE_REALTIME_EVENT_VERSION = 1;
@@ -48,7 +48,7 @@ export const PUBLIC_TINYOFFICE_REALTIME_EVENT_KEY_SETS = {
     "replyMessageId",
     "errorMessage",
   ],
-  chatProcessTraceAppended: [
+  chatActivityObserved: [
     "conversationId",
     "roomId",
     "runId",
@@ -56,8 +56,17 @@ export const PUBLIC_TINYOFFICE_REALTIME_EVENT_KEY_SETS = {
     "sourceMessageId",
     "targetMemberId",
     "sessionKey",
-    "replyMessageId",
-    "processTraceEvent",
+    "sequenceInRun",
+    "activity",
+  ],
+  chatActivityPersisted: [
+    "conversationId",
+    "roomId",
+    "runId",
+    "chainId",
+    "sourceMessageId",
+    "targetMemberId",
+    "persistedThroughSequence",
   ],
   chatReplyDelta: [
     "conversationId",
@@ -178,8 +187,8 @@ export type ChatRuntimeStatusChangedEvent = {
   errorMessage?: string;
 };
 
-export type ChatProcessTraceAppendedEvent = {
-  type: "chat.process_trace.appended";
+export type ChatActivityObservedEvent = {
+  type: "chat.activity.observed";
   companyId: string;
   conversationId: string;
   roomId: string;
@@ -188,8 +197,20 @@ export type ChatProcessTraceAppendedEvent = {
   sourceMessageId: string;
   targetMemberId: string;
   sessionKey?: string;
-  replyMessageId?: string;
-  processTraceEvent: ProcessTraceEvent;
+  sequenceInRun: number;
+  activity: RuntimeActivity;
+};
+
+export type ChatActivityPersistedEvent = {
+  type: "chat.activity.persisted";
+  companyId: string;
+  conversationId: string;
+  roomId: string;
+  runId: string;
+  chainId?: string;
+  sourceMessageId: string;
+  targetMemberId: string;
+  persistedThroughSequence: number;
 };
 
 export type ChatReplyDeltaEvent = {
@@ -270,7 +291,8 @@ export type TinyOfficeRealtimeEventPayload =
   | ChatProjectionChangedEvent
   | CompanyDirectoryChangedEvent
   | ChatRuntimeStatusChangedEvent
-  | ChatProcessTraceAppendedEvent
+  | ChatActivityObservedEvent
+  | ChatActivityPersistedEvent
   | ChatReplyDeltaEvent
   | ChatReplySnapshotEvent
   | AccessRequestChangedEvent
@@ -367,7 +389,7 @@ export function assertTinyOfficeRealtimeEvent(value: unknown): asserts value is 
       requireOptionalString(event.replyMessageId, "replyMessageId");
       requireOptionalString(event.errorMessage, "errorMessage");
       return;
-    case "chat.process_trace.appended":
+    case "chat.activity.observed":
       rejectLegacyPublicField(event, "eventKey");
       requireNonEmptyString(event.conversationId, "conversationId");
       requireNonEmptyString(event.roomId, "roomId");
@@ -376,8 +398,18 @@ export function assertTinyOfficeRealtimeEvent(value: unknown): asserts value is 
       requireNonEmptyString(event.sourceMessageId, "sourceMessageId");
       requireNonEmptyString(event.targetMemberId, "targetMemberId");
       requireOptionalString(event.sessionKey, "sessionKey");
-      requireOptionalString(event.replyMessageId, "replyMessageId");
-      requireProcessTraceEvent(event.processTraceEvent);
+      requirePositiveInteger(event.sequenceInRun, "sequenceInRun");
+      requireRuntimeActivity(event.activity);
+      return;
+    case "chat.activity.persisted":
+      rejectLegacyPublicField(event, "eventKey");
+      requireNonEmptyString(event.conversationId, "conversationId");
+      requireNonEmptyString(event.roomId, "roomId");
+      requireNonEmptyString(event.runId, "runId");
+      requireOptionalString(event.chainId, "chainId");
+      requireNonEmptyString(event.sourceMessageId, "sourceMessageId");
+      requireNonEmptyString(event.targetMemberId, "targetMemberId");
+      requirePositiveInteger(event.persistedThroughSequence, "persistedThroughSequence");
       return;
     case "chat.reply.delta":
       rejectLegacyPublicField(event, "eventKey");
@@ -463,14 +495,12 @@ function requirePositiveInteger(value: unknown, fieldName: string): void {
   }
 }
 
-function requireProcessTraceEvent(value: unknown): void {
+function requireRuntimeActivity(value: unknown): void {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("processTraceEvent must be an object");
+    throw new Error("activity must be an object");
   }
-  const event = value as Partial<ProcessTraceEvent>;
-  requireNonEmptyString(event.id, "processTraceEvent.id");
-  requireNonEmptyString(event.timestamp, "processTraceEvent.timestamp");
-  requireNonEmptyString(event.kind, "processTraceEvent.kind");
-  requireNonEmptyString(event.sessionKey, "processTraceEvent.sessionKey");
-  requireNonEmptyString(event.title, "processTraceEvent.title");
+  const activity = value as Partial<RuntimeActivity>;
+  if (!Array.isArray(activity.items)) {
+    throw new Error("activity.items must be an array");
+  }
 }

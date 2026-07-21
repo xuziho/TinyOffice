@@ -104,6 +104,22 @@ class FakePostgresMessageClient implements CompanyPostgresClient {
           .filter((row) => row.company_id === params[0] && row.conversation_id === params[1]) as T[],
       };
     }
+    if (/SELECT DISTINCT ON \(conversation_id\)/.test(sql) && params) {
+      const conversationIds = new Set(params[1] as string[]);
+      const firstByConversation = new Map<string, Record<string, unknown>>();
+      for (const row of [...this.messages.values()]
+        .filter((candidate) => candidate.company_id === params[0] && conversationIds.has(String(candidate.conversation_id)))
+        .sort((left, right) =>
+          String(left.created_at).localeCompare(String(right.created_at)) ||
+          String(left.message_id).localeCompare(String(right.message_id))
+        )) {
+        const conversationId = String(row.conversation_id);
+        if (!firstByConversation.has(conversationId)) {
+          firstByConversation.set(conversationId, row);
+        }
+      }
+      return { rows: [...firstByConversation.values()] as T[] };
+    }
     return { rows: [] as T[] };
   }
 }
@@ -424,6 +440,30 @@ test("postgres message repository round-trips message mention attachment and run
   assert.equal(loaded[0]?.message.attachments[0]?.contentSha256, "abc123");
   assert.equal(loaded[0]?.message.runtimeLinks[0]?.targetKind, "work_run");
   assert.doesNotMatch(JSON.stringify(loaded), /\b(team_id|teamId|user_id|userId|channel_id|channelId|post_id|postId)\b/);
+});
+
+test("postgres message repository batches first-message previews for multiple conversations", async () => {
+  const client = new FakePostgresMessageClient();
+  const repository = createRepository(client);
+  await repository.upsertMessage({ message: message() });
+  await repository.upsertMessage({
+    message: {
+      ...message(),
+      conversationId: "conversation-2",
+      messageId: "message-2",
+      body: "Second conversation preview",
+    },
+  });
+
+  const loaded = await repository.listFirstMessages({
+    companyId: "acme",
+    conversationIds: ["conversation-1", "conversation-2"],
+  });
+
+  assert.deepEqual(loaded.map((record) => record.message.conversationId).sort(), ["conversation-1", "conversation-2"]);
+  const query = client.queries.at(-1);
+  assert.match(query?.sql ?? "", /SELECT DISTINCT ON \(conversation_id\)/);
+  assert.deepEqual(query?.params, ["acme", ["conversation-1", "conversation-2"]]);
 });
 
 test("postgres message repository persists and lists Company Member participants and senders", async () => {

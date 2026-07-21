@@ -29,6 +29,12 @@ export interface ProcessTraceEvent {
   timestamp: string;
   kind: ProcessTraceEventKind;
   sessionKey: string;
+  runId?: string;
+  sequenceInRun?: number;
+  conversationId?: string;
+  messageId?: string;
+  sourceMessageId?: string;
+  chatEntryId?: string;
   workTaskId?: string;
   workRunId?: string;
   channelId?: string;

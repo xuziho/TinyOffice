@@ -8,6 +8,7 @@ import type {
   TinyOfficeRealtimePublisher,
 } from "../../collaboration/contracts/tinyoffice-realtime-contract.js";
 import type { ProcessTraceEvent } from "../contracts/process-trace-event.js";
+import { buildRuntimeActivity } from "../activity/runtime-activity-projection.js";
 import type {
   NaturalLanguageResponseInput,
   ProcessTraceEventDraft,
@@ -30,7 +31,6 @@ import {
   handleTinyOfficeChatExecutionDispatch,
   persistTinyOfficeChatNaturalLanguageReply,
   TinyOfficeChatTurnDispatchBoundary,
-  type TinyOfficeChatExecutionStatusRepository,
   updateTinyOfficeChatExecutionDispatchStatus,
   type TinyOfficeChatTurnDispatchDecision,
 } from "../realtime/tinyoffice-chat-turn-dispatch.js";
@@ -249,6 +249,7 @@ export function createTinyOfficeChatRuntimeDispatchSink(
             cancelRequested: false,
             sequenceInRun: 0,
             streamedContent: "",
+            activityEvents: [],
           });
           const task = executeTinyOfficeChatRuntimeDecision({
             config,
@@ -398,6 +399,7 @@ interface ActiveChatRun {
   cancelRequested: boolean;
   sequenceInRun: number;
   streamedContent: string;
+  activityEvents: ProcessTraceEvent[];
 }
 
 export class ChatTopicAlreadyActiveError extends Error {
@@ -486,6 +488,7 @@ function ensureActiveChatRun(
     cancelRequested: false,
     sequenceInRun: 0,
     streamedContent: "",
+    activityEvents: [],
   };
   activeRuns.set(decision.eventKey, run);
   return run;
@@ -511,13 +514,14 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
       companyId: decision.companyId,
       targetMemberId: decision.targetMemberId,
     });
-    const failedTraceEvent = await publishTurnFailed(
+    await publishTurnFailed(
+      config,
       runtime,
       decision,
+      activeRun,
       "Employee home was not available for TinyOffice Chat execution.",
       "Chat turn failed",
     );
-    publishChatProcessTraceAppended(config.realtimePublisher, decision, failedTraceEvent);
     publishRuntimeStatus(config.realtimePublisher, decision, {
       status: "failed",
       runtimeProviderId: config.runtimeProvider?.providerId,
@@ -529,12 +533,16 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
   const repositoryHandle = config.runtimeSessionRepositoryForCompany
     ? await config.runtimeSessionRepositoryForCompany(decision.companyId)
     : {
-        repository: await RuntimeSessionRepository.open(config.repoRoot, { companyId: decision.companyId }),
+        repository: await RuntimeSessionRepository.open(config.repoRoot, {
+          companyId: decision.companyId,
+          domains: ["sessions"],
+        }),
         close() {
           this.repository.close();
         },
       };
   const repository = repositoryHandle.repository;
+  let repositoryClosed = false;
   try {
     const intent = await handleTinyOfficeChatExecutionDispatch({
       decision,
@@ -568,20 +576,24 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
           })
         : undefined,
     });
+    const injectedRuntimeSessionRepository = Boolean(config.runtimeSessionRepositoryForCompany);
+    if (!injectedRuntimeSessionRepository) {
+      repositoryHandle.close?.();
+      repositoryClosed = true;
+    }
     publishRuntimeStatus(config.realtimePublisher, decision, {
       status: "thinking",
       runtimeProviderId: config.runtimeProvider?.providerId,
     });
-    const startedTraceEvent = await publishChatRunStartedTrace(runtime, decision, {
+    await publishChatRunStartedTrace(config, runtime, decision, activeRun, {
       runtimeProviderId: config.runtimeProvider?.providerId,
       sessionRecordId: intent.kind === "started" ? intent.sessionRecordId : undefined,
     });
-    publishChatProcessTraceAppended(config.realtimePublisher, decision, startedTraceEvent);
     const result = await executeTinyOfficeChatNaturalLanguageTurn({
       context,
       employee,
       repoRoot: config.repoRoot,
-      runtimeSessionRepository: repository,
+      ...(injectedRuntimeSessionRepository ? { runtimeSessionRepository: repository } : {}),
       runtimeProvider: config.runtimeProvider,
       onRuntimeSessionPersisted: config.onRuntimeSessionPersisted,
       onProcessEvent: async (event) => {
@@ -603,7 +615,7 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
           publishReplyDeltaFromProcessEvent(config.realtimePublisher, decision, event, activeRun);
           return;
         }
-        const processTraceEvent = await runtime.processTrace?.publishProcessTraceEvent({
+        await publishChatActivityTrace(config, runtime, decision, activeRun, {
           ...event,
           metadata: {
             ...(event.metadata || {}),
@@ -618,7 +630,6 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
             targetMemberId: decision.targetMemberId,
           },
         });
-        publishChatProcessTraceAppended(config.realtimePublisher, decision, processTraceEvent);
       },
     });
     if (chatExecutionCanceled(input, activeRun)) {
@@ -626,7 +637,7 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
         config,
         runtime,
         decision,
-        repository,
+        activeRun,
         runtimeSessionRecordId: result.runtimeEvidence?.sessionRecordId,
         providerReplyObserved: true,
       });
@@ -652,7 +663,7 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
         config,
         runtime,
         decision,
-        repository,
+        activeRun,
         runtimeSessionRecordId: result.runtimeEvidence?.sessionRecordId,
         providerReplyObserved: true,
       });
@@ -691,15 +702,8 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
         });
       }
     }
-    publishRuntimeStatus(config.realtimePublisher, decision, {
-      status: "completed",
-      runtimeProviderId: config.runtimeProvider?.providerId,
-      sessionRecordId: result.runtimeEvidence?.sessionRecordId,
-      replyMessageId: persisted.message.messageId,
-    });
-    await updateTinyOfficeChatExecutionDispatchStatus({
+    await persistTinyOfficeChatExecutionDispatchStatus(config, {
       decision,
-      repository,
       status: "completed",
       summary: `Owned Chat reply ${persisted.message.messageId} was persisted.`,
     });
@@ -716,7 +720,7 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
       handoffTargetMemberId: result.stateAction?.targetMemberId,
       runtimeSessionRecordId: result.runtimeEvidence?.sessionRecordId,
     });
-    const completedTraceEvent = await runtime.processTrace?.publishProcessTrace({
+    await publishChatActivityTrace(config, runtime, decision, activeRun, {
       kind: "turn_completed",
       sessionKey: result.sessionKey,
       employeeId: result.targetMemberId,
@@ -739,7 +743,10 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
         runtimeSessionRecordId: result.runtimeEvidence?.sessionRecordId,
       },
     });
-    publishChatProcessTraceAppended(config.realtimePublisher, decision, completedTraceEvent, {
+    publishRuntimeStatus(config.realtimePublisher, decision, {
+      status: "completed",
+      runtimeProviderId: config.runtimeProvider?.providerId,
+      sessionRecordId: result.runtimeEvidence?.sessionRecordId,
       replyMessageId: persisted.message.messageId,
     });
     await requestTopicSummaryRefresh({
@@ -789,7 +796,7 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
         config,
         runtime,
         decision,
-        repository,
+        activeRun,
         errorMessage,
       }).catch(() => undefined);
       if (decision.sceneType === "chat_topic_room") {
@@ -797,19 +804,17 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
         input.activeChains.delete(decision.chainId);
       }
     } else {
-      await updateTinyOfficeChatExecutionDispatchStatus({
+      await persistTinyOfficeChatExecutionDispatchStatus(config, {
         decision,
-        repository,
         status: "failed",
         summary: errorMessage,
       }).catch(() => undefined);
+      await publishTurnFailed(config, runtime, decision, activeRun, errorMessage, "Chat turn failed").catch(() => undefined);
       publishRuntimeStatus(config.realtimePublisher, decision, {
         status: "failed",
         runtimeProviderId: config.runtimeProvider?.providerId,
         errorMessage,
       });
-      const failedTraceEvent = await publishTurnFailed(runtime, decision, errorMessage, "Chat turn failed").catch(() => undefined);
-      publishChatProcessTraceAppended(config.realtimePublisher, decision, failedTraceEvent);
       if (decision.sceneType === "chat_topic_room") {
         await input.topicChainRepository.finish(decision.companyId, decision.chainId, "failed").catch(() => undefined);
         input.activeChains.delete(decision.chainId);
@@ -818,7 +823,9 @@ async function executeTinyOfficeChatRuntimeDecision(input: {
     }
   } finally {
     input.activeRuns.delete(decision.eventKey);
-    repositoryHandle.close?.();
+    if (!repositoryClosed) {
+      repositoryHandle.close?.();
+    }
   }
 }
 
@@ -829,11 +836,42 @@ function chatExecutionCanceled(
   return run.cancelRequested || Boolean(input.activeChains.get(run.decision.chainId)?.cancelRequested);
 }
 
+async function persistTinyOfficeChatExecutionDispatchStatus(
+  config: TinyOfficeChatRuntimeDispatchSinkConfig,
+  input: {
+    decision: Extract<TinyOfficeChatTurnDispatchDecision, { kind: "routable" }>;
+    status: "completed" | "failed" | "canceled";
+    summary: string;
+  },
+): Promise<void> {
+  const handle = config.runtimeSessionRepositoryForCompany
+    ? await config.runtimeSessionRepositoryForCompany(input.decision.companyId)
+    : {
+        repository: await RuntimeSessionRepository.open(config.repoRoot, {
+          companyId: input.decision.companyId,
+          domains: ["sessions"],
+        }),
+        close() {
+          this.repository.close();
+        },
+      };
+  try {
+    await updateTinyOfficeChatExecutionDispatchStatus({
+      decision: input.decision,
+      repository: handle.repository,
+      status: input.status,
+      summary: input.summary,
+    });
+  } finally {
+    handle.close?.();
+  }
+}
+
 async function finishCanceledChatRun(input: {
   config: TinyOfficeChatRuntimeDispatchSinkConfig;
   runtime: TinyOfficeChatRuntimeDispatchContext;
   decision: Extract<TinyOfficeChatTurnDispatchDecision, { kind: "routable" }>;
-  repository: TinyOfficeChatExecutionStatusRepository;
+  activeRun: ActiveChatRun;
   runtimeSessionRecordId?: string;
   errorMessage?: string;
   providerReplyObserved?: boolean;
@@ -841,27 +879,31 @@ async function finishCanceledChatRun(input: {
   const summary = input.providerReplyObserved
     ? "Owned Chat execution was canceled before a late provider reply could be persisted."
     : "Owned Chat execution was canceled before a reply was persisted.";
-  await updateTinyOfficeChatExecutionDispatchStatus({
-    decision: input.decision,
-    repository: input.repository,
-    status: "canceled",
-    summary,
-  }).catch((statusError) => trace(input.config, {
-    phase: "tinyoffice_chat_runtime_execution.cancel_status_persist_failed",
-    eventKey: input.decision.eventKey,
-    companyId: input.decision.companyId,
-    roomId: input.decision.roomId,
-    messageId: input.decision.messageId,
-    targetMemberId: input.decision.targetMemberId,
-    error: statusError instanceof Error ? statusError.stack || statusError.message : String(statusError),
-  }).catch(() => undefined));
-  publishRuntimeStatus(input.config.realtimePublisher, input.decision, {
-    status: "canceled",
-    runtimeProviderId: input.config.runtimeProvider?.providerId,
-    sessionRecordId: input.runtimeSessionRecordId,
-    errorMessage: input.errorMessage,
-  });
-  const canceledTraceEvent = await input.runtime.processTrace?.publishProcessTrace({
+  try {
+    await persistTinyOfficeChatExecutionDispatchStatus(input.config, {
+      decision: input.decision,
+      status: "canceled",
+      summary,
+    });
+  } catch (statusError) {
+    await trace(input.config, {
+      phase: "tinyoffice_chat_runtime_execution.cancel_status_persist_failed",
+      eventKey: input.decision.eventKey,
+      companyId: input.decision.companyId,
+      roomId: input.decision.roomId,
+      messageId: input.decision.messageId,
+      targetMemberId: input.decision.targetMemberId,
+      error: statusError instanceof Error ? statusError.stack || statusError.message : String(statusError),
+    }).catch(() => undefined);
+    publishRuntimeStatus(input.config.realtimePublisher, input.decision, {
+      status: "failed",
+      runtimeProviderId: input.config.runtimeProvider?.providerId,
+      sessionRecordId: input.runtimeSessionRecordId,
+      errorMessage: "Cancellation could not be persisted.",
+    });
+    return;
+  }
+  await publishChatActivityTrace(input.config, input.runtime, input.decision, input.activeRun, {
     kind: "turn_failed",
     sessionKey: input.decision.sessionKey,
     employeeId: input.decision.targetMemberId,
@@ -882,7 +924,12 @@ async function finishCanceledChatRun(input: {
       providerReplyObserved: input.providerReplyObserved || false,
     },
   });
-  publishChatProcessTraceAppended(input.config.realtimePublisher, input.decision, canceledTraceEvent);
+  publishRuntimeStatus(input.config.realtimePublisher, input.decision, {
+    status: "canceled",
+    runtimeProviderId: input.config.runtimeProvider?.providerId,
+    sessionRecordId: input.runtimeSessionRecordId,
+    errorMessage: input.errorMessage,
+  });
 }
 
 async function requestTopicSummaryRefresh(input: {
@@ -960,19 +1007,49 @@ function publishRuntimeStatus(
   });
 }
 
-function publishChatProcessTraceAppended(
-  publisher: TinyOfficeRealtimePublisher | undefined,
+async function publishChatActivityTrace(
+  config: TinyOfficeChatRuntimeDispatchSinkConfig,
+  runtime: TinyOfficeChatRuntimeDispatchContext,
   decision: Extract<TinyOfficeChatTurnDispatchDecision, { kind: "routable" }>,
-  event: ProcessTraceEvent | undefined,
-  input: {
-    replyMessageId?: string;
-  } = {},
-): void {
-  if (!publisher || !event) {
-    return;
+  activeRun: ActiveChatRun,
+  event: TinyOfficeChatRuntimeProcessTraceEventInput,
+): Promise<ProcessTraceEvent | undefined> {
+  if (!runtime.processTrace) {
+    return undefined;
   }
-  publisher.publish({
-    type: "chat.process_trace.appended",
+  activeRun.sequenceInRun += 1;
+  const sequenceInRun = activeRun.sequenceInRun;
+  const observed = await runtime.processTrace.publishProcessTraceEvent({
+    ...event,
+    runId: decision.eventKey,
+    sequenceInRun,
+    conversationId: decision.roomId,
+    sourceMessageId: decision.messageId,
+    chatEntryId: decision.entryId,
+    metadata: {
+      ...(event.metadata || {}),
+      runId: decision.eventKey,
+      sequenceInRun,
+      conversationId: decision.roomId,
+      sourceMessageId: decision.messageId,
+      chatEntryId: decision.entryId,
+      chainId: decision.chainId,
+      targetMemberId: decision.targetMemberId,
+    },
+  });
+  const existingIndex = activeRun.activityEvents.findIndex((candidate) => candidate.id === observed.id);
+  if (existingIndex >= 0) {
+    activeRun.activityEvents[existingIndex] = observed;
+  } else {
+    activeRun.activityEvents.push(observed);
+  }
+  const projected = buildRuntimeActivity(activeRun.activityEvents);
+  const changedItems = projected.items.filter((item) => item.raw.eventIds.includes(observed.id));
+  if (changedItems.length === 0) {
+    return observed;
+  }
+  config.realtimePublisher?.publish({
+    type: "chat.activity.observed",
     companyId: decision.companyId,
     conversationId: decision.roomId,
     roomId: decision.roomId,
@@ -980,21 +1057,24 @@ function publishChatProcessTraceAppended(
     chainId: decision.chainId,
     sourceMessageId: decision.messageId,
     targetMemberId: decision.targetMemberId,
-    sessionKey: event.sessionKey,
-    ...(input.replyMessageId ? { replyMessageId: input.replyMessageId } : {}),
-    processTraceEvent: event,
+    sessionKey: observed.sessionKey,
+    sequenceInRun,
+    activity: { items: changedItems },
   });
+  return observed;
 }
 
 async function publishChatRunStartedTrace(
+  config: TinyOfficeChatRuntimeDispatchSinkConfig,
   runtime: TinyOfficeChatRuntimeDispatchContext,
   decision: Extract<TinyOfficeChatTurnDispatchDecision, { kind: "routable" }>,
+  activeRun: ActiveChatRun,
   input: {
     runtimeProviderId?: string;
     sessionRecordId?: string;
   },
 ): Promise<ProcessTraceEvent | undefined> {
-  return runtime.processTrace?.publishProcessTrace({
+  return publishChatActivityTrace(config, runtime, decision, activeRun, {
     kind: "employee_reply_started",
     sessionKey: decision.sessionKey,
     employeeId: decision.targetMemberId,
@@ -1121,12 +1201,14 @@ function resultSessionRecordId(event: ProcessTraceEventDraft): string | undefine
 }
 
 async function publishTurnFailed(
+  config: TinyOfficeChatRuntimeDispatchSinkConfig,
   runtime: TinyOfficeChatRuntimeDispatchContext,
   decision: Extract<TinyOfficeChatTurnDispatchDecision, { kind: "routable" }>,
+  activeRun: ActiveChatRun,
   summary: string,
   titleSuffix: string,
 ): Promise<ProcessTraceEvent | undefined> {
-  return runtime.processTrace?.publishProcessTrace({
+  return publishChatActivityTrace(config, runtime, decision, activeRun, {
     kind: "turn_failed",
     sessionKey: decision.sessionKey,
     employeeId: decision.targetMemberId,

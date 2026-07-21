@@ -139,7 +139,10 @@ export async function listCollaborationToolCallRecords(input: {
   actionName?: string;
   sinceIso?: string;
 }): Promise<ToolCallLogRecord[]> {
-  const repository = await RuntimeSessionRepository.open(input.repoRoot, { companyId: input.companyId });
+  const repository = await RuntimeSessionRepository.open(input.repoRoot, {
+    companyId: input.companyId,
+    domains: ["collaborationActions"],
+  });
   try {
     return repository
       .listCollaborationActionEvents({
@@ -325,7 +328,10 @@ export async function readRecentHandoffResults(input: {
   sinceIso: string;
   employeeId?: string;
 }): Promise<HandoffResult[]> {
-  const repository = await RuntimeSessionRepository.open(input.repoRoot, { companyId: input.companyId });
+  const repository = await RuntimeSessionRepository.open(input.repoRoot, {
+    companyId: input.companyId,
+    domains: ["collaborationActions"],
+  });
   try {
     const databaseCalls = repository
       .listCollaborationActionEvents({

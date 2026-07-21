@@ -21,7 +21,8 @@ import type {
   SendMessageResult,
 } from "../../collaboration/contracts/conversation-message-contract.js";
 import type {
-  ChatProcessTraceAppendedEvent,
+  ChatActivityObservedEvent,
+  ChatActivityPersistedEvent,
   ChatRuntimeStatus,
   ChatRuntimeStatusChangedEvent,
   TinyOfficeRealtimeEvent,
@@ -90,7 +91,8 @@ export type {
   ChatContainerDto,
   ChatEntryDto,
   ChatOpenTargetDto,
-  ChatProcessTraceAppendedEvent,
+  ChatActivityObservedEvent,
+  ChatActivityPersistedEvent,
   ChatRuntimeLinkDto,
   ChatRuntimeStatus,
   ChatRuntimeStatusChangedEvent,

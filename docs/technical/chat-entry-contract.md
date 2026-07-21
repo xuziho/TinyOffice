@@ -190,10 +190,10 @@ Chat runtime state-machine acceptance:
 | State | Required backend event | UI contract |
 | --- | --- | --- |
 | Run accepted | `chat.runtime_status.changed` with `queued` / `received` | Composer may switch to Stop; message stream does not show a fake assistant row. |
-| Work begins | `chat.runtime_status.changed` with `thinking`, followed by a persisted `chat.process_trace.appended` for the same `runId` | Context Activity dock shows real active evidence before visible assistant text starts. |
+| Work begins | `chat.runtime_status.changed` with `thinking`, followed by a realtime `chat.activity.observed` for the same `runId` | Context Activity dock shows real active evidence before visible assistant text starts; provider invocation does not wait for Process Trace persistence. |
 | Text streams | `chat.reply.delta` / `chat.reply.snapshot` | Message stream shows one draft reply for the `runId`; Context keeps the Activity dock stable. |
 | Reply persists | `chat.message.created` and `chat.runtime_status.changed` with `completed` | Draft reply is replaced by the persisted Chat message. |
-| Run fails | `chat.runtime_status.changed` with `failed` plus `chat.process_trace.appended` failure evidence | Message stream may show concise failure state; technical details stay in Activity raw evidence / Sessions. |
+| Run fails | Durable Run/Session failure state, `chat.runtime_status.changed` with `failed`, and realtime `chat.activity.observed` failure evidence | Message stream may show concise failure state; technical details stay in Activity raw evidence / Sessions. |
 | Run cancellation requested | `chat.runtime_status.changed` with `cancel_requested` | UI may show cancellation as pending, but must not synthesize a terminal canceled state. |
 | Run cancels | `chat.runtime_status.changed` with `canceled` plus cancellation trace evidence when available | No stopped partial draft is promoted to a Chat message. |
 

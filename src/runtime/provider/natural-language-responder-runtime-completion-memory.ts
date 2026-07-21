@@ -9,7 +9,10 @@ export async function updateRuntimeSessionCompletionMemory(input: {
   sessionRecordId: string;
 }) {
   const completionRepository = input.responseInput.runtimeSessionRepository ||
-    await RuntimeSessionRepository.open(input.repoRoot, { companyId: input.responseInput.employee.companyId });
+    await RuntimeSessionRepository.open(input.repoRoot, {
+      companyId: input.responseInput.employee.companyId,
+      domains: ["sessions", "memory"],
+    });
   try {
     upsertSessionCompletionMemory(completionRepository, {
       sessionRecordId: input.sessionRecordId,

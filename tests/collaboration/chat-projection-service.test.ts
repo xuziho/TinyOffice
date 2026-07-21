@@ -338,7 +338,7 @@ test("chat projection uses the first message body as the entry preview", async (
   );
 });
 
-test("chat projection loads visible entry previews concurrently", async () => {
+test("chat projection serializes fallback preview reads on a shared message source", async () => {
   let activeReads = 0;
   let maxActiveReads = 0;
   const conversations = ["one", "two", "three"].map((suffix) => conversation({
@@ -377,7 +377,52 @@ test("chat projection loads visible entry previews concurrently", async () => {
   const page = await service.listChatProjection("acme", { participantKind: "company_member", memberId: "iris-growth" });
 
   assert.equal(page.entries.length, 3);
-  assert.ok(maxActiveReads > 1, `expected concurrent preview reads, observed ${maxActiveReads}`);
+  assert.equal(maxActiveReads, 1);
+});
+
+test("chat projection loads all visible entry previews through one batch read when supported", async () => {
+  let batchReads = 0;
+  const conversations = ["one", "two", "three"].map((suffix) => conversation({
+    conversationId: `conversation-topic-${suffix}`,
+    title: `Topic ${suffix}`,
+    conversationKind: "topic",
+    topicId: `topic-${suffix}`,
+    chatChannelId: "ops",
+    participants: [
+      memberParticipant("acme", `conversation-topic-${suffix}`, "iris-growth", "Iris"),
+      memberParticipant("acme", `conversation-topic-${suffix}`, "nora-automation", "Nora"),
+    ],
+  }));
+  const service = new ChatProjectionService({
+    conversationSource: {
+      async listConversations() {
+        return { conversations };
+      },
+    },
+    channelSource: {
+      async listChannelsForViewer() {
+        return [channel()];
+      },
+    },
+    messageSource: {
+      async listFirstMessages(companyId, conversationIds) {
+        batchReads += 1;
+        return {
+          messages: conversationIds.flatMap((conversationId) =>
+            messagePage(companyId, conversationId, `Preview for ${conversationId}`).messages
+          ),
+        };
+      },
+      async listMessages() {
+        throw new Error("per-conversation preview reads must not run when batch reads are available");
+      },
+    },
+  });
+
+  const page = await service.listChatProjection("acme", { participantKind: "company_member", memberId: "iris-growth" });
+
+  assert.equal(page.entries.length, 3);
+  assert.equal(batchReads, 1);
 });
 
 test("chat projection hides archived topic conversations from active entry lists", async () => {

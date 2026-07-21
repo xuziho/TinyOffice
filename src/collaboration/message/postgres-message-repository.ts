@@ -1,4 +1,6 @@
-import { endCompanyPostgresPool, openConfiguredPostgresConnection } from "../../runtime/company-config/postgres-runtime-connection.js";
+import { AsyncLocalStorage } from "node:async_hooks";
+
+import { endCompanyPostgresPool, openConfiguredPostgresConnection, PostgresConnectionUnavailableError } from "../../runtime/company-config/postgres-runtime-connection.js";
 import type {
   CompanyPostgresClient,
   CompanyPostgresOpenOptions,
@@ -10,6 +12,7 @@ import type {
   MessageRecord,
   MessageRepository,
   MessageRepositoryAfterCursorInput,
+  MessageRepositoryConversationIdsInput,
   MessageRepositoryConversationListInput,
   MessageRepositoryPageInput,
 } from "./message-repository.js";
@@ -51,11 +54,18 @@ export interface PostgresMessageRepositoryOpenOptions extends CompanyPostgresOpe
 }
 
 export class PostgresMessageRepository implements MessageRepository {
+  private readonly transactionClient = new AsyncLocalStorage<CompanyPostgresClient>();
+
   private constructor(
     private readonly client: CompanyPostgresClient,
     private readonly pool: CompanyPostgresPoolLike,
     private readonly companyId: string,
-  ) {}
+    private readonly borrowPerOperation = false,
+  ) {
+    if (borrowPerOperation) {
+      client.release();
+    }
+  }
 
   static async open(repoRoot: string, options: PostgresMessageRepositoryOpenOptions): Promise<PostgresMessageRepository> {
     const companyId = normalizeCompanyId(options.companyId);
@@ -63,28 +73,72 @@ export class PostgresMessageRepository implements MessageRepository {
     if (!postgres) {
       throw new Error("Message Service requires PostgreSQL runtime configuration.");
     }
-    return new PostgresMessageRepository(postgres.client, postgres.pool, companyId);
+    return new PostgresMessageRepository(postgres.client, postgres.pool, companyId, true);
   }
 
   close(): void {
-    this.client.release();
+    if (!this.borrowPerOperation) {
+      this.client.release();
+    }
     void endCompanyPostgresPool(this.pool);
   }
 
   async runInTransaction<T>(run: () => Promise<T>): Promise<T> {
-    await this.client.query("BEGIN");
+    if (!this.borrowPerOperation) {
+      await this.client.query("BEGIN");
+      try {
+        const result = await run();
+        await this.client.query("COMMIT");
+        return result;
+      } catch (error) {
+        await this.client.query("ROLLBACK").catch(() => undefined);
+        throw error;
+      }
+    }
+    const client = await this.borrowClient();
     try {
-      const result = await run();
-      await this.client.query("COMMIT");
-      return result;
+      return await this.transactionClient.run(client, async () => {
+        await client.query("BEGIN");
+        try {
+          const result = await run();
+          await client.query("COMMIT");
+          return result;
+        } catch (error) {
+          await client.query("ROLLBACK").catch(() => undefined);
+          throw error;
+        }
+      });
+    } finally {
+      client.release();
+    }
+  }
+
+  private async query<T = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<{ rows: T[] }> {
+    const transactionClient = this.transactionClient.getStore();
+    if (transactionClient) {
+      return transactionClient.query<T>(sql, params);
+    }
+    if (!this.borrowPerOperation) {
+      return this.client.query<T>(sql, params);
+    }
+    const client = await this.borrowClient();
+    try {
+      return await client.query<T>(sql, params);
+    } finally {
+      client.release();
+    }
+  }
+
+  private async borrowClient(): Promise<CompanyPostgresClient> {
+    try {
+      return await this.pool.connect();
     } catch (error) {
-      await this.client.query("ROLLBACK").catch(() => undefined);
-      throw error;
+      throw new PostgresConnectionUnavailableError(error);
     }
   }
 
   async upsertConversation(record: ConversationRecord): Promise<void> {
-    await this.client.query(
+    await this.query(
       `INSERT INTO conversations (
   company_id, conversation_id, title, title_status, title_source_message_id, title_failure_reason, conversation_kind, participants_json,
   topic_state_json, participant_states_json, last_message_id, runtime_links_json,
@@ -123,7 +177,7 @@ ON CONFLICT (company_id, conversation_id) DO UPDATE SET
       ],
     );
     for (const participant of record.conversation.participants) {
-      await this.client.query(
+      await this.query(
         `INSERT INTO conversation_participants (
   company_id, conversation_id, participant_id, participant_kind, member_id,
   display_name, role, joined_at, left_at
@@ -152,7 +206,7 @@ ON CONFLICT (company_id, conversation_id, participant_id) DO UPDATE SET
   }
 
   async getConversation(companyId: string, conversationId: string): Promise<ConversationRecord | undefined> {
-    const rows = await this.client.query<Record<string, unknown>>(
+    const rows = await this.query<Record<string, unknown>>(
       "SELECT * FROM conversations WHERE company_id = $1 AND conversation_id = $2",
       [companyId, conversationId],
     );
@@ -161,7 +215,7 @@ ON CONFLICT (company_id, conversation_id, participant_id) DO UPDATE SET
   }
 
   async findConversationCompanyId(conversationId: string): Promise<string | undefined> {
-    const rows = await this.client.query<{ company_id: string }>(
+    const rows = await this.query<{ company_id: string }>(
       "SELECT company_id FROM conversations WHERE conversation_id = $1 ORDER BY company_id ASC LIMIT 1",
       [conversationId],
     );
@@ -169,7 +223,7 @@ ON CONFLICT (company_id, conversation_id, participant_id) DO UPDATE SET
   }
 
   async listConversations(input: MessageRepositoryConversationListInput): Promise<ConversationRecord[]> {
-    const rows = await this.client.query<Record<string, unknown>>(
+    const rows = await this.query<Record<string, unknown>>(
       `SELECT c.*
 FROM conversations c
 JOIN conversation_participants p ON p.company_id = c.company_id AND p.conversation_id = c.conversation_id
@@ -192,7 +246,7 @@ LIMIT $4 OFFSET $5`,
   }
 
   async upsertMessage(record: MessageRecord): Promise<void> {
-    await this.client.query(
+    await this.query(
       `INSERT INTO conversation_messages (
   company_id, conversation_id, message_id, sender_json, body, attachments_json,
   mentions_json, runtime_links_json, delivery_state, created_at, updated_at
@@ -220,12 +274,12 @@ ON CONFLICT (company_id, message_id) DO UPDATE SET
         record.message.updatedAt ?? record.message.createdAt,
       ],
     );
-    await this.client.query(
+    await this.query(
       "DELETE FROM chat_attachment_references WHERE company_id = $1 AND message_id = $2",
       [record.message.companyId, record.message.messageId],
     );
     for (const attachment of record.message.attachments) {
-      await this.client.query(
+      await this.query(
         `INSERT INTO chat_attachment_references (
   company_id, attachment_id, message_id, conversation_id, created_at
 ) VALUES ($1, $2, $3, $4, $5)
@@ -244,7 +298,7 @@ ON CONFLICT (company_id, attachment_id, message_id) DO UPDATE SET
   }
 
   async listMessages(input: MessageRepositoryPageInput & { conversationId: string }): Promise<MessageRecord[]> {
-    const rows = await this.client.query<Record<string, unknown>>(
+    const rows = await this.query<Record<string, unknown>>(
       `SELECT * FROM conversation_messages
 WHERE company_id = $1 AND conversation_id = $2
 ORDER BY created_at ASC, message_id ASC
@@ -254,8 +308,22 @@ LIMIT $3 OFFSET $4`,
     return rows.rows.map((row) => ({ message: this.messageFromRow(row) }));
   }
 
+  async listFirstMessages(input: MessageRepositoryConversationIdsInput): Promise<MessageRecord[]> {
+    if (input.conversationIds.length === 0) {
+      return [];
+    }
+    const rows = await this.query<Record<string, unknown>>(
+      `SELECT DISTINCT ON (conversation_id) *
+FROM conversation_messages
+WHERE company_id = $1 AND conversation_id = ANY($2::text[])
+ORDER BY conversation_id ASC, created_at ASC, message_id ASC`,
+      [input.companyId, input.conversationIds],
+    );
+    return rows.rows.map((row) => ({ message: this.messageFromRow(row) }));
+  }
+
   async listRecentMessages(input: MessageRepositoryPageInput & { conversationId: string }): Promise<MessageRecord[]> {
-    const rows = await this.client.query<Record<string, unknown>>(
+    const rows = await this.query<Record<string, unknown>>(
       `SELECT * FROM (
   SELECT * FROM conversation_messages
   WHERE company_id = $1 AND conversation_id = $2
@@ -269,7 +337,7 @@ ORDER BY created_at ASC, message_id ASC`,
   }
 
   async listMessagesAfter(input: MessageRepositoryAfterCursorInput): Promise<MessageRecord[]> {
-    const rows = await this.client.query<Record<string, unknown>>(
+    const rows = await this.query<Record<string, unknown>>(
       `SELECT * FROM conversation_messages
 WHERE company_id = $1
   AND conversation_id = $2

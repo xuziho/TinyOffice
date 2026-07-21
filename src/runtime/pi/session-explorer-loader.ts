@@ -47,7 +47,10 @@ export async function loadDatabaseSessionExplorerIndex(
 ): Promise<SessionExplorerIndex> {
   const [employeeProfiles, runtimeRepository] = await Promise.all([
     loadEmployeeProfileMap({ repoRoot, companyId }),
-    RuntimeSessionRepository.open(repoRoot, { companyId }),
+    RuntimeSessionRepository.open(repoRoot, {
+      companyId,
+      domains: ["sessions", "processTrace", "collaborationActions"],
+    }),
   ]);
   try {
     const records = runtimeRepository.listSessionRecords()
@@ -91,7 +94,10 @@ export async function loadDatabaseSessionExplorerSessionDetail(input: {
       repoRoot: input.repoRoot,
       companyId: input.companyId,
     }),
-    RuntimeSessionRepository.open(input.repoRoot, { companyId: input.companyId }),
+    RuntimeSessionRepository.open(input.repoRoot, {
+      companyId: input.companyId,
+      domains: ["sessions", "processTrace", "collaborationActions"],
+    }),
   ]);
   try {
     const detail = runtimeRepository.getSessionDetail(input.sessionId);

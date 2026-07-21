@@ -388,6 +388,19 @@ function createRuntimeServer(): Promise<SmokeServer> {
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
     requests.push(`${req.method ?? "GET"} ${url.pathname}${url.search}`);
 
+    if (url.pathname === "/api/tinyoffice/auth/status" && req.method === "GET") {
+      json(res, 200, {
+        schema: "tinyoffice-auth-status",
+        version: 2,
+        accessMode: "local",
+        authenticated: true,
+        bootstrapRequired: false,
+        ownerConfigured: true,
+        passkeyConfigured: false,
+      });
+      return;
+    }
+
     if (url.pathname === "/api/tinyoffice/session/current" && req.method === "GET") {
       json(res, 200, {
         schema: "tinyoffice-current-session",
@@ -463,7 +476,7 @@ function createRuntimeServer(): Promise<SmokeServer> {
                 version: 1,
                 companyId,
                 chatChannelId,
-                employeeId: targetEmployeeId,
+                memberId: targetEmployeeId,
                 displayName: "Nora Automation",
                 avatarSeed: "smoke-nora-automation",
                 role: "member",
@@ -1004,6 +1017,7 @@ function spawnBrowser(browser: BrowserChoice, debuggingPort: number, userDataDir
     `--user-data-dir=${userDataDir}`,
     "--headless=new",
     "--window-size=1440,900",
+    "--lang=en-US",
     "--disable-gpu",
     "--no-first-run",
     "--no-default-browser-check",

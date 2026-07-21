@@ -61,7 +61,7 @@
   "devDependencies": {
     "@types/node": "^24.0.1",
     "@types/pg": "^8.20.0",
-    "typescript": "^5.8.3"
+    "typescript": "^7.0.2"
   },
   "dependencies": {
     "@better-auth/passkey": "1.6.23",

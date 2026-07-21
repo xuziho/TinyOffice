@@ -1825,10 +1825,10 @@ test("Hono TinyOffice API main path serves Chat, directory, conversation, messag
       }>;
     };
     assert.deepEqual(activityBody.items, [{
-      id: "activity:tool_call:run-1:trace-call",
+      id: "activity:tool_step:run-1:trace-call",
       kind: "tool_call",
-      title: "Tool call",
-      details: "nora-automation called bash",
+      title: "Tool · bash",
+      details: "{\"command\":\"pwd\"}",
       status: "succeeded",
       timestamp: fixedNow,
       primary: {

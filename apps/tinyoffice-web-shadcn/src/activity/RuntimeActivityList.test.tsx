@@ -77,6 +77,21 @@ const handoffActivity: RuntimeActivityItem[] = [{
   raw: { eventIds: ["trace-handoff"], events: [] },
 }];
 
+const repeatedToolActivity: RuntimeActivityItem[] = [
+  sampleActivity[0],
+  ...["webfetch", "webfetch", "websearch", "bash"].map((toolName, index): RuntimeActivityItem => ({
+    id: `activity:tool-result-${index}`,
+    kind: "tool_result",
+    title: "Tool result",
+    details: `${toolName} returned a long result that belongs in detailed Session evidence.`,
+    status: index === 2 ? "failed" : "succeeded",
+    timestamp: `2026-07-07T10:33:5${index}.000Z`,
+    primary: { toolName },
+    raw: { eventIds: [`trace-tool-${index}`], events: [] },
+  })),
+  noisyChatActivity.at(-1)!,
+];
+
 test("renders compact activity as a quiet event stream", async () => {
   (globalThis as typeof globalThis & { React: typeof React }).React = React;
   const { RuntimeActivityList } = await import("./RuntimeActivityList");
@@ -161,4 +176,20 @@ test("renders topic handoff target in the collapsed activity row", async () => {
   assert.match(html, /To Olivia/);
   assert.doesNotMatch(html, /Tool call/);
   assert.doesNotMatch(html, /Tool handoff_topic_turn/);
+});
+
+test("collapses repeated Chat tool rows into one high-signal summary", async () => {
+  (globalThis as typeof globalThis & { React: typeof React }).React = React;
+  const { RuntimeActivityList } = await import("./RuntimeActivityList");
+
+  const html = renderToStaticMarkup(
+    <RuntimeActivityList items={repeatedToolActivity} density="summary" collapseToolActivity maxHeight="min(420px, 46vh)" />,
+  );
+
+  assert.match(html, /Tool activity/);
+  assert.match(html, /4 results/);
+  assert.match(html, /1 failed/);
+  assert.match(html, /max-height:min\(420px, 46vh\)/);
+  assert.equal((html.match(/Tool activity/g) || []).length, 1);
+  assert.doesNotMatch(html, /returned a long result/);
 });

@@ -375,6 +375,8 @@ function ActivityDock({
       <RuntimeActivityList
         items={activityItems}
         density="summary"
+        collapseToolActivity
+        maxHeight="min(420px, 46vh)"
         emptyText={hasActivitySource ? t("chat.noReplyActivity") : t("chat.selectReplyActivity")}
         followLatest
       />

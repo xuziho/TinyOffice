@@ -1,6 +1,8 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import type { RuntimeActivityItem } from "tinyoffice/frontend-api-contracts";
+import { ChevronRightIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
 export type RuntimeActivityDensity = "summary" | "compact" | "full";
@@ -11,12 +13,14 @@ export function RuntimeActivityList({
   emptyText = "No activity recorded.",
   density = "compact",
   followLatest = false,
+  collapseToolActivity = false,
 }: {
   items: RuntimeActivityItem[];
   maxHeight?: string;
   emptyText?: string;
   density?: RuntimeActivityDensity;
   followLatest?: boolean;
+  collapseToolActivity?: boolean;
 }): ReactElement {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [isFollowingLatest, setIsFollowingLatest] = useState(true);
@@ -24,6 +28,10 @@ export function RuntimeActivityList({
   const activityVersion = useMemo(
     () => items.map((item) => `${item.id}:${item.status}:${(item.details ?? "").length}:${item.raw.eventIds.length}`).join("|"),
     [items],
+  );
+  const displayEntries = useMemo(
+    () => collapseToolActivity ? collapseToolEntries(items) : items.map((item) => ({ type: "item" as const, item })),
+    [collapseToolActivity, items],
   );
 
   useEffect(() => {
@@ -75,8 +83,10 @@ export function RuntimeActivityList({
     <div className="relative min-w-0" ref={rootRef}>
       <ScrollArea className={`rounded-md border border-[var(--tiny-line-soft)] bg-[var(--tiny-surface)] ${maxHeightClass(maxHeight)}`} style={maxHeight ? { maxHeight } : undefined}>
         <ol className={listClassName(density)}>
-          {items.map((item) => (
-            <RuntimeActivityRow key={item.id} item={item} density={density} />
+          {displayEntries.map((entry) => entry.type === "tool-group" ? (
+            <ToolActivitySummaryRow key={entry.id} entry={entry} />
+          ) : (
+            <RuntimeActivityRow key={entry.item.id} item={entry.item} density={density} />
           ))}
         </ol>
       </ScrollArea>
@@ -97,6 +107,98 @@ export function RuntimeActivityList({
       ) : null}
     </div>
   );
+}
+
+interface ToolActivityGroupEntry {
+  type: "tool-group";
+  id: string;
+  items: RuntimeActivityItem[];
+  operationLabel: string;
+  failedCount: number;
+}
+
+type ActivityDisplayEntry = { type: "item"; item: RuntimeActivityItem } | ToolActivityGroupEntry;
+
+function collapseToolEntries(items: RuntimeActivityItem[]): ActivityDisplayEntry[] {
+  const toolItems = items.filter(isToolItem);
+  if (toolItems.length < 2) {
+    return items.map((item) => ({ type: "item", item }));
+  }
+
+  const standaloneResults = toolItems.filter((item) => item.kind === "tool_result");
+  const summaryItems = standaloneResults.length > 0 ? standaloneResults : toolItems;
+  const operationLabel = standaloneResults.length > 0
+    ? `${summaryItems.length} ${summaryItems.length === 1 ? "result" : "results"}`
+    : `${summaryItems.length} ${summaryItems.length === 1 ? "operation" : "operations"}`;
+  const group: ToolActivityGroupEntry = {
+    type: "tool-group",
+    id: `tool-activity:${toolItems.map((item) => item.id).join("|")}`,
+    items: summaryItems,
+    operationLabel,
+    failedCount: summaryItems.filter((item) => item.status === "failed").length,
+  };
+  const output: ActivityDisplayEntry[] = [];
+  let inserted = false;
+  for (const item of items) {
+    if (isToolItem(item)) {
+      if (!inserted) {
+        output.push(group);
+        inserted = true;
+      }
+      continue;
+    }
+    output.push({ type: "item", item });
+  }
+  return output;
+}
+
+function isToolItem(item: RuntimeActivityItem): boolean {
+  return item.kind === "tool_call" || item.kind === "tool_result";
+}
+
+function ToolActivitySummaryRow({ entry }: { entry: ToolActivityGroupEntry }): ReactElement {
+  const [open, setOpen] = useState(false);
+  const breakdown = toolBreakdown(entry.items);
+  const status: RuntimeActivityItem["status"] = entry.failedCount > 0 ? "failed" : entry.items.some((item) => item.status === "running") ? "running" : "succeeded";
+  return (
+    <li className="grid min-w-0 grid-cols-[12px_minmax(0,1fr)] gap-1.5 border-b border-[var(--tiny-line-soft)] py-1.5 last:border-b-0">
+      <div className="relative flex justify-center pt-1.5">
+        <span className={`relative z-10 size-1.5 rounded-full ${statusDotClass(status)}`} />
+      </div>
+      <Collapsible open={open} onOpenChange={setOpen} className="min-w-0">
+        <CollapsibleTrigger className="flex min-w-0 w-full cursor-pointer items-baseline gap-1.5 text-left">
+          <ChevronRightIcon className={`size-3 shrink-0 self-center transition-transform ${open ? "rotate-90" : ""}`} aria-hidden="true" />
+          <span className="min-w-0 break-words text-xs font-semibold leading-4">Tool activity</span>
+          <span className="min-w-0 break-words text-[11px] text-muted-foreground">
+            {entry.operationLabel}{entry.failedCount > 0 ? ` · ${entry.failedCount} failed` : ""}
+          </span>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="mt-1 pl-[18px]">
+          <ul className="grid gap-1 text-[11px] leading-4 text-muted-foreground">
+            {breakdown.map((item) => (
+              <li key={item.toolName} className="flex min-w-0 items-baseline justify-between gap-2">
+                <span className="min-w-0 break-words font-medium text-foreground [overflow-wrap:anywhere]">{item.toolName}</span>
+                <span className="shrink-0">{item.count}{item.failedCount > 0 ? ` · ${item.failedCount} failed` : ""}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-1.5 text-[10px] leading-4 text-muted-foreground/80">Full step evidence remains available in Sessions.</p>
+        </CollapsibleContent>
+      </Collapsible>
+    </li>
+  );
+}
+
+function toolBreakdown(items: RuntimeActivityItem[]): Array<{ toolName: string; count: number; failedCount: number }> {
+  const values = new Map<string, { toolName: string; count: number; failedCount: number }>();
+  for (const item of items) {
+    const toolName = sanitizeInlineText(item.primary?.toolName) || "tool";
+    const current = values.get(toolName) || { toolName, count: 0, failedCount: 0 };
+    current.count += 1;
+    if (item.status === "failed") current.failedCount += 1;
+    values.set(toolName, current);
+  }
+  return [...values.values()].sort((left, right) => right.count - left.count || left.toolName.localeCompare(right.toolName));
 }
 
 function activityViewport(root: HTMLDivElement | null): HTMLElement | undefined {

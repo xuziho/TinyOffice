@@ -21,7 +21,7 @@ test("runtime Activity projects tool calls, tool results, and raw details withou
       kind: "tool_activity",
       title: "Ran a command",
       status: "running",
-      metadata: { runId: "run-1", sourceMessageId: "message-a8d", toolName: "bash" },
+      metadata: { runId: "run-1", sourceMessageId: "message-a8d", toolCallId: "call-1", toolName: "bash" },
     }),
     traceEvent({
       id: "trace-tool-call",
@@ -33,6 +33,7 @@ test("runtime Activity projects tool calls, tool results, and raw details withou
       metadata: {
         runId: "run-1",
         sourceMessageId: "message-a8d",
+        toolCallId: "call-1",
         toolName: "bash",
         arguments: { command: "pwd && ls -la", timeout: 10 },
       },
@@ -46,6 +47,7 @@ test("runtime Activity projects tool calls, tool results, and raw details withou
       metadata: {
         runId: "run-1",
         sourceMessageId: "message-a8d",
+        toolCallId: "call-1",
         toolName: "bash",
         activityTarget: "pwd && ls -la",
       },
@@ -57,7 +59,7 @@ test("runtime Activity projects tool calls, tool results, and raw details withou
       title: "bash returned a result",
       summary: "/workspace\nREADME.md\n",
       status: "succeeded",
-      metadata: { runId: "run-1", sourceMessageId: "message-a8d", toolName: "bash" },
+      metadata: { runId: "run-1", sourceMessageId: "message-a8d", toolCallId: "call-1", toolName: "bash" },
     }),
     traceEvent({
       id: "trace-reply",
@@ -97,24 +99,14 @@ test("runtime Activity projects tool calls, tool results, and raw details withou
     },
     {
       kind: "tool_call",
-      title: "Tool call",
-      details: "employee-hr called bash",
+      title: "Tool · bash",
+      details: "/workspace\nREADME.md\n",
       status: "succeeded",
       primary: {
         toolName: "bash",
         arguments: { command: "pwd && ls -la", timeout: 10 },
       },
-      rawEventIds: ["trace-tool-call"],
-    },
-    {
-      kind: "tool_result",
-      title: "Tool result",
-      details: "/workspace\nREADME.md\n",
-      status: "succeeded",
-      primary: {
-        toolName: "bash",
-      },
-      rawEventIds: ["trace-result"],
+      rawEventIds: ["trace-tool-running", "trace-tool-call", "trace-tool-activity-succeeded", "trace-result"],
     },
     {
       kind: "run_completed",
@@ -162,7 +154,7 @@ test("runtime Activity keeps repeated same-name tool calls separate", () => {
       status: "succeeded",
       metadata: {
         runId: "run-1",
-        sessionRecordId: "assistant-python",
+        toolCallId: "call-python",
         toolName: "bash",
         arguments: { command: "python script.py" },
       },
@@ -176,7 +168,7 @@ test("runtime Activity keeps repeated same-name tool calls separate", () => {
       status: "failed",
       metadata: {
         runId: "run-1",
-        sessionRecordId: "result-python",
+        toolCallId: "call-python",
         toolName: "bash",
       },
     }),
@@ -189,7 +181,7 @@ test("runtime Activity keeps repeated same-name tool calls separate", () => {
       status: "succeeded",
       metadata: {
         runId: "run-1",
-        sessionRecordId: "assistant-sed",
+        toolCallId: "call-sed",
         toolName: "bash",
         arguments: { command: "sed -n p .env.local" },
       },
@@ -203,7 +195,7 @@ test("runtime Activity keeps repeated same-name tool calls separate", () => {
       status: "succeeded",
       metadata: {
         runId: "run-1",
-        sessionRecordId: "result-sed",
+        toolCallId: "call-sed",
         toolName: "bash",
       },
     }),
@@ -216,21 +208,11 @@ test("runtime Activity keeps repeated same-name tool calls separate", () => {
   })), [
     {
       kind: "tool_call",
-      status: "succeeded",
-      details: "employee-hr called bash",
-    },
-    {
-      kind: "tool_result",
       status: "failed",
       details: "python: command not found",
     },
     {
       kind: "tool_call",
-      status: "succeeded",
-      details: "employee-hr called bash",
-    },
-    {
-      kind: "tool_result",
       status: "succeeded",
       details: "KEY=<redacted>",
     },

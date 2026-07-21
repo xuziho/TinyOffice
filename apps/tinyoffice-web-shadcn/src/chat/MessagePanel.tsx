@@ -11,6 +11,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmployeeAvatar } from "@/components/product/EmployeeAvatar";
 import { Message, MessageAvatar, MessageContent, MessageHeader } from "@/components/ui/message";
 import {
@@ -25,6 +26,7 @@ import { ArrowLeftIcon, EditIcon } from "lucide-react";
 import { useEffect, useState, type FormEvent, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from "react";
 import { reconciledTimelineRows } from "./chatReplyReconciliation";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { ChatShellModel } from "./chatShellModel";
 import type { ChatRunRecord, DraftReply } from "./chatRunState";
 import { RoomReplyComposer } from "./Composer";
@@ -622,11 +624,19 @@ function formatCompactNumber(value: number): string {
   return `${compact >= 10 ? Math.round(compact) : compact.toFixed(1).replace(/\.0$/, "")}k`;
 }
 
-function MarkdownMessageBody({ body }: { body: string }): ReactElement {
+export function MarkdownMessageBody({ body }: { body: string }): ReactElement {
   return (
-    <div className="space-y-2 [&_a]:underline [&_a]:underline-offset-2 [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_code]:rounded-sm [&_code]:bg-background/70 [&_code]:px-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-background/70 [&_pre]:p-2 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_ul]:list-disc [&_ul]:pl-5">
+    <div className="space-y-2 [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_code]:rounded-sm [&_code]:bg-background/70 [&_code]:px-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-background/70 [&_pre]:p-2 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_ul]:list-disc [&_ul]:pl-5">
       <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
         components={{
+          table: ({ node: _node, ...props }) => <Table className="my-3 min-w-[680px] border border-[var(--tiny-line-faint)]" {...props} />,
+          thead: ({ node: _node, ...props }) => <TableHeader className="bg-[var(--tiny-fill)]" {...props} />,
+          tbody: ({ node: _node, ...props }) => <TableBody {...props} />,
+          tr: ({ node: _node, ...props }) => <TableRow className="hover:bg-[var(--tiny-hover)]" {...props} />,
+          th: ({ node: _node, children, ...props }) => <TableHead className="h-auto min-w-36 whitespace-normal border-r border-[var(--tiny-line-faint)] px-3 py-2 align-top last:border-r-0" {...props}>{renderMentionNodes(children)}</TableHead>,
+          td: ({ node: _node, children, ...props }) => <TableCell className="min-w-36 whitespace-normal border-r border-[var(--tiny-line-faint)] px-3 py-2 align-top last:border-r-0" {...props}>{renderMentionNodes(children)}</TableCell>,
+          a: ({ node: _node, ...props }) => <a className="font-semibold text-[var(--tiny-tab-active-ink)] underline decoration-2 underline-offset-2 transition-colors hover:text-foreground focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" {...props} />,
           p: ({ children }) => <p>{renderMentionNodes(children)}</p>,
           li: ({ children }) => <li>{renderMentionNodes(children)}</li>,
         }}

@@ -277,6 +277,7 @@ export function runtimeSessionEventFromPiEvent(event: unknown) {
       role?: string;
       content?: unknown;
       toolName?: string;
+      toolCallId?: string;
       isError?: boolean;
     };
     assistantMessageEvent?: {
@@ -426,6 +427,7 @@ export function buildProcessEventsFromPiSessionEvent(
       content?: unknown[];
       isError?: boolean;
       toolName?: string;
+      toolCallId?: string;
     };
     assistantMessageEvent?: {
       type?: string;
@@ -482,6 +484,7 @@ export function buildProcessEventsFromPiSessionEvent(
       }
       const candidate = item as {
         type?: string;
+        id?: string;
         text?: string;
         thinking?: string;
         name?: string;
@@ -504,6 +507,7 @@ export function buildProcessEventsFromPiSessionEvent(
           metadata: {
             sessionRecordId: record.id,
             contentIndex,
+            toolCallId: candidate.id,
             toolName: candidate.name,
             activityKind: activity.activityKind,
             activityTarget: activity.activityTarget,
@@ -520,6 +524,7 @@ export function buildProcessEventsFromPiSessionEvent(
           metadata: {
             sessionRecordId: record.id,
             contentIndex,
+            toolCallId: candidate.id,
             toolName: candidate.name,
             arguments: candidate.arguments ?? {},
           },
@@ -567,6 +572,7 @@ export function buildProcessEventsFromPiSessionEvent(
       metadata: {
         sessionRecordId: record.id,
         contentIndex: 0,
+        toolCallId: record.message.toolCallId,
         toolName,
       },
     }];

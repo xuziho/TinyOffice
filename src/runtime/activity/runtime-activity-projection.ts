@@ -67,15 +67,17 @@ function activityGroupKey(event: ProcessTraceEvent): string | undefined {
       return `provider_retry:${runId}:${metadataString(metadata.attempt) || event.id}`;
     case "tool_activity": {
       const key = durableToolTraceKey(event);
-      return key ? `${isHandoffToolEvent(event) ? "handoff" : "tool_call"}:${runId}:${key}` : undefined;
+      return key ? `${isHandoffToolEvent(event) ? "handoff" : "tool_step"}:${runId}:${key}` : undefined;
     }
     case "model_tool_call": {
       const key = durableToolTraceKey(event);
       if (!key && metadataString(metadata.streamEventType)) return undefined;
-      return `${isHandoffToolEvent(event) ? "handoff" : "tool_call"}:${runId}:${key || event.id}`;
+      return `${isHandoffToolEvent(event) ? "handoff" : "tool_step"}:${runId}:${key || event.id}`;
     }
-    case "model_tool_result":
-      return `tool_result:${runId}:${durableToolTraceKey(event) || event.id}`;
+    case "model_tool_result": {
+      const key = durableToolTraceKey(event) || event.id;
+      return `${isHandoffToolEvent(event) ? "handoff" : "tool_step"}:${runId}:${key}`;
+    }
     case "turn_completed":
       return `run_completed:${runId}`;
     case "turn_failed":
@@ -160,35 +162,23 @@ function activityItemForGroup(key: string, events: ProcessTraceEvent[]): Runtime
       raw,
     };
   }
-  if (key.startsWith("tool_call:")) {
-    const call = latestMatching(sorted, "model_tool_call") || latest;
-    const toolName = metadataString(call.metadata?.toolName);
-    const argumentsValue = call.metadata?.arguments;
+  if (key.startsWith("tool_step:")) {
+    const call = latestMatching(sorted, "model_tool_call");
+    const result = latestMatching(sorted, "model_tool_result");
+    const activity = latestMatching(sorted, "tool_activity");
+    const representative = call || result || activity || latest;
+    const toolName = metadataString(representative.metadata?.toolName);
+    const argumentsValue = call?.metadata?.arguments;
     return {
       id: `activity:${key}`,
       kind: "tool_call",
-      title: "Tool call",
-      details: activityDetails(argumentsValue === undefined ? call.summary || call.title : call.title || call.summary),
+      title: toolName ? `Tool · ${toolName}` : "Tool activity",
+      details: activityDetails(result?.summary || result?.preview || activity?.summary || call?.summary || representative.title),
       status: bestStatus(sorted),
-      timestamp: call.timestamp || latest.timestamp,
+      timestamp: call?.timestamp || activity?.timestamp || representative.timestamp,
       primary: objectWithValues({
         toolName,
         arguments: argumentsValue,
-      }),
-      raw,
-    };
-  }
-  if (key.startsWith("tool_result:")) {
-    const toolName = metadataString(latest.metadata?.toolName);
-    return {
-      id: `activity:${key}`,
-      kind: "tool_result",
-      title: "Tool result",
-      details: activityDetails(latest.summary || latest.preview || latest.title),
-      status: latest.status,
-      timestamp: latest.timestamp,
-      primary: objectWithValues({
-        toolName,
       }),
       raw,
     };

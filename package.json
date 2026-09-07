@@ -60,24 +60,24 @@
   },
   "devDependencies": {
     "@types/node": "^24.0.1",
-    "@types/pg": "^8.20.0",
+    "@types/pg": "^8.23.1",
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@better-auth/passkey": "1.6.23",
-    "@earendil-works/pi-coding-agent": "0.80.6",
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@better-auth/passkey": "1.7.2",
+    "@earendil-works/pi-coding-agent": "0.84.4",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@mozilla/readability": "0.6.0",
-    "better-auth": "1.6.23",
-    "hono": "^4.12.27",
+    "better-auth": "1.7.2",
+    "hono": "^4.13.5",
     "linkedom": "0.18.13",
-    "pg": "^8.21.0",
+    "pg": "^8.23.0",
     "socket.io": "^4.8.3",
-    "tar": "^7.5.19",
-    "tsx": "^4.20.3",
+    "tar": "^7.5.22",
+    "tsx": "^4.23.13",
     "turndown": "7.2.4",
-    "typebox": "^1.1.39",
-    "undici": "8.7.0",
-    "zod": "^4.4.3"
+    "typebox": "^1.3.25",
+    "undici": "8.10.1",
+    "zod": "^4.5.4"
   }
 }
